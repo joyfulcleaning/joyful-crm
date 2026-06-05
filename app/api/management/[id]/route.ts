@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const management = await prisma.management.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { clients: true }
     })
     if (!management) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -14,11 +15,12 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const body = await request.json()
     const management = await prisma.management.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name,
         priceConditions: body.priceConditions,
@@ -31,9 +33,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await prisma.management.delete({ where: { id: params.id } })
+    const { id } = await params
+    await prisma.management.delete({ where: { id } })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Failed to delete management' }, { status: 500 })
