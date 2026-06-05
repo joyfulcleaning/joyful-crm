@@ -10,7 +10,7 @@ import { ChevronDown } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
-interface WeekData { week: string; netIncome: number }
+interface WeekData { week: string; revenue: number; expenses: number; netIncome: number; count: number }
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
