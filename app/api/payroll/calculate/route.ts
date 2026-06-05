@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server'
+﻿export const dynamic = 'force-dynamic'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 const EXTRA_FEE_TYPES = new Set(['Deep Clean', 'Heavy Deep Clean'])
