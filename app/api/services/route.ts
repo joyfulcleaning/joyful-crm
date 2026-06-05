@@ -1,0 +1,106 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export async function GET() {
+  try {
+    const services = await prisma.service.findMany({
+      include: {
+        client: {
+          select: { id: true, name: true }
+        },
+        staff: {
+          include: {
+            user: {
+              select: { name: true }
+            }
+          }
+        },
+        _count: {
+          select: { duplicates: true }
+        },
+      },
+      orderBy: [
+        { serviceDate: 'desc' },
+        { serviceTime: 'asc' },
+      ]
+    })
+    return NextResponse.json(services)
+  } catch (error) {
+    return NextResponse.json([], { status: 200 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { ids } = await request.json()
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'No IDs provided' }, { status: 400 })
+    }
+
+    const { count } = await prisma.service.deleteMany({ where: { id: { in: ids } } })
+    return NextResponse.json({ deleted: count })
+  } catch (error) {
+    console.error('Error bulk deleting services:', error)
+    return NextResponse.json({ error: 'Failed to delete services' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    const body = await request.json()
+
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email || 'admin@joyfulcleaning.com' }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 })
+    }
+
+    const service = await prisma.service.create({
+      data: {
+        client: {
+          connect: { id: body.clientId }
+        },
+        createdBy: {
+          connect: { id: user.id }
+        },
+        serviceDate: new Date(body.serviceDate),
+        serviceTime: body.serviceTime,
+        type: body.type,
+        status: body.status || 'pending',
+        address: body.address,
+        unit: body.unit || null,
+        roomSize: body.roomSize || null,
+        frequency: body.frequency || null,
+        parentService: body.parentServiceId ? { connect: { id: body.parentServiceId } } : undefined,
+        basePrice: parseFloat(body.basePrice),
+        additionalFee: parseFloat(body.additionalFee) || 0,
+        total: parseFloat(body.total),
+        paymentMethod: body.paymentMethod,
+        internalNotes: body.notes,
+        staffNotes: body.staffNotes || null,
+      }
+    })
+
+    if (body.staffIds && body.staffIds.length > 0) {
+      await prisma.serviceStaff.createMany({
+        data: body.staffIds.map((userId: string) => ({
+          serviceId: service.id,
+          userId,
+        }))
+      })
+    }
+
+    return NextResponse.json(service)
+  } catch (error) {
+    console.error('Error creating service:', error)
+    return NextResponse.json({ error: 'Failed to create service' }, { status: 500 })
+  }
+}

@@ -1,0 +1,47 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params
+    const body = await request.json()
+    const data: any = {}
+    if (body.sku           !== undefined) data.sku           = body.sku
+    if (body.name          !== undefined) data.name          = body.name
+    if (body.category      !== undefined) data.category      = body.category
+    if (body.unitOfMeasure !== undefined) data.unitOfMeasure = body.unitOfMeasure
+    if (body.unitCost      !== undefined) data.unitCost      = parseFloat(body.unitCost)
+    if (body.currentStock  !== undefined) data.currentStock  = parseInt(body.currentStock)
+    if (body.minimumStock  !== undefined) data.minimumStock  = parseInt(body.minimumStock)
+    if (body.supplier      !== undefined) data.supplier      = body.supplier || null
+    if (body.notes         !== undefined) data.notes         = body.notes || null
+
+    const product = await prisma.inventoryProduct.update({ where: { id }, data })
+    return NextResponse.json(product)
+  } catch (error) {
+    console.error('PATCH /api/inventory/[id]:', error)
+    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  _: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { id } = await context.params
+    await prisma.inventoryProduct.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('DELETE /api/inventory/[id]:', error)
+    return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
+  }
+}

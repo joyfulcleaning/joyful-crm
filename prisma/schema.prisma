@@ -1,13 +1,525 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// ─────────────────────────────────────────────
+// Joyful Services CRM — Prisma Schema
+// Database: PostgreSQL (Supabase)
+// ─────────────────────────────────────────────
 
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  admin
+  user
+}
+
+enum UserStatus {
+  active
+  invited
+  inactive
+}
+
+enum ClientType {
+  residential
+  commercial
+}
+
+enum ServiceStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+}
+
+enum PaymentMethod {
+  cash
+  zelle
+  venmo
+  paypal
+  cashapp
+  check
+  ach
+  card
+  eft
+}
+
+// ── NUEVO ──
+enum PaymentPlatform {
+  stripe
+  square
+  cash
+  zelle
+  venmo
+  paypal
+  cashapp
+  check
+  ach
+  card
+  other
+}
+
+enum Frequency {
+  weekly
+  biweekly
+  monthly
+  one_time
+}
+
+enum PaymentType {
+  hourly
+  fixed_day
+  per_job
+}
+
+enum PayrollStatus {
+  pending
+  paid
+}
+
+enum RecurringFrequency {
+  weekly
+  biweekly
+  monthly
+  quarterly
+  annual
+}
+
+enum AssetStatus {
+  active
+  maintenance
+  retired
+}
+
+model User {
+  id               String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  emailVerified    DateTime?
+  password         String?
+  role             Role             @default(user)
+  phone            String?
+  status           UserStatus       @default(invited)
+  avatarInitials   String?
+  hourlyRate            Decimal?         @db.Decimal(8, 2)
+  scheduleType          String?
+  payRates              Json?
+  taxId                 String?
+  taxIdType             String?
+  immigrationStatus     String?
+  hireDate              DateTime?        @db.Date
+  workPermit            Boolean?
+  workPermitExpiry      DateTime?        @db.Date
+  dateOfBirth           DateTime?        @db.Date
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  notes                 String?
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  accounts         Account[]
+  sessions         Session[]
+  permissions      UserPermission?
+  serviceStaff     ServiceStaff[]
+  createdServices  Service[]        @relation("CreatedBy")
+  createdInvoices  Invoice[]        @relation("InvoiceCreatedBy")
+  createdExpenses  Expense[]        @relation("ExpenseCreatedBy")
+  payrollRecords   PayrollRecord[]  @relation("StaffPayroll")
+  createdPayroll   PayrollRecord[]  @relation("PayrollCreatedBy")
+  createdPayments  InvoicePayment[] @relation("PaymentCreatedBy")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model UserPermission {
+  id                      String   @id @default(uuid())
+  userId                  String   @unique
+  canViewCalendar         Boolean  @default(true)
+  canViewMap              Boolean  @default(true)
+  canUpdateStatus         Boolean  @default(true)
+  canUploadPhotos         Boolean  @default(true)
+  canAddNotes             Boolean  @default(true)
+  canViewHistory          Boolean  @default(true)
+  canViewPrices           Boolean  @default(false)
+  canExportData           Boolean  @default(false)
+  canReceiveNotifications Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_permissions")
+}
+
+model Management {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  priceConditions  Json?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  clients          Client[]
+
+  @@map("managements")
+}
+
+model Client {
+  id             String      @id @default(uuid())
+  name           String
+  type           ClientType  @default(residential)
+  phone          String?
+  email          String?
+  contactName    String?
+  contactPhone   String?
+  address        String?
+  city           String?     @default("Fayetteville")
+  state          String?     @default("NC")
+  zip            String?
+  propertyCode   String?
+  frequency      Frequency?
+  status         String      @default("active")
+  managementId   String?
+  priceRef       Json?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  management     Management? @relation(fields: [managementId], references: [id])
+  services       Service[]
+  invoices       Invoice[]
+  estimates      Estimate[]
+
+  @@map("clients")
+}
+
+model Service {
+  id              String         @id @default(uuid())
+  serviceNumber   Int            @default(autoincrement())
+  clientId        String
+  serviceDate     DateTime       @db.Date
+  serviceTime     String
+  type            String
+  address         String?
+  unit            String?
+  roomSize        String?
+  basePrice       Decimal        @db.Decimal(10, 2)
+  additionalFee   Decimal?       @default(0) @db.Decimal(10, 2)
+  total           Decimal        @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod?
+  frequency       Frequency?     @default(one_time)
+  status          ServiceStatus  @default(pending)
+  internalNotes   String?
+  staffNotes      String?
+  completionNotes String?
+  emailSent       Boolean        @default(false)
+  invoicedAt      DateTime?                          // ── NUEVO: marca cuando se factura
+  parentServiceId String?
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  completedAt     DateTime?
+  client          Client         @relation(fields: [clientId], references: [id])
+  createdBy       User           @relation("CreatedBy", fields: [createdById], references: [id])
+  parentService   Service?       @relation("ServiceDuplicates", fields: [parentServiceId], references: [id])
+  duplicates      Service[]      @relation("ServiceDuplicates")
+  staff           ServiceStaff[]
+  photos          ServicePhoto[]
+  invoiceItems    InvoiceItem[]
+
+  @@map("services")
+}
+
+model ServiceStaff {
+  id         String   @id @default(uuid())
+  serviceId  String
+  userId     String
+  assignedAt DateTime @default(now())
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([serviceId, userId])
+  @@map("service_staff")
+}
+
+model ServicePhoto {
+  id         String   @id @default(uuid())
+  serviceId  String
+  url        String
+  type       String
+  uploadedAt DateTime @default(now())
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_photos")
+}
+
+model Invoice {
+  id                String           @id @default(uuid())
+  invoiceNumber     String           @unique
+  invoiceMode       String           @default("auto")
+  clientId          String
+  periodFrom        DateTime         @db.Date
+  periodTo          DateTime         @db.Date
+  subtotal          Decimal          @db.Decimal(10, 2)
+  additionalFees    Decimal          @default(0) @db.Decimal(10, 2)
+  taxRate           Decimal          @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal          @default(0) @db.Decimal(10, 2)
+  total             Decimal          @db.Decimal(10, 2)
+  amountPaid        Decimal          @default(0) @db.Decimal(10, 2)  // ── NUEVO
+  balanceDue        Decimal          @default(0) @db.Decimal(10, 2)  // ── NUEVO
+  paymentMethod     PaymentMethod?
+  paymentLinkStripe String?                                           // ── NUEVO
+  paymentLinkSquare String?                                           // ── NUEVO
+  status            InvoiceStatus    @default(draft)
+  dueDate           DateTime?        @db.Date
+  paidAt            DateTime?
+  emailSentAt       DateTime?                                         // ── NUEVO
+  notes             String?
+  createdById       String
+  issuedAt          DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  client            Client           @relation(fields: [clientId], references: [id])
+  createdBy         User             @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items             InvoiceItem[]
+  payments          InvoicePayment[]                                  // ── NUEVO
+  estimates         Estimate[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  serviceId   String?
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  service     Service? @relation(fields: [serviceId], references: [id])
+
+  @@map("invoice_items")
+}
+
+// ── NUEVO MODELO ──
+model InvoicePayment {
+  id          String          @id @default(uuid())
+  invoiceId   String
+  amount      Decimal         @db.Decimal(10, 2)
+  method      PaymentMethod
+  platform    PaymentPlatform @default(other)
+  reference   String?
+  notes       String?
+  createdById String
+  paidAt      DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdBy   User            @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@map("invoice_payments")
+}
+
+model Expense {
+  id              String             @id @default(uuid())
+  expenseNumber   Int                @default(autoincrement())
+  description     String
+  category        String
+  amount          Decimal            @db.Decimal(10, 2)
+  expenseDate     DateTime           @db.Date
+  paymentMethod   PaymentMethod?
+  supplier        String?
+  receiptUrl      String?
+  recurringId     String?
+  notes           String?
+  createdById     String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdBy       User               @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  recurringSource RecurringExpense?  @relation(fields: [recurringId], references: [id])
+  payrollRecord   PayrollRecord?
+
+  @@map("expenses")
+}
+
+model RecurringExpense {
+  id               String             @id @default(uuid())
+  name             String
+  category         String
+  amount           Decimal            @db.Decimal(10, 2)
+  frequency        RecurringFrequency @default(monthly)
+  dayOfMonth       Int?
+  dayOfWeek        Int?
+  paymentMethod    PaymentMethod?
+  autoRegister     Boolean            @default(true)
+  startDate        DateTime           @db.Date
+  isActive         Boolean            @default(true)
+  notes            String?
+  lastRegisteredAt DateTime?
+  nextDueAt        DateTime?          @db.Date
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  expenses         Expense[]
+
+  @@map("recurring_expenses")
+}
+
+model PayrollRecord {
+  id             String         @id @default(uuid())
+  payrollNumber  Int            @default(autoincrement())
+  userId         String
+  periodFrom     DateTime       @db.Date
+  periodTo       DateTime       @db.Date
+  paymentType    PaymentType    @default(hourly)
+  hoursWorked    Decimal?       @db.Decimal(6, 2)
+  daysWorked     Int?
+  rate           Decimal        @db.Decimal(8, 2)
+  servicesCount  Int?
+  basePay        Decimal        @db.Decimal(10, 2)
+  bonus          Decimal        @default(0) @db.Decimal(10, 2)
+  deductions     Decimal        @default(0) @db.Decimal(10, 2)
+  netPay         Decimal        @db.Decimal(10, 2)
+  paymentMethod  PaymentMethod?
+  status         PayrollStatus  @default(pending)
+  payDate        DateTime?      @db.Date
+  analysisNotes  String?
+  expenseId      String?        @unique
+  createdById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  staff          User           @relation("StaffPayroll", fields: [userId], references: [id])
+  createdBy      User           @relation("PayrollCreatedBy", fields: [createdById], references: [id])
+  expense        Expense?       @relation(fields: [expenseId], references: [id])
+
+  @@map("payroll_records")
+}
+
+model InventoryProduct {
+  id            String   @id @default(uuid())
+  sku           String   @unique
+  name          String
+  category      String
+  unitOfMeasure String
+  unitCost      Decimal  @db.Decimal(10, 2)
+  currentStock  Int      @default(0)
+  minimumStock  Int      @default(0)
+  supplier      String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("inventory_products")
+}
+
+model Asset {
+  id                 String      @id @default(uuid())
+  name               String
+  type               String
+  purchaseDate       DateTime    @db.Date
+  purchaseValue      Decimal     @db.Decimal(10, 2)
+  currentValue       Decimal     @db.Decimal(10, 2)
+  annualDepreciation Decimal     @db.Decimal(5, 2)
+  serialNumber       String?
+  status             AssetStatus @default(active)
+  notes              String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@map("assets")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Estimate {
+  id             String    @id @default(uuid())
+  estimateNumber String    @unique
+  issueDate      DateTime  @db.Date
+  validUntil     DateTime  @db.Date
+  clientName     String
+  clientEmail    String?
+  clientPhone    String?
+  clientAddress  String?
+  notes          String?
+  taxRate        Decimal   @default(0) @db.Decimal(5, 2)
+  subtotal       Decimal   @db.Decimal(10, 2)
+  tax            Decimal   @default(0) @db.Decimal(10, 2)
+  total          Decimal   @db.Decimal(10, 2)
+  items          Json
+  status         String    @default("pending")
+  clientId       String?
+  invoiceId      String?
+  emailSentAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  client         Client?   @relation(fields: [clientId], references: [id])
+  invoice        Invoice?  @relation(fields: [invoiceId], references: [id])
+
+  @@map("estimates")
 }

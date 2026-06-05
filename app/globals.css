@@ -1,26 +1,329 @@
+@font-face {
+  font-family: 'Joyful';
+  src: url('/Joyful.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-surface: #161922;
+  --color-surface2: #1e2330;
+  --color-surface3: #252b3b;
+  --color-accent: #4A3FB0;
+  --color-accent-green: #38d9a9;
+  --color-warn: #f59e0b;
+  --color-danger: #f87171;
+  --color-purple: #8478D4;
+  --font-family-sans: 'DM Sans', sans-serif;
+  --font-family-display: 'Joyful', 'Space Grotesk', sans-serif;
+  --font-family-mono: 'DM Mono', monospace;
 }
+
+/* ── Joyful Services CRM — Design System Variables ── */
+:root {
+  /* Override --font-display so it resolves to Joyful.ttf regardless of Next.js injection */
+  --font-display: 'Joyful', 'Space Grotesk', sans-serif;
+  --sw: 224px;
+  --bg:         #0d0f14;
+  --surface:    #161922;
+  --surface2:   #1e2330;
+  --surface3:   #252b3b;
+  --border:     #2a2f3d;
+  --border2:    #343c52;
+  --text:       #e8eaf0;
+  --muted:      #6b7280;
+  --muted2:     #9ca3af;
+  --accent:     #4A3FB0;
+  --accent-hover:#3D3399;
+  --accent2:    #38d9a9;
+  --warn:       #f59e0b;
+  --danger:     #f87171;
+  --purple:     #8478D4;
+  --orange:     #fb923c;
+}
+
+/* ── Light Mode — Joyful Brand Design System (v1.0) ──
+   Spec: #4A3FB0 Indigo · #E3E6ED Canvas · #FFFFFF Surface
+   Shadows tinted with rgba(74,63,176, α), never pure black.
+   3-level hierarchy: chrome (--bg) → card (--surface) → inset (--surface-2) */
+body.light {
+  /* Surfaces */
+  --bg:         #E3E6ED;
+  --surface:    #FFFFFF;
+  --surface2:   #EEF0F5;
+  --surface3:   #E1E4EB;
+  --border:     #D3D7E0;
+  --border2:    #BCC1CC;
+  /* Text */
+  --text:       #1F1A3D;
+  --muted:      #6B7280;
+  --muted2:     #9AA0AD;
+  /* Brand palette (light-adjusted) */
+  --accent2:    #3E9B75;
+  --warn:       #C98220;
+  --danger:     #f87171;
+  --purple:     #8478D4;
+  --orange:     #D8865A;
+  /* Shadows */
+  --shadow-rest:  inset 0 1px 0 rgba(255,255,255,.6), 0 1px 2px rgba(74,63,176,.04), 0 4px 12px -8px rgba(74,63,176,.08);
+  --shadow-hover: inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px -4px rgba(74,63,176,.18);
+  --shadow-modal: 0 16px 40px rgba(31,26,61,.18);
+  --focus-ring:   0 0 0 3px rgba(74,63,176,.12);
+}
+
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Joyful', 'DM Sans', sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+body.light ::-webkit-scrollbar-thumb { background: rgba(74,63,176,.18); border: 2px solid var(--bg); }
+body.light ::-webkit-scrollbar-thumb:hover { background: rgba(74,63,176,.32); }
+
+/* ── Font utilities ── */
+.font-display { font-family: var(--font-display); }
+.font-mono-custom { font-family: var(--font-mono); }
+
+/* Joyful takes priority over Tailwind's font-mono utility */
+.font-mono { font-family: 'Joyful', 'DM Mono', monospace !important; }
+
+/* ── Joyful font — applied to all headings and display elements ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Page-level titles (text-lg, text-xl, text-2xl, text-3xl with font-bold) */
+.text-lg.font-bold,
+.text-xl.font-bold,
+.text-2xl.font-bold,
+.text-3xl.font-bold {
+  font-family: var(--font-display);
+}
+
+/* Sidebar brand name */
+.font-bold.tracking-tight {
+  font-family: var(--font-display);
+}
+
+
+/* ════════════════════════════════════════════════════
+   ACCENT: Replace legacy blue #4f8ef7 → Joyful Indigo #4A3FB0
+   Applies in BOTH dark and light mode
+   ════════════════════════════════════════════════════ */
+
+.bg-\[\#4f8ef7\]                         { background-color: #4A3FB0 !important; }
+.hover\:bg-\[\#3a7ee0\]:hover            { background-color: #3D3399 !important; }
+.hover\:bg-\[\#3d7de0\]:hover            { background-color: #3D3399 !important; }
+.text-\[\#4f8ef7\]                       { color: #4A3FB0 !important; }
+.border-\[\#4f8ef7\]                     { border-color: #4A3FB0 !important; }
+.focus\:border-\[\#4f8ef7\]:focus        { border-color: #4A3FB0 !important; }
+.hover\:border-\[\#4f8ef7\]:hover        { border-color: #4A3FB0 !important; }
+
+/* Transparent tints — Joyful Indigo rgba(74,63,176, α) */
+.bg-\[rgba\(79\,142\,247\,0\.15\)\]      { background-color: rgba(74,63,176,0.15) !important; }
+.bg-\[rgba\(79\,142\,247\,0\.12\)\]      { background-color: rgba(74,63,176,0.12) !important; }
+.bg-\[rgba\(79\,142\,247\,0\.1\)\]       { background-color: rgba(74,63,176,0.10) !important; }
+.bg-\[rgba\(79\,142\,247\,0\.08\)\]      { background-color: rgba(74,63,176,0.08) !important; }
+.bg-\[rgba\(79\,142\,247\,0\.06\)\]      { background-color: rgba(74,63,176,0.06) !important; }
+.border-\[rgba\(79\,142\,247\,0\.2\)\]   { border-color: rgba(74,63,176,0.20) !important; }
+.border-\[rgba\(79\,142\,247\,0\.25\)\]  { border-color: rgba(74,63,176,0.25) !important; }
+.border-\[rgba\(79\,142\,247\,0\.3\)\]   { border-color: rgba(74,63,176,0.30) !important; }
+
+/* Previous override targets (from earlier refactor) */
+.bg-\[\#3D3A9F\]                         { background-color: #4A3FB0 !important; }
+.text-\[\#3D3A9F\]                       { color: #4A3FB0 !important; }
+.border-\[\#3D3A9F\]                     { border-color: #4A3FB0 !important; }
+.hover\:bg-\[\#322F88\]:hover            { background-color: #3D3399 !important; }
+.bg-\[rgba\(61\,58\,159\,0\.15\)\]       { background-color: rgba(74,63,176,0.15) !important; }
+.bg-\[rgba\(61\,58\,159\,0\.12\)\]       { background-color: rgba(74,63,176,0.12) !important; }
+.bg-\[rgba\(61\,58\,159\,0\.10\)\]       { background-color: rgba(74,63,176,0.10) !important; }
+.bg-\[rgba\(61\,58\,159\,0\.08\)\]       { background-color: rgba(74,63,176,0.08) !important; }
+.border-\[rgba\(61\,58\,159\,0\.2\)\]    { border-color: rgba(74,63,176,0.20) !important; }
+.border-\[rgba\(61\,58\,159\,0\.25\)\]   { border-color: rgba(74,63,176,0.25) !important; }
+
+
+/* ════════════════════════════════════════════════════
+   LIGHT MODE — Surface & chrome overrides
+   Chrome (topbar + sidebar + bg) = --bg #E3E6ED
+   Cards / panels = --surface #FFFFFF
+   ════════════════════════════════════════════════════ */
+
+/* ── Page / chrome backgrounds ── */
+body.light .bg-\[\#0d0f14\]             { background-color: #EEF0F5 !important; }
+body.light .bg-\[\#161922\]             { background-color: #FFFFFF !important; }
+body.light .bg-\[\#1e2330\]             { background-color: #EEF0F5 !important; }
+body.light .bg-\[\#252b3b\]             { background-color: #E1E4EB !important; }
+body.light .bg-gray-900                 { background-color: #E3E6ED !important; }
+body.light .bg-gray-800                 { background-color: #EEF0F5 !important; }
+body.light .bg-gray-950                 { background-color: #E3E6ED !important; }
+
+/* ── Borders ── */
+body.light .border-\[\#2a2f3d\]         { border-color: #D3D7E0 !important; }
+body.light .border-\[\#2e3650\]         { border-color: #BCC1CC !important; }
+body.light .border-\[\#343c52\]         { border-color: #BCC1CC !important; }
+body.light .border-\[\#2a2f3d\]\/50     { border-color: rgba(211,215,224,0.5) !important; }
+body.light .border-gray-800             { border-color: #D3D7E0 !important; }
+body.light .border-gray-700             { border-color: #BCC1CC !important; }
+
+/* ── Primary text ── */
+body.light .text-\[\#e8eaf0\]           { color: #1F1A3D !important; }
+body.light .text-\[\#9ca3af\]           { color: #6B7280 !important; }
+body.light .text-\[\#4b5563\]           { color: #9AA0AD !important; }
+body.light .text-gray-400               { color: #6B7280 !important; }
+body.light .text-gray-500               { color: #6B7280 !important; }
+body.light .text-gray-600               { color: #5b5374 !important; }
+
+/* ── Hover backgrounds ── */
+body.light .hover\:bg-\[\#1e2330\]:hover  { background-color: #EEF0F5 !important; }
+body.light .hover\:bg-\[\#0d0f14\]:hover  { background-color: #E1E4EB !important; }
+body.light .hover\:bg-\[\#161922\]:hover  { background-color: #EEF0F5 !important; }
+body.light .hover\:bg-\[\#1a1f2e\]:hover  { background-color: #E1E4EB !important; }
+body.light .hover\:bg-gray-800:hover      { background-color: #EEF0F5 !important; }
+/* ── Divide utilities ── */
+body.light .divide-\[\#2a2f3d\] > * + *  { border-color: #D3D7E0 !important; }
+body.light .divide-\[\#1e2330\] > * + *  { border-color: #E8EAEF !important; }
+
+/* ── Hover text ── */
+body.light .hover\:text-\[\#e8eaf0\]:hover { color: #1F1A3D !important; }
+body.light .hover\:text-white:hover         { color: #1F1A3D !important; }
+
+/* ── Hover borders ── */
+body.light .hover\:border-\[\#2e3650\]:hover { border-color: #BCC1CC !important; }
+
+/* ── Placeholders ── */
+body.light .placeholder-\[\#6b7280\]::placeholder { color: #9AA0AD !important; }
+body.light input::placeholder,
+body.light textarea::placeholder              { color: #9AA0AD !important; }
+
+/* ── Form fields text ── */
+body.light input,
+body.light select,
+body.light textarea                          { color: #1F1A3D !important; }
+
+/* ── Card shadow (Joyful spec) ── */
+body.light .bg-\[\#161922\] {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6),
+              0 1px 2px rgba(74,63,176,.04),
+              0 4px 12px -8px rgba(74,63,176,.08) !important;
+}
+
+
+/* ════════════════════════════════════════════════════
+   LIGHT MODE — Active / selected states
+   Per spec: subtle rgba(74,63,176,.10) tint + #4A3FB0 text
+   (solid purple used only for primary buttons & CTAs)
+   ════════════════════════════════════════════════════ */
+
+/* The rgba(0.12) pattern = active nav / tab backgrounds */
+body.light .bg-\[rgba\(79\,142\,247\,0\.12\)\],
+body.light .bg-\[rgba\(74\,63\,176\,0\.12\)\] {
+  background-color: rgba(74,63,176,0.10) !important;
+}
+body.light .bg-\[rgba\(79\,142\,247\,0\.12\)\] *,
+body.light .bg-\[rgba\(74\,63\,176\,0\.12\)\] * {
+  color: #4A3FB0 !important;
+}
+body.light .bg-\[rgba\(79\,142\,247\,0\.12\)\],
+body.light .bg-\[rgba\(74\,63\,176\,0\.12\)\] {
+  color: #4A3FB0 !important;
+}
+
+/* Solid accent buttons keep white text in light mode */
+body.light .bg-\[\#4A3FB0\],
+body.light .bg-\[\#4A3FB0\] * {
+  color: #ffffff !important;
+}
+body.light .bg-\[\#4f8ef7\],
+body.light .bg-\[\#4f8ef7\] * {
+  color: #ffffff !important;
+}
+
+/* Subtle tints stay as very light indigo wash */
+body.light .bg-\[rgba\(74\,63\,176\,0\.10\)\],
+body.light .bg-\[rgba\(74\,63\,176\,0\.08\)\],
+body.light .bg-\[rgba\(79\,142\,247\,0\.1\)\],
+body.light .bg-\[rgba\(79\,142\,247\,0\.08\)\] {
+  background-color: rgba(74,63,176,0.07) !important;
+}
+
+/* Active accent border */
+body.light .border-\[\#4f8ef7\],
+body.light .border-\[\#4A3FB0\],
+body.light .border-\[\#3D3A9F\] {
+  border-color: #4A3FB0 !important;
+}
+
+/* Input focus ring */
+body.light .focus\:border-\[\#4f8ef7\]:focus {
+  border-color: #4A3FB0 !important;
+  box-shadow: var(--focus-ring);
+}
+
+
+/* ════════════════════════════════════════════════════
+   LIGHT MODE — State badges (desaturated per spec)
+   Pattern: bg rgba at 12-14% opacity · text at 60-70% luminosity
+   ════════════════════════════════════════════════════ */
+
+/* Success / Completed — sage #3E9B75 */
+body.light .bg-\[rgba\(56\,217\,169\,0\.15\)\]  { background-color: rgba(62,155,117,0.14) !important; }
+body.light .bg-\[rgba\(56\,217\,169\,0\.12\)\]  { background-color: rgba(62,155,117,0.12) !important; }
+body.light .bg-\[rgba\(56\,217\,169\,0\.1\)\]   { background-color: rgba(62,155,117,0.10) !important; }
+body.light .bg-\[rgba\(56\,217\,169\,0\.08\)\]  { background-color: rgba(62,155,117,0.08) !important; }
+body.light .text-\[\#38d9a9\]                   { color: #2C7355 !important; }
+body.light .hover\:text-\[\#38d9a9\]:hover      { color: #2C7355 !important; }
+body.light .hover\:text-\[\#2bc090\]:hover       { color: #2C7355 !important; }
+body.light .hover\:bg-\[\#2bc090\]:hover         { background-color: #3E9B75 !important; }
+body.light .border-\[\#38d9a9\]                 { border-color: #3E9B75 !important; }
+body.light .border-t-\[\#38d9a9\]               { border-top-color: #3E9B75 !important; }
+body.light .border-b-\[\#38d9a9\]               { border-bottom-color: #3E9B75 !important; }
+body.light .border-\[rgba\(56\,217\,169\,0\.2\)\]  { border-color: rgba(62,155,117,0.25) !important; }
+body.light .border-\[rgba\(56\,217\,169\,0\.15\)\] { border-color: rgba(62,155,117,0.20) !important; }
+body.light .bg-\[\#38d9a9\]                     { background-color: #3E9B75 !important; }
+body.light .hover\:bg-\[\#38d9a9\]:hover         { background-color: #3E9B75 !important; }
+/* Hex+alpha variants (#38d9a910, #38d9a920, #38d9a940) */
+body.light .bg-\[\#38d9a910\]                   { background-color: rgba(62,155,117,0.06) !important; }
+body.light .bg-\[\#38d9a920\]                   { background-color: rgba(62,155,117,0.12) !important; }
+body.light .border-\[\#38d9a940\]               { border-color: rgba(62,155,117,0.25) !important; }
+
+/* Warning / Pending — amber #C98220 */
+body.light .bg-\[rgba\(245\,158\,11\,0\.15\)\]  { background-color: rgba(201,130,32,0.14) !important; }
+body.light .bg-\[rgba\(245\,158\,11\,0\.1\)\]   { background-color: rgba(201,130,32,0.10) !important; }
+body.light .bg-\[rgba\(245\,158\,11\,0\.06\)\]  { background-color: rgba(201,130,32,0.06) !important; }
+body.light .text-\[\#f59e0b\]                   { color: #9C6516 !important; }
+body.light .border-\[rgba\(245\,158\,11\,0\.2\)\] { border-color: rgba(201,130,32,0.25) !important; }
+body.light .border-\[rgba\(245\,158\,11\,0\.3\)\] { border-color: rgba(201,130,32,0.30) !important; }
+
+/* Danger / Error — keep original coral #f87171 in light mode (user preference) */
+
+/* Purple — lavender #8478D4 */
+body.light .bg-\[rgba\(167\,139\,250\,0\.15\)\] { background-color: rgba(132,120,212,0.14) !important; }
+body.light .bg-\[rgba\(167\,139\,250\,0\.1\)\]  { background-color: rgba(132,120,212,0.10) !important; }
+body.light .text-\[\#a78bfa\]                   { color: #5F53A8 !important; }
+body.light .border-\[rgba\(167\,139\,250\,0\.2\)\] { border-color: rgba(132,120,212,0.25) !important; }
+
+/* Orange — peach #D8865A */
+body.light .bg-\[rgba\(251\,146\,60\,0\.15\)\]  { background-color: rgba(216,134,90,0.14) !important; }
+body.light .bg-\[rgba\(251\,146\,60\,0\.1\)\]   { background-color: rgba(216,134,90,0.10) !important; }
+body.light .text-\[\#fb923c\]                   { color: #9C5A30 !important; }
+body.light .border-\[rgba\(251\,146\,60\,0\.2\)\] { border-color: rgba(216,134,90,0.25) !important; }
