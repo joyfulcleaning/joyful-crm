@@ -37,7 +37,7 @@ export async function GET(
 
     const pdf = await generateEstimatePDF(data)
 
-    return new Response(pdf, {
+    return new Response(new Uint8Array(pdf), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `inline; filename="Estimate-${est.estimateNumber}.pdf"`,
