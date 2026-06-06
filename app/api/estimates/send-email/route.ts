@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     await transporter.sendMail({
       from:        `"Joyful Cleaning Services Corp." <${process.env.GMAIL_USER}>`,
       to:          estimate.clientEmail,
-      subject:     `Estimate ${estimate.estimateNumber} — Joyful Cleaning Services Corp.`,
+      subject:     `Estimate ${estimate.estimateNumber} | Joyful Cleaning Services Corp.`,
       html:        emailHtml,
       attachments: [{
         filename:    `Estimate-${estimate.estimateNumber}.pdf`,
