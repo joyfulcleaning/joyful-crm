@@ -122,6 +122,18 @@ export default function FinancesPage() {
   useEffect(() => {
     try { localStorage.setItem('joyful_inv_cols_order', JSON.stringify(invColOrder)) } catch {}
   }, [invColOrder])
+  const [invSortKey, setInvSortKey] = useState<string>(() => {
+    try { return (typeof window !== 'undefined' && localStorage.getItem('joyful_inv_sort_key')) || 'date' } catch { return 'date' }
+  })
+  const [invSortDir, setInvSortDir] = useState<'asc' | 'desc'>(() => {
+    try { return ((typeof window !== 'undefined' && localStorage.getItem('joyful_inv_sort_dir')) || 'desc') as 'asc' | 'desc' } catch { return 'desc' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_sort_key', invSortKey) } catch {}
+  }, [invSortKey])
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_sort_dir', invSortDir) } catch {}
+  }, [invSortDir])
   const [generating, setGenerating] = useState(false)
   const [invError, setInvError] = useState('')
   const [histFilter, setHistFilter]           = useState('all')
@@ -989,6 +1001,35 @@ export default function FinancesPage() {
       default:        return null
     }
   }
+  function handleInvSort(colId: string) {
+    if (invSortKey === colId) setInvSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setInvSortKey(colId); setInvSortDir('asc') }
+  }
+  function getInvSortVal(s: any, key: string): string | number {
+    switch (key) {
+      case 'id':      return Number(s.serviceNumber) || 0
+      case 'date':    return s.serviceDate || ''
+      case 'type':    return s.type || ''
+      case 'unit':    return s.unit || ''
+      case 'room':    return s.roomSize || ''
+      case 'time':    return s.serviceTime || ''
+      case 'staff':   return s.staff?.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') || ''
+      case 'price':   return Number(s.basePrice) || 0
+      case 'fee':     return Number(s.additionalFee) || 0
+      case 'total':   return Number(s.total) || 0
+      case 'payment': return s.paymentMethod || ''
+      case 'status':  return s.status || ''
+      case 'notes':   return s.notes || ''
+      default:        return ''
+    }
+  }
+  const sortedResults = [...results].sort((a, b) => {
+    const av = getInvSortVal(a, invSortKey)
+    const bv = getInvSortVal(b, invSortKey)
+    const dir = invSortDir === 'asc' ? 1 : -1
+    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir
+    return String(av).localeCompare(String(bv)) * dir
+  })
   const invOrderedCols = invColOrder.map(id => INV_COL_DEFS.find(c => c.id === id)!).filter(Boolean)
   const invVisibleOrderedCols = invOrderedCols.filter(c => invVisibleCols.has(c.id))
 
@@ -1526,12 +1567,22 @@ export default function FinancesPage() {
                               onChange={e => toggleAll(e.target.checked)} className="accent-[#4f8ef7]" />
                           </th>
                           {invVisibleOrderedCols.map(col => (
-                            <th key={col.id} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{col.label}</th>
+                            <th key={col.id}
+                              onClick={() => handleInvSort(col.id)}
+                              className={`text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 cursor-pointer select-none transition-colors ${invSortKey === col.id ? 'text-[#4f8ef7]' : 'text-[#6b7280] hover:text-[#9ca3af]'}`}
+                            >
+                              <span className="flex items-center gap-1">
+                                {col.label}
+                                <span className="text-[10px] leading-none">
+                                  {invSortKey === col.id ? (invSortDir === 'asc' ? '↑' : '↓') : <span className="opacity-20">↕</span>}
+                                </span>
+                              </span>
+                            </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {results.map((s: any) => {
+                        {sortedResults.map((s: any) => {
                           const isInvoiced = !!s.invoicedAt
                           return (
                             <tr key={s.id}
