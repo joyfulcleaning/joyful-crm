@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { DollarSign, TrendingUp, TrendingDown, Search, Check, CheckCircle, Plus, RefreshCw, ReceiptText, X, ChevronDown } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { DollarSign, TrendingUp, TrendingDown, Search, Check, CheckCircle, Plus, RefreshCw, ReceiptText, X, ChevronDown, SlidersHorizontal, GripVertical } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import InvoiceDetailModal from '@/components/modals/InvoiceDetailModal'
 import InvoicePDFModal from '@/components/modals/InvoicePDFModal'
@@ -11,6 +11,22 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import EstimatePDFModal, { type EstimateData } from '@/components/modals/EstimatePDFModal'
 import ClientModal from '@/components/modals/ClientModal'
 import ServiceModal from '@/components/modals/ServiceModal'
+
+const INV_COL_DEFS = [
+  { id: 'id',      label: 'ID',       defaultOn: true  },
+  { id: 'date',    label: 'Date',     defaultOn: true  },
+  { id: 'type',    label: 'Type',     defaultOn: true  },
+  { id: 'unit',    label: 'Unit',     defaultOn: false },
+  { id: 'room',    label: 'Room',     defaultOn: false },
+  { id: 'time',    label: 'Time',     defaultOn: false },
+  { id: 'staff',   label: 'Staff',    defaultOn: true  },
+  { id: 'price',   label: 'Price',    defaultOn: true  },
+  { id: 'fee',     label: 'Add. Fee', defaultOn: true  },
+  { id: 'total',   label: 'Total',    defaultOn: true  },
+  { id: 'payment', label: 'Payment',  defaultOn: true  },
+  { id: 'status',  label: 'Status',   defaultOn: true  },
+  { id: 'notes',   label: 'Notes',    defaultOn: false },
+]
 
 const INVOICE_COLORS: Record<string, string> = {
   draft: '#9ca3af',
@@ -83,6 +99,13 @@ export default function FinancesPage() {
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<any[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [invVisibleCols, setInvVisibleCols] = useState<Set<string>>(
+    () => new Set(INV_COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
+  )
+  const [invColOrder, setInvColOrder] = useState<string[]>(() => INV_COL_DEFS.map(c => c.id))
+  const [invColsOpen, setInvColsOpen] = useState(false)
+  const [invDragIdx, setInvDragIdx] = useState<number | null>(null)
+  const [invDropIdx, setInvDropIdx] = useState<number | null>(null)
   const [generating, setGenerating] = useState(false)
   const [invError, setInvError] = useState('')
   const [histFilter, setHistFilter]           = useState('all')
@@ -902,6 +925,57 @@ export default function FinancesPage() {
   const taxAmount      = (subtotal + additionalFees) * (parseFloat(invForm.taxRate) / 100)
   const total          = subtotal + additionalFees + taxAmount
 
+  function toggleInvCol(id: string) {
+    setInvVisibleCols(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function onInvDragStart(idx: number) { setInvDragIdx(idx) }
+  function onInvDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); setInvDropIdx(idx) }
+  function onInvDrop(idx: number) {
+    if (invDragIdx === null || invDragIdx === idx) { setInvDragIdx(null); setInvDropIdx(null); return }
+    setInvColOrder(prev => { const n = [...prev]; const [m] = n.splice(invDragIdx, 1); n.splice(idx, 0, m); return n })
+    setInvDragIdx(null); setInvDropIdx(null)
+  }
+  function onInvDragEnd() { setInvDragIdx(null); setInvDropIdx(null) }
+  function getInvColTdClass(colId: string) {
+    const base = 'px-3 py-2.5 text-xs'
+    switch (colId) {
+      case 'id':      return `${base} font-mono`
+      case 'date':    return `${base} text-[#9ca3af]`
+      case 'type':    return `${base} text-[#e8eaf0]`
+      case 'unit':    return `${base} text-[#9ca3af]`
+      case 'room':    return `${base} text-[#9ca3af]`
+      case 'time':    return `${base} text-[#9ca3af]`
+      case 'staff':   return `${base} text-[#9ca3af]`
+      case 'price':   return `${base} text-[#9ca3af] font-mono`
+      case 'fee':     return `${base} text-[#f59e0b] font-mono`
+      case 'total':   return `${base} font-bold text-[#38d9a9] font-mono`
+      case 'payment': return `${base} text-[#6b7280] capitalize`
+      case 'status':  return base
+      case 'notes':   return `${base} text-[#9ca3af] max-w-[140px] truncate`
+      default:        return `${base} text-[#9ca3af]`
+    }
+  }
+  function getInvCellContent(colId: string, s: any, isInvoiced: boolean): React.ReactNode {
+    switch (colId) {
+      case 'id':      return <>{`#${s.serviceNumber}`}{isInvoiced && <span className="ml-1 text-[9px] text-[#f59e0b]">invoiced</span>}</>
+      case 'date':    return s.serviceDate ? formatDate(s.serviceDate) : '—'
+      case 'type':    return s.type
+      case 'unit':    return s.unit || '—'
+      case 'room':    return s.roomSize || '—'
+      case 'time':    return s.serviceTime || '—'
+      case 'staff':   return s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'
+      case 'price':   return `$${Number(s.basePrice).toFixed(2)}`
+      case 'fee':     return Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'
+      case 'total':   return `$${Number(s.total).toFixed(2)}`
+      case 'payment': return s.paymentMethod || '—'
+      case 'status':  return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.1)' : 'rgba(245,158,11,0.1)', color: s.status === 'completed' ? '#38d9a9' : '#f59e0b' }}>{s.status?.replace('_', ' ')}</span>
+      case 'notes':   return s.notes || '—'
+      default:        return null
+    }
+  }
+  const invOrderedCols = invColOrder.map(id => INV_COL_DEFS.find(c => c.id === id)!).filter(Boolean)
+  const invVisibleOrderedCols = invOrderedCols.filter(c => invVisibleCols.has(c.id))
+
   const previewInvoice = {
     invoiceNumber,
     client:        clients.find(c => c.id === invForm.clientId),
@@ -1377,7 +1451,43 @@ export default function FinancesPage() {
                       <span className="ml-2 text-[#f59e0b]">· {results.filter(s => s.invoicedAt).length} already invoiced</span>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {/* Column picker */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setInvColsOpen(o => !o)}
+                        className={`px-2 py-1 text-[10px] font-semibold border rounded-lg transition-all flex items-center gap-1 ${invColsOpen ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-[#1e2330] border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0]'}`}
+                      >
+                        <SlidersHorizontal size={10} />
+                        Columns
+                      </button>
+                      {invColsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setInvColsOpen(false)} />
+                          <div className="absolute right-0 top-8 z-20 bg-[#1a1f2e] border border-[#2a2f3d] rounded-xl shadow-2xl p-3 w-44">
+                            <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
+                            <div className="space-y-0.5">
+                              {invOrderedCols.map((col, i) => (
+                                <div key={col.id} draggable
+                                  onDragStart={() => onInvDragStart(i)}
+                                  onDragOver={e => onInvDragOver(e, i)}
+                                  onDrop={() => onInvDrop(i)}
+                                  onDragEnd={onInvDragEnd}
+                                  className={`flex items-center gap-1.5 py-0.5 rounded px-1 border transition-colors ${invDragIdx === i ? 'opacity-40' : ''} ${invDropIdx === i && invDragIdx !== i ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7]' : 'border-transparent'}`}
+                                >
+                                  <GripVertical size={11} className="text-[#4b5563] cursor-grab flex-shrink-0" />
+                                  <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
+                                    <input type="checkbox" checked={invVisibleCols.has(col.id)} onChange={() => toggleInvCol(col.id)} className="accent-[#4f8ef7] flex-shrink-0" />
+                                    <span className="text-xs text-[#9ca3af] group-hover:text-[#e8eaf0] transition-colors truncate">{col.label}</span>
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
                     <button onClick={() => toggleAll(true)}
                       className="px-2 py-1 text-[10px] font-semibold bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-[#9ca3af] hover:text-[#e8eaf0]">☑ All</button>
                     <button onClick={() => toggleAll(false)}
@@ -1399,8 +1509,8 @@ export default function FinancesPage() {
                               checked={selected.size === results.filter(s => !s.invoicedAt).length && results.filter(s => !s.invoicedAt).length > 0}
                               onChange={e => toggleAll(e.target.checked)} className="accent-[#4f8ef7]" />
                           </th>
-                          {['ID', 'Date', 'Type', 'Staff', 'Price', 'Add. Fee', 'Total', 'Payment', 'Status'].map(h => (
-                            <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
+                          {invVisibleOrderedCols.map(col => (
+                            <th key={col.id} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{col.label}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1417,30 +1527,14 @@ export default function FinancesPage() {
                                   onChange={() => toggleSelect(s.id, isInvoiced)} disabled={isInvoiced}
                                   className="accent-[#4f8ef7] disabled:opacity-30 disabled:cursor-not-allowed" />
                               </td>
-                              <td className="px-3 py-2.5 text-xs font-mono" style={{ color: isInvoiced ? '#6b7280' : '#4f8ef7' }}>
-                                #{s.serviceNumber}
-                                {isInvoiced && <span className="ml-1 text-[9px] text-[#f59e0b]">invoiced</span>}
-                              </td>
-                              <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{s.serviceDate ? formatDate(s.serviceDate) : '—'}</td>
-                              <td className="px-3 py-2.5 text-xs text-[#e8eaf0]">{s.type}</td>
-                              <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
-                                {s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'}
-                              </td>
-                              <td className="px-3 py-2.5 text-xs text-[#9ca3af] font-mono">${Number(s.basePrice).toFixed(2)}</td>
-                              <td className="px-3 py-2.5 text-xs text-[#f59e0b] font-mono">
-                                {Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'}
-                              </td>
-                              <td className="px-3 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">${Number(s.total).toFixed(2)}</td>
-                              <td className="px-3 py-2.5 text-xs text-[#6b7280] capitalize">{s.paymentMethod || '—'}</td>
-                              <td className="px-3 py-2.5">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                                  style={{
-                                    backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.1)' : 'rgba(245,158,11,0.1)',
-                                    color: s.status === 'completed' ? '#38d9a9' : '#f59e0b'
-                                  }}>
-                                  {s.status?.replace('_', ' ')}
-                                </span>
-                              </td>
+                              {invVisibleOrderedCols.map(col => (
+                                <td key={col.id}
+                                  className={getInvColTdClass(col.id)}
+                                  style={col.id === 'id' ? { color: isInvoiced ? '#6b7280' : '#4f8ef7' } : undefined}
+                                >
+                                  {getInvCellContent(col.id, s, isInvoiced)}
+                                </td>
+                              ))}
                             </tr>
                           )
                         })}
