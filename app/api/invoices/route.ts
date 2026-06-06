@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         taxRate:       body.taxRate   || 0,
         taxAmount:     body.taxAmount || 0,
         total:         body.total,
-        paymentMethod: body.paymentMethod,
+        paymentMethod: body.paymentMethod || null,
         status:        body.status || 'draft',
         dueDate:       body.dueDate ? new Date(body.dueDate) : null,
         notes:         body.notes,
