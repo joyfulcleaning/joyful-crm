@@ -99,13 +99,29 @@ export default function FinancesPage() {
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<any[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [invVisibleCols, setInvVisibleCols] = useState<Set<string>>(
-    () => new Set(INV_COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
-  )
-  const [invColOrder, setInvColOrder] = useState<string[]>(() => INV_COL_DEFS.map(c => c.id))
+  const [invVisibleCols, setInvVisibleCols] = useState<Set<string>>(() => {
+    try {
+      const s = typeof window !== 'undefined' && localStorage.getItem('joyful_inv_cols_visible')
+      if (s) return new Set(JSON.parse(s) as string[])
+    } catch {}
+    return new Set(INV_COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
+  })
+  const [invColOrder, setInvColOrder] = useState<string[]>(() => {
+    try {
+      const s = typeof window !== 'undefined' && localStorage.getItem('joyful_inv_cols_order')
+      if (s) return JSON.parse(s) as string[]
+    } catch {}
+    return INV_COL_DEFS.map(c => c.id)
+  })
   const [invColsOpen, setInvColsOpen] = useState(false)
   const [invDragIdx, setInvDragIdx] = useState<number | null>(null)
   const [invDropIdx, setInvDropIdx] = useState<number | null>(null)
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_cols_visible', JSON.stringify([...invVisibleCols])) } catch {}
+  }, [invVisibleCols])
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_cols_order', JSON.stringify(invColOrder)) } catch {}
+  }, [invColOrder])
   const [generating, setGenerating] = useState(false)
   const [invError, setInvError] = useState('')
   const [histFilter, setHistFilter]           = useState('all')

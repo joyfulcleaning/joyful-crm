@@ -61,13 +61,29 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
   const [searched, setSearched] = useState(false)
   const [results, setResults] = useState<any[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [visibleCols, setVisibleCols] = useState<Set<string>>(
-    () => new Set(COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
-  )
-  const [colOrder, setColOrder] = useState<string[]>(() => COL_DEFS.map(c => c.id))
+  const [visibleCols, setVisibleCols] = useState<Set<string>>(() => {
+    try {
+      const s = typeof window !== 'undefined' && localStorage.getItem('joyful_inv_cols_visible')
+      if (s) return new Set(JSON.parse(s) as string[])
+    } catch {}
+    return new Set(COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
+  })
+  const [colOrder, setColOrder] = useState<string[]>(() => {
+    try {
+      const s = typeof window !== 'undefined' && localStorage.getItem('joyful_inv_cols_order')
+      if (s) return JSON.parse(s) as string[]
+    } catch {}
+    return COL_DEFS.map(c => c.id)
+  })
   const [colsOpen, setColsOpen] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_cols_visible', JSON.stringify([...visibleCols])) } catch {}
+  }, [visibleCols])
+  useEffect(() => {
+    try { localStorage.setItem('joyful_inv_cols_order', JSON.stringify(colOrder)) } catch {}
+  }, [colOrder])
 
   const [paymentTerm, setPaymentTerm] = useState('')
 
