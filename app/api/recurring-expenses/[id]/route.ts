@@ -24,6 +24,21 @@ export async function PATCH(
     if (body.autoRegister  !== undefined) data.autoRegister  = Boolean(body.autoRegister)
     if (body.isActive      !== undefined) data.isActive      = Boolean(body.isActive)
     if (body.notes         !== undefined) data.notes         = body.notes || null
+    if (body.startDate     !== undefined) {
+      const sd = new Date(body.startDate)
+      data.startDate = sd
+      // recalculate nextDueAt from the new startDate
+      const freq = body.frequency ?? 'monthly'
+      const dom  = body.dayOfMonth ? parseInt(body.dayOfMonth) : null
+      let nextDue: Date
+      if (freq === 'monthly' && dom) {
+        nextDue = new Date(sd.getFullYear(), sd.getMonth(), dom)
+        if (nextDue < new Date()) nextDue.setMonth(nextDue.getMonth() + 1)
+      } else {
+        nextDue = sd
+      }
+      data.nextDueAt = nextDue
+    }
 
     const recurring = await prisma.recurringExpense.update({ where: { id }, data })
     return NextResponse.json(recurring)

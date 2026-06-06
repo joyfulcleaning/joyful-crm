@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth'
 export async function GET() {
   try {
     const recurring = await prisma.recurringExpense.findMany({
+      where:   { isActive: true },
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(recurring)
