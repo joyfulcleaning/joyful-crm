@@ -288,11 +288,11 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             {/* ══ HEADER ══ */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services"
+                <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services Corp."
                   style={{ height: 115, width: 'auto', objectFit: 'contain' }} />
                 <div>
                   <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4 })}>
-                    Joyful Cleaning Services
+                    Joyful Cleaning Services Corp.
                   </div>
                   <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
                     320 Laketree Blvd, Spring Lake NC 28390<br />
@@ -448,13 +448,13 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
               <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300 }}>
                 {invoice.notes
                   ? <><strong>Notes:</strong><br />{invoice.notes}</>
-                  : <>Thank you for choosing Joyful Cleaning Services.</>
+                  : <>Thank you for choosing Joyful Cleaning Services Corp..</>
                 }
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.7 }}>
                 <img src="/Joyful_logo_transparent.png" alt="Joyful"
                   style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
-                <span style={joyfulFont(16)}>Joyful Cleaning Services</span>
+                <span style={joyfulFont(16)}>Joyful Cleaning Services Corp.</span>
               </div>
             </div>
 

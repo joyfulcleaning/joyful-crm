@@ -35,7 +35,7 @@ const DEFAULTS: Record<string, string> = {
   'inv.taxRate':     '0',
   'inv.lateFeePct':  '0',
   'inv.autoSend':    'false',
-  'inv.footer':      'Thank you for choosing Joyful Cleaning Services! We appreciate your business.',
+  'inv.footer':      'Thank you for choosing Joyful Cleaning Services Corp.! We appreciate your business.',
   'inv.methods':     'cash,zelle,venmo,check',
   // Notifications
   'notif.email':     'info@joyfulservices.com',
@@ -401,7 +401,7 @@ export default function SettingsPage() {
                 onChange={e => set('inv.footer', e.target.value)}
                 rows={3}
                 className={inputCls + ' resize-none'}
-                placeholder="Thank you for choosing Joyful Cleaning Services!"
+                placeholder="Thank you for choosing Joyful Cleaning Services Corp.!"
               />
             </div>
 

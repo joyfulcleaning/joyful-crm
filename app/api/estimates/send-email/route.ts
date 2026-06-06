@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import { generateEstimatePDF, buildEmailHtml, EstimateData } from '@/lib/estimate-pdf'
@@ -22,9 +22,9 @@ export async function POST(req: Request) {
     })
 
     await transporter.sendMail({
-      from:        `"Joyful Cleaning Services" <${process.env.GMAIL_USER}>`,
+      from:        `"Joyful Cleaning Services Corp." <${process.env.GMAIL_USER}>`,
       to:          estimate.clientEmail,
-      subject:     `Estimate ${estimate.estimateNumber} — Joyful Cleaning Services`,
+      subject:     `Estimate ${estimate.estimateNumber} � Joyful Cleaning Services Corp.`,
       html:        emailHtml,
       attachments: [{
         filename:    `Estimate-${estimate.estimateNumber}.pdf`,

@@ -93,7 +93,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     <div style="display:flex;align-items:center;gap:14px">
       <img src="${logoDataUrl}" style="width:56px;height:56px;object-fit:contain"/>
       <div>
-        <div class="brand-name">Joyful Cleaning Services</div>
+        <div class="brand-name">Joyful Cleaning Services Corp.</div>
         <div class="brand-info">320 Laketree Blvd, Spring Lake NC 28390<br/>(919) 322-9092 · joyfulcleaningservicesnc@gmail.com</div>
       </div>
     </div>
@@ -150,11 +150,11 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   <div class="footer">
     <div class="footer-note">
       This estimate is valid until ${formatDate(estimate.validUntil)}.<br/>
-      Thank you for choosing Joyful Cleaning Services.
+      Thank you for choosing Joyful Cleaning Services Corp..
     </div>
     <div style="display:flex;align-items:center;gap:8px;opacity:0.7">
       <img src="${logoDataUrl}" style="height:36px;width:auto;object-fit:contain"/>
-      <div class="footer-brand">Joyful Cleaning Services</div>
+      <div class="footer-brand">Joyful Cleaning Services Corp.</div>
     </div>
   </div>
 </div>
@@ -185,13 +185,13 @@ export function buildEmailHtml(estimate: EstimateData): string {
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
     <div style="background:linear-gradient(135deg,#4b3fa0,#4f8ef7);padding:28px 32px;text-align:center;">
-      <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;">Joyful Cleaning Services</div>
+      <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;">Joyful Cleaning Services Corp.</div>
       <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px;">320 Laketree Blvd, Spring Lake NC 28390</div>
     </div>
     <div style="padding:28px 32px;">
       <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:8px;">Hello${estimate.clientName ? ', ' + estimate.clientName : ''}!</p>
       <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:24px;">
-        Thank you for your interest in Joyful Cleaning Services! Please find attached estimate
+        Thank you for your interest in Joyful Cleaning Services Corp.! Please find attached estimate
         <strong>${estimate.estimateNumber}</strong> for the requested cleaning services.
       </p>
       <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:24px;">
@@ -220,12 +220,12 @@ export function buildEmailHtml(estimate: EstimateData): string {
       </div>
       <p style="font-size:13px;color:#374151;margin-top:20px;">
         Warm regards,<br/>
-        <strong>Joyful Cleaning Services Team</strong><br/>
+        <strong>Joyful Cleaning Services Corp. Team</strong><br/>
         <span style="color:#6b7280">(919) 322-9092 · joyfulcleaningservicesnc@gmail.com</span>
       </p>
     </div>
     <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;text-align:center;">
-      <div style="font-size:11px;color:#9ca3af;">Joyful Cleaning Services · 320 Laketree Blvd, Spring Lake NC 28390</div>
+      <div style="font-size:11px;color:#9ca3af;">Joyful Cleaning Services Corp. · 320 Laketree Blvd, Spring Lake NC 28390</div>
     </div>
   </div>
 </body>

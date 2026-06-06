@@ -106,7 +106,7 @@ ${subtitle ? `<div class="sub">${subtitle}</div>` : ''}
   <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
   <tbody>${trs}</tbody>
 </table>
-<div class="footer">Joyful Cleaning Services — Confidential — ${new Date().getFullYear()}</div>
+<div class="footer">Joyful Cleaning Services Corp. — Confidential — ${new Date().getFullYear()}</div>
 <script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`
