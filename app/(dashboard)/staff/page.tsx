@@ -24,13 +24,16 @@ const PAY_METHODS = [
 ]
 
 function fmt(dateStr: string) {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 function fmtFull(dateStr: string) {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 function fmtDay(dateStr: string) {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────

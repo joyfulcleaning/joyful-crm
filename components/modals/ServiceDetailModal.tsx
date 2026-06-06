@@ -102,10 +102,8 @@ function calcPrices(client: any, type: string, roomSize: string) {
 
 function fmtDate(raw: string | undefined) {
   if (!raw) return '—'
-  const dateStr = raw.split('T')[0]
-  const d = new Date(dateStr + 'T12:00:00')
-  if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const [y, m, d] = raw.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 
 export default function ServiceDetailModal({ service, open, onClose, onSuccess }: Props) {

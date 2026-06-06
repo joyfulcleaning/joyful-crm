@@ -32,9 +32,8 @@ const PAYMENT_TERMS = [
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '—'
-  return new Date(dateStr.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
-  })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 
 function fmt(n: number) {
@@ -918,7 +917,7 @@ export default function FinancesPage() {
     taxAmount, total,
     items: selectedServices.map(s => ({
       id:          s.id,
-      description: `${s.type} - ${s.client?.name} (${s.serviceDate?.split('T')[0]})`,
+      description: `${s.type} - ${s.client?.name} (${s.serviceDate ? formatDate(s.serviceDate) : ''})`,
       quantity:    1,
       unitPrice:   Number(s.total),
       total:       Number(s.total),
@@ -957,7 +956,7 @@ export default function FinancesPage() {
           dueDate:       invForm.dueDate,
           notes:         invForm.notes,
           items: selectedServices.map(s => ({
-            description: `${s.type} - ${s.client?.name} (${s.serviceDate?.split('T')[0]})`,
+            description: `${s.type} - ${s.client?.name} (${s.serviceDate ? formatDate(s.serviceDate) : ''})`,
             quantity:    1,
             unitPrice:   Number(s.total),
             total:       Number(s.total),
@@ -1422,7 +1421,7 @@ export default function FinancesPage() {
                                 #{s.serviceNumber}
                                 {isInvoiced && <span className="ml-1 text-[9px] text-[#f59e0b]">invoiced</span>}
                               </td>
-                              <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{s.serviceDate?.split('T')[0]}</td>
+                              <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{s.serviceDate ? formatDate(s.serviceDate) : '—'}</td>
                               <td className="px-3 py-2.5 text-xs text-[#e8eaf0]">{s.type}</td>
                               <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
                                 {s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'}

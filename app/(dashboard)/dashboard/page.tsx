@@ -156,7 +156,7 @@ export default async function DashboardPage() {
                       {service.type}
                     </td>
                     <td className="px-6 py-4 text-sm text-[var(--muted)]">
-                      {new Date(service.serviceDate).toLocaleDateString('en-US')}
+                      {service.serviceDate ? (([y,m,d]) => `${m}/${d}/${y}`)(new Date(service.serviceDate).toISOString().split('T')[0].split('-')) : '—'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[service.status] || 'bg-[rgba(107,114,128,0.1)] text-[var(--muted)]'}`}>

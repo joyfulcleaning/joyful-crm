@@ -126,7 +126,11 @@ function trigger(blob: Blob, filename: string) {
 
 function fmtDate(v: unknown) {
   if (!v) return ''
-  try { return new Date(v as string).toLocaleDateString('en-US') } catch { return String(v) }
+  try {
+    const s = typeof v === 'string' ? v.split('T')[0] : new Date(v as string).toISOString().split('T')[0]
+    const [y, m, d] = s.split('-')
+    return `${m}/${d}/${y}`
+  } catch { return String(v) }
 }
 function fmtAmt(v: unknown) {
   if (v === null || v === undefined) return '$0.00'

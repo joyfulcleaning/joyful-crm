@@ -16,9 +16,8 @@ const INVOICE_STATUSES = [
 
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '—'
-  return new Date(dateStr.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 
 interface Props {

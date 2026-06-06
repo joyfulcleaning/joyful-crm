@@ -10,9 +10,8 @@ const LOGO_PAYPAL  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYA
 
 export function formatDate(dateStr: string) {
   if (!dateStr) return '—'
-  return new Date(dateStr.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric'
-  })
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${m}/${d}/${y}`
 }
 
 export interface EstimateData {

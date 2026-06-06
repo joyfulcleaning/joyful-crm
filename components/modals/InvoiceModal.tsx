@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Search, FileText, Check } from 'lucide-react'
+import { X, Search, FileText, Check, SlidersHorizontal, GripVertical } from 'lucide-react'
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 
@@ -22,6 +22,22 @@ const INVOICE_STATUSES = [
   { value: 'sent', label: 'Sent' },
   { value: 'paid', label: 'Paid' },
   { value: 'overdue', label: 'Overdue' },
+]
+
+const COL_DEFS = [
+  { id: 'id',      label: 'ID',       defaultOn: true  },
+  { id: 'date',    label: 'Date',     defaultOn: true  },
+  { id: 'type',    label: 'Type',     defaultOn: true  },
+  { id: 'unit',    label: 'Unit',     defaultOn: false },
+  { id: 'room',    label: 'Room',     defaultOn: false },
+  { id: 'time',    label: 'Time',     defaultOn: false },
+  { id: 'staff',   label: 'Staff',    defaultOn: true  },
+  { id: 'price',   label: 'Price',    defaultOn: true  },
+  { id: 'fee',     label: 'Add. Fee', defaultOn: true  },
+  { id: 'total',   label: 'Total',    defaultOn: true  },
+  { id: 'payment', label: 'Payment',  defaultOn: true  },
+  { id: 'status',  label: 'Status',   defaultOn: true  },
+  { id: 'notes',   label: 'Notes',    defaultOn: false },
 ]
 
 interface Props {
@@ -45,6 +61,13 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
   const [searched, setSearched] = useState(false)
   const [results, setResults] = useState<any[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [visibleCols, setVisibleCols] = useState<Set<string>>(
+    () => new Set(COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
+  )
+  const [colOrder, setColOrder] = useState<string[]>(() => COL_DEFS.map(c => c.id))
+  const [colsOpen, setColsOpen] = useState(false)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dropIdx, setDropIdx] = useState<number | null>(null)
 
   const [paymentTerm, setPaymentTerm] = useState('')
 
@@ -134,6 +157,72 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     else setSelected(new Set())
   }
 
+  function toggleCol(id: string) {
+    setVisibleCols(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function onDragStart(idx: number) { setDragIdx(idx) }
+  function onDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); setDropIdx(idx) }
+  function onDrop(idx: number) {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDropIdx(null); return }
+    setColOrder(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(dragIdx, 1)
+      next.splice(idx, 0, moved)
+      return next
+    })
+    setDragIdx(null); setDropIdx(null)
+  }
+  function onDragEnd() { setDragIdx(null); setDropIdx(null) }
+
+  function getColTdClass(colId: string): string {
+    switch (colId) {
+      case 'id':      return 'px-3 py-2 text-xs text-[#4f8ef7] font-mono'
+      case 'date':    return 'px-3 py-2 text-xs text-[#9ca3af]'
+      case 'type':    return 'px-3 py-2 text-xs text-[#e8eaf0]'
+      case 'unit':    return 'px-3 py-2 text-xs text-[#9ca3af]'
+      case 'room':    return 'px-3 py-2 text-xs text-[#9ca3af]'
+      case 'time':    return 'px-3 py-2 text-xs text-[#9ca3af]'
+      case 'staff':   return 'px-3 py-2 text-xs text-[#9ca3af]'
+      case 'price':   return 'px-3 py-2 text-xs text-[#9ca3af] font-mono'
+      case 'fee':     return 'px-3 py-2 text-xs text-[#f59e0b] font-mono'
+      case 'total':   return 'px-3 py-2 text-xs font-bold text-[#38d9a9] font-mono'
+      case 'payment': return 'px-3 py-2 text-xs text-[#6b7280] capitalize'
+      case 'status':  return 'px-3 py-2'
+      case 'notes':   return 'px-3 py-2 text-xs text-[#9ca3af] max-w-[140px] truncate'
+      default:        return 'px-3 py-2 text-xs text-[#9ca3af]'
+    }
+  }
+
+  function getCellContent(colId: string, s: any) {
+    switch (colId) {
+      case 'id':      return `#${s.serviceNumber}`
+      case 'date':    return s.serviceDate ? (([y,m,d]) => `${m}/${d}/${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'
+      case 'type':    return s.type
+      case 'unit':    return s.unit || '—'
+      case 'room':    return s.roomSize || '—'
+      case 'time':    return s.serviceTime || '—'
+      case 'staff':   return s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'
+      case 'price':   return `$${Number(s.basePrice).toFixed(2)}`
+      case 'fee':     return Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'
+      case 'total':   return `$${Number(s.total).toFixed(2)}`
+      case 'payment': return s.paymentMethod || '—'
+      case 'status':  return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
+          style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.1)' : 'rgba(245,158,11,0.1)', color: s.status === 'completed' ? '#38d9a9' : '#f59e0b' }}>
+          {s.status?.replace('_', ' ')}
+        </span>
+      )
+      case 'notes':   return s.notes || '—'
+      default:        return null
+    }
+  }
+
   const selectedServices = results.filter(s => selected.has(s.id))
   const subtotal = selectedServices.reduce((sum, s) => sum + Number(s.basePrice || 0), 0)
   const additionalFees = selectedServices.reduce((sum, s) => sum + Number(s.additionalFee || 0), 0)
@@ -194,6 +283,9 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     setInvNum('001')
     setError('')
   }
+
+  const orderedCols = colOrder.map(id => COL_DEFS.find(c => c.id === id)!).filter(Boolean)
+  const visibleOrderedCols = orderedCols.filter(c => visibleCols.has(c.id))
 
   if (!open) return null
 
@@ -413,7 +505,50 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                       <> · {clients.find(c => c.id === form.clientId)?.name}</>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {/* Column picker */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setColsOpen(o => !o)}
+                        className={`px-2 py-1 text-[10px] font-semibold border rounded-lg transition-all flex items-center gap-1 ${colsOpen ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-[#1e2330] border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0]'}`}
+                      >
+                        <SlidersHorizontal size={10} />
+                        Columns
+                      </button>
+                      {colsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setColsOpen(false)} />
+                          <div className="absolute right-0 top-8 z-20 bg-[#1a1f2e] border border-[#2a2f3d] rounded-xl shadow-2xl p-3 w-44">
+                            <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
+                            <div className="space-y-0.5">
+                              {orderedCols.map((col, i) => (
+                                <div
+                                  key={col.id}
+                                  draggable
+                                  onDragStart={() => onDragStart(i)}
+                                  onDragOver={e => onDragOver(e, i)}
+                                  onDrop={() => onDrop(i)}
+                                  onDragEnd={onDragEnd}
+                                  className={`flex items-center gap-1.5 py-0.5 rounded px-1 transition-colors ${dragIdx === i ? 'opacity-40' : ''} ${dropIdx === i && dragIdx !== i ? 'bg-[rgba(79,142,247,0.12)] border border-[#4f8ef7]' : 'border border-transparent'}`}
+                                >
+                                  <GripVertical size={11} className="text-[#4b5563] cursor-grab flex-shrink-0" />
+                                  <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={visibleCols.has(col.id)}
+                                      onChange={() => toggleCol(col.id)}
+                                      className="accent-[#4f8ef7] flex-shrink-0"
+                                    />
+                                    <span className="text-xs text-[#9ca3af] group-hover:text-[#e8eaf0] transition-colors truncate">{col.label}</span>
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
                     <button onClick={() => toggleAll(true)}
                       className="px-2 py-1 text-[10px] font-semibold bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-[#9ca3af] hover:text-[#e8eaf0] transition-all">
                       ☑ All
@@ -439,8 +574,8 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                               className="accent-[#4f8ef7]"
                             />
                           </th>
-                          {['ID', 'Date', 'Type', 'Staff', 'Price', 'Add. Fee', 'Total', 'Payment', 'Status'].map(h => (
-                            <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2">{h}</th>
+                          {visibleOrderedCols.map(col => (
+                            <th key={col.id} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2">{col.label}</th>
                           ))}
                         </tr>
                       </thead>
@@ -450,24 +585,11 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                             <td className="px-3 py-2">
                               <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelect(s.id)} className="accent-[#4f8ef7]" />
                             </td>
-                            <td className="px-3 py-2 text-xs text-[#4f8ef7] font-mono">#{s.serviceNumber}</td>
-                            <td className="px-3 py-2 text-xs text-[#9ca3af]">{s.serviceDate?.split('T')[0]}</td>
-                            <td className="px-3 py-2 text-xs text-[#e8eaf0]">{s.type}</td>
-                            <td className="px-3 py-2 text-xs text-[#9ca3af]">
-                              {s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-[#9ca3af] font-mono">${Number(s.basePrice).toFixed(2)}</td>
-                            <td className="px-3 py-2 text-xs text-[#f59e0b] font-mono">
-                              {Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'}
-                            </td>
-                            <td className="px-3 py-2 text-xs font-bold text-[#38d9a9] font-mono">${Number(s.total).toFixed(2)}</td>
-                            <td className="px-3 py-2 text-xs text-[#6b7280] capitalize">{s.paymentMethod || '—'}</td>
-                            <td className="px-3 py-2">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                                style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.1)' : 'rgba(245,158,11,0.1)', color: s.status === 'completed' ? '#38d9a9' : '#f59e0b' }}>
-                                {s.status?.replace('_', ' ')}
-                              </span>
-                            </td>
+                            {visibleOrderedCols.map(col => (
+                              <td key={col.id} className={getColTdClass(col.id)}>
+                                {getCellContent(col.id, s)}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
