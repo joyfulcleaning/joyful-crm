@@ -291,23 +291,19 @@ export default function FinancesPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  useEffect(() => {
-    if (invForm.clientId && invMode === 'auto') {
-      const client = clients.find(c => c.id === invForm.clientId)
-      if (client) {
-        const code = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-        setInvCode(code)
-        // Find the highest existing number for this code+year and suggest next
-        const pattern = new RegExp(`^${code}-(\\d+)-${invYear}$`, 'i')
-        let maxNum = 0
-        for (const inv of invoices) {
-          const m = inv.invoiceNumber?.match(pattern)
-          if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
-        }
-        setInvNum(String(maxNum + 1).padStart(3, '0'))
-      }
+  function applyAutoInvoiceNum(clientId: string, currentInvoices: any[], year: string) {
+    const client = clients.find(c => c.id === clientId)
+    if (!client) return
+    const code = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    setInvCode(code)
+    const pattern = new RegExp(`^${code}-(\\d+)-${year}$`, 'i')
+    let maxNum = 0
+    for (const inv of currentInvoices) {
+      const m = inv.invoiceNumber?.match(pattern)
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
     }
-  }, [invForm.clientId, clients, invMode, invoices, invYear])
+    setInvNum(String(maxNum + 1).padStart(3, '0'))
+  }
 
   useEffect(() => {
     if (!invPaymentTerm) return
@@ -1347,7 +1343,10 @@ export default function FinancesPage() {
               )}
               <div className="flex gap-2">
                 {[{ value: 'auto', label: '⚡ Auto' }, { value: 'manual', label: '✏️ Manual' }].map(m => (
-                  <button key={m.value} onClick={() => setInvMode(m.value as 'auto' | 'manual')}
+                  <button key={m.value} onClick={() => {
+                    setInvMode(m.value as 'auto' | 'manual')
+                    if (m.value === 'auto' && invForm.clientId) applyAutoInvoiceNum(invForm.clientId, invoices, invYear)
+                  }}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       invMode === m.value ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'
                     }`}>{m.label}</button>
@@ -1381,7 +1380,10 @@ export default function FinancesPage() {
               </div>
               <div>
                 <label className={labelCls}>Client <span className="text-[#f87171]">*</span></label>
-                <select value={invForm.clientId} onChange={e => setInv('clientId', e.target.value)} className={inputCls}>
+                <select value={invForm.clientId} onChange={e => {
+                  setInv('clientId', e.target.value)
+                  if (invMode === 'auto' && e.target.value) applyAutoInvoiceNum(e.target.value, invoices, invYear)
+                }} className={inputCls}>
                   <option value="">— Select client —</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
