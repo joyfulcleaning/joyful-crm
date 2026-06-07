@@ -1,6 +1,22 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 
+const TYPE_ABBR: Record<string, string> = {
+  'Standard Clean':      'SC',
+  'Deep Clean':          'DC',
+  'Heavy Deep Clean':    'HDC',
+  'Office Clean':        'OC',
+  'Move In/Out':         'MIO',
+  'Touch Up':            'TU',
+  'Construction Clean':  'CC',
+  'Airbnb Clean':        'ABC',
+  'Cancellation Fee':    'CF',
+  'Inspection Fee':      'IF',
+  'Monthly Cleaning':    'MC',
+  'Biweekly Cleaning':   'BWC',
+  'Weekly Cleaning':     'WC',
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending:     'Scheduled',
   in_progress: 'In Progress',
@@ -8,19 +24,16 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled:   'Cancelled',
 }
 
-// Convert "HH:MM" slot string (e.g. "09:00") to "HHMMSS"
 function timeToIcs(t: string) {
   return t.replace(':', '') + '00'
 }
 
-// Add 2 hours to a time string "HH:MM" → "HHMMSS"
 function endTime(t: string) {
   const [h, m] = t.split(':').map(Number)
   const end = (h + 2) % 24
   return String(end).padStart(2, '0') + String(m).padStart(2, '0') + '00'
 }
 
-// "2026-01-15T00:00:00.000Z" → "20260115"
 function dateToIcs(d: Date) {
   return d.toISOString().split('T')[0].replace(/-/g, '')
 }
@@ -42,11 +55,16 @@ export async function GET() {
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 
   const vevents = services.map(s => {
-    const dateStr  = dateToIcs(s.serviceDate)
-    const hasTime  = !!s.serviceTime
+    const dateStr    = dateToIcs(s.serviceDate)
+    const hasTime    = !!s.serviceTime
+    const abbr       = TYPE_ABBR[s.type] ?? s.type
     const staffNames = s.staff.map(st => st.user?.name?.split(' ')[0]).filter(Boolean).join(', ') || 'Unassigned'
 
-    const parts: string[] = []
+    // Title: Unit · Room · SC  (omit missing parts)
+    const titleParts = [s.unit, s.roomSize, abbr].filter(Boolean)
+    const summary    = titleParts.join(' · ')
+
+    // Location: pure address for Maps tap
     const addressParts = [
       s.address || s.client.address,
       s.client.city,
@@ -55,22 +73,23 @@ export async function GET() {
     ].filter(Boolean)
     const location = addressParts.join(', ')
 
+    // Description: client name first, then details + address repeated for Maps link
     const descLines = [
+      s.client.name,
       `Type: ${s.type}`,
-      `Client: ${s.client.name}`,
-      s.unit     ? `Unit: ${s.unit}`         : null,
-      s.roomSize ? `Room: ${s.roomSize}`      : null,
       `Staff: ${staffNames}`,
       `Status: ${STATUS_LABEL[s.status] ?? s.status}`,
-      Number(s.additionalFee) > 0 ? `Add. Fee: +$${Number(s.additionalFee).toFixed(2)}` : null,
+      Number(s.additionalFee) > 0 ? `Fee: +$${Number(s.additionalFee).toFixed(2)}` : null,
       `Total: $${Number(s.total).toFixed(2)}`,
+      location ? `📍 ${location}` : null,
       s.internalNotes ? `Notes: ${s.internalNotes}` : null,
     ].filter(Boolean).join('\\n')
 
+    const parts: string[] = []
     parts.push('BEGIN:VEVENT')
     parts.push(`UID:svc-${s.id}@joyfulcleaning.com`)
     parts.push(`DTSTAMP:${now}`)
-    parts.push(`SUMMARY:${escape(`${s.type} – ${s.client.name}`)}`)
+    parts.push(`SUMMARY:${escape(summary)}`)
     parts.push(`DESCRIPTION:${escape(descLines)}`)
     if (location) parts.push(`LOCATION:${escape(location)}`)
 
@@ -82,7 +101,7 @@ export async function GET() {
       parts.push(`DTEND;VALUE=DATE:${dateStr}`)
     }
 
-    const icsStatus = s.status === 'completed' ? 'CONFIRMED' : s.status === 'in_progress' ? 'CONFIRMED' : 'TENTATIVE'
+    const icsStatus = s.status === 'completed' || s.status === 'in_progress' ? 'CONFIRMED' : 'TENTATIVE'
     parts.push(`STATUS:${icsStatus}`)
     parts.push('END:VEVENT')
 
