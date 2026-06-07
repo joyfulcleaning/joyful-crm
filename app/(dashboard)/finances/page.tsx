@@ -95,6 +95,7 @@ export default function FinancesPage() {
     serviceStatus: 'all', taxRate: '0',
     paymentMethod: '', status: 'draft',
     dueDate: '', notes: '',
+    issuedAt: new Date().toLocaleDateString('en-CA'),
   })
   const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -1079,7 +1080,7 @@ export default function FinancesPage() {
           invoiceNumber,
           invoiceMode:   invMode,
           clientId:      invForm.clientId,
-          issuedAt:      new Date().toLocaleDateString('en-CA'),
+          issuedAt:      invForm.issuedAt || new Date().toLocaleDateString('en-CA'),
           periodFrom:    invForm.periodFrom || new Date().toLocaleDateString('en-CA'),
           periodTo:      invForm.periodTo   || new Date().toLocaleDateString('en-CA'),
           subtotal, additionalFees,
@@ -1393,6 +1394,10 @@ export default function FinancesPage() {
                   <option value="">— Select Payment Terms —</option>
                   {PAYMENT_TERMS.map(t => <option key={t.label} value={t.label}>{t.label}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className={labelCls}>Issue Date</label>
+                <input type="date" value={invForm.issuedAt} onChange={e => setInv('issuedAt', e.target.value)} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>Due Date</label>
