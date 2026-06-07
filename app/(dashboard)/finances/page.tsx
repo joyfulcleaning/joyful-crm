@@ -11,6 +11,7 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import EstimatePDFModal, { type EstimateData } from '@/components/modals/EstimatePDFModal'
 import ClientModal from '@/components/modals/ClientModal'
 import ServiceModal from '@/components/modals/ServiceModal'
+import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 
 const INV_COL_DEFS = [
   { id: 'id',      label: 'ID',       defaultOn: true  },
@@ -134,6 +135,8 @@ export default function FinancesPage() {
   useEffect(() => {
     try { localStorage.setItem('joyful_inv_sort_dir', invSortDir) } catch {}
   }, [invSortDir])
+  const [invDetailService, setInvDetailService] = useState<any>(null)
+  const [invDetailOpen, setInvDetailOpen] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [invError, setInvError] = useState('')
   const [histFilter, setHistFilter]           = useState('all')
@@ -1599,7 +1602,15 @@ export default function FinancesPage() {
                                   className={getInvColTdClass(col.id)}
                                   style={col.id === 'id' ? { color: isInvoiced ? '#6b7280' : '#4f8ef7' } : undefined}
                                 >
-                                  {getInvCellContent(col.id, s, isInvoiced)}
+                                  {col.id === 'id' ? (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setInvDetailService(s); setInvDetailOpen(true) }}
+                                      className="font-mono font-semibold hover:underline cursor-pointer"
+                                      style={{ color: 'inherit', background: 'none', border: 'none', padding: 0 }}
+                                    >
+                                      {getInvCellContent(col.id, s, isInvoiced)}
+                                    </button>
+                                  ) : getInvCellContent(col.id, s, isInvoiced)}
                                 </td>
                               ))}
                             </tr>
@@ -3112,6 +3123,12 @@ export default function FinancesPage() {
         initialBasePrice={estFromEstimate ? String(Number(estFromEstimate.total).toFixed(2)) : undefined}
         initialNotes={estFromEstimate?.notes || undefined}
         initialAddress={estFromEstimate?.clientAddress || undefined}
+      />
+      <ServiceDetailModal
+        service={invDetailService}
+        open={invDetailOpen}
+        onClose={() => { setInvDetailOpen(false); setInvDetailService(null) }}
+        onSuccess={() => {}}
       />
     </div>
   )
