@@ -76,14 +76,16 @@ export async function GET() {
     // LOCATION = "Client Name, Address" → shows as 2nd line in month preview + opens Maps
     const location = [s.client.name, address].filter(Boolean).join(', ')
 
-    // Description: type, staff, status, notes — no total
+    // Description: real \n so escape() converts them correctly to ICS line breaks
+    const unitRoom = [s.unit ? `Unit: ${s.unit}` : null, s.roomSize ? `Room: ${s.roomSize}` : null].filter(Boolean).join(' | ')
     const descLines = [
+      `Client: ${s.client.name}`,
       `Type: ${s.type}`,
+      unitRoom || null,
       `Staff: ${staffNames}`,
       `Status: ${STATUS_LABEL[s.status] ?? s.status}`,
-      Number(s.additionalFee) > 0 ? `Fee: +$${Number(s.additionalFee).toFixed(2)}` : null,
-      s.internalNotes ? `Notes: ${s.internalNotes}` : null,
-    ].filter(Boolean).join('\\n')
+      s.internalNotes ? `Note For Staff: ${s.internalNotes}` : null,
+    ].filter(Boolean).join('\n')
 
     const parts: string[] = []
     parts.push('BEGIN:VEVENT')
