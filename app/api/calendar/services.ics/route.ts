@@ -64,24 +64,24 @@ export async function GET() {
     const titleParts = [s.unit, s.roomSize, abbr].filter(Boolean)
     const summary    = titleParts.join(' · ')
 
-    // Location: pure address for Maps tap
+    // Address parts for Maps
     const addressParts = [
       s.address || s.client.address,
       s.client.city,
       s.client.state,
       s.client.zip,
     ].filter(Boolean)
-    const location = addressParts.join(', ')
+    const address = addressParts.join(', ')
 
-    // Description: client name first, then details + address repeated for Maps link
+    // LOCATION = "Client Name, Address" → shows as 2nd line in month preview + opens Maps
+    const location = [s.client.name, address].filter(Boolean).join(', ')
+
+    // Description: type, staff, status, notes — no total
     const descLines = [
-      s.client.name,
       `Type: ${s.type}`,
       `Staff: ${staffNames}`,
       `Status: ${STATUS_LABEL[s.status] ?? s.status}`,
       Number(s.additionalFee) > 0 ? `Fee: +$${Number(s.additionalFee).toFixed(2)}` : null,
-      `Total: $${Number(s.total).toFixed(2)}`,
-      location ? `📍 ${location}` : null,
       s.internalNotes ? `Notes: ${s.internalNotes}` : null,
     ].filter(Boolean).join('\\n')
 
