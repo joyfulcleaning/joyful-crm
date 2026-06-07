@@ -297,9 +297,17 @@ export default function FinancesPage() {
       if (client) {
         const code = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
         setInvCode(code)
+        // Find the highest existing number for this code+year and suggest next
+        const pattern = new RegExp(`^${code}-(\\d+)-${invYear}$`, 'i')
+        let maxNum = 0
+        for (const inv of invoices) {
+          const m = inv.invoiceNumber?.match(pattern)
+          if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
+        }
+        setInvNum(String(maxNum + 1).padStart(3, '0'))
       }
     }
-  }, [invForm.clientId, clients, invMode])
+  }, [invForm.clientId, clients, invMode, invoices, invYear])
 
   useEffect(() => {
     if (!invPaymentTerm) return
