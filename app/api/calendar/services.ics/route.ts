@@ -82,7 +82,6 @@ export async function GET() {
       `Client: ${s.client.name}`,
       `Type: ${s.type}`,
       unitRoom || null,
-      `Staff: ${staffNames}`,
       `Status: ${STATUS_LABEL[s.status] ?? s.status}`,
       s.internalNotes ? `Note For Staff: ${s.internalNotes}` : null,
     ].filter(Boolean).join('\n')
