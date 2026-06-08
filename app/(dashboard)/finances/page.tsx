@@ -1162,6 +1162,8 @@ export default function FinancesPage() {
   const histTotal      = filteredInvoices.reduce((s, i) => s + Number(i.total       || 0), 0)
   const histPaid       = filteredInvoices.reduce((s, i) => s + Number(i.amountPaid  || 0), 0)
   const histBalance    = filteredInvoices.reduce((s, i) => s + Number(i.balanceDue  || 0), 0)
+  const histPending    = filteredInvoices.filter(i => i.status === 'sent' || i.status === 'draft').reduce((s, i) => s + Number(i.balanceDue || 0), 0)
+  const histOverdue    = filteredInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.balanceDue || 0), 0)
   const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
   const tabs = [
@@ -1784,6 +1786,24 @@ export default function FinancesPage() {
                     <span className="text-[10px] text-[#6b7280]">Balance due:</span>
                     <span className="text-[11px] font-bold font-mono" style={{ color: histBalance > 0 ? '#f87171' : '#38d9a9' }}>{fmt(histBalance)}</span>
                   </div>
+                  {histPending > 0 && (
+                    <>
+                      <div className="w-px h-4 bg-[#2a2f3d]" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-[#6b7280]">Pending to pay:</span>
+                        <span className="text-[11px] font-bold font-mono text-[#f59e0b]">{fmt(histPending)}</span>
+                      </div>
+                    </>
+                  )}
+                  {histOverdue > 0 && (
+                    <>
+                      <div className="w-px h-4 bg-[#2a2f3d]" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-[#6b7280]">Overdue balance:</span>
+                        <span className="text-[11px] font-bold font-mono text-[#f87171]">{fmt(histOverdue)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
               <table className="w-full">
