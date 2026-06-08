@@ -144,6 +144,7 @@ export default function FinancesPage() {
   const [histClientFilter, setHistClientFilter] = useState('all')
   const [histDateFrom, setHistDateFrom]         = useState('')
   const [histDateTo, setHistDateTo]             = useState('')
+  const [histSearch, setHistSearch]             = useState('')
   const [histSortKey, setHistSortKey]           = useState('issuedAt')
   const [histSortDir, setHistSortDir]           = useState<'asc'|'desc'>('desc')
 
@@ -1131,6 +1132,19 @@ export default function FinancesPage() {
     if (histClientFilter !== 'all' && i.clientId !== histClientFilter) return false
     if (histDateFrom && i.issuedAt?.split('T')[0] < histDateFrom) return false
     if (histDateTo   && i.issuedAt?.split('T')[0] > histDateTo)   return false
+    if (histSearch) {
+      const q = histSearch.toLowerCase()
+      const issuedFmt = i.issuedAt ? formatDate(i.issuedAt).toLowerCase() : ''
+      const paidFmt   = i.paidAt   ? formatDate(i.paidAt).toLowerCase()   : ''
+      const matches =
+        i.invoiceNumber?.toLowerCase().includes(q) ||
+        i.client?.name?.toLowerCase().includes(q)  ||
+        i.status?.toLowerCase().includes(q)        ||
+        issuedFmt.includes(q)                      ||
+        paidFmt.includes(q)                        ||
+        String(i.total).includes(q)
+      if (!matches) return false
+    }
     return true
   }).sort((a, b) => {
     let av: any, bv: any
@@ -1149,7 +1163,7 @@ export default function FinancesPage() {
   const histTotal      = filteredInvoices.reduce((s, i) => s + Number(i.total       || 0), 0)
   const histPaid       = filteredInvoices.reduce((s, i) => s + Number(i.amountPaid  || 0), 0)
   const histBalance    = filteredInvoices.reduce((s, i) => s + Number(i.balanceDue  || 0), 0)
-  const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo
+  const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
   const tabs = [
     { key: 'summary',   label: '📊 Summary'   },
@@ -1699,6 +1713,18 @@ export default function FinancesPage() {
 
               {/* Filter bar */}
               <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 flex-wrap bg-[var(--surface)]">
+                {/* General search */}
+                <div className="relative">
+                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
+                  <input
+                    type="text"
+                    value={histSearch}
+                    onChange={e => setHistSearch(e.target.value)}
+                    placeholder="Search invoices..."
+                    className="pl-7 pr-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44"
+                  />
+                </div>
+
                 {/* Client dropdown */}
                 <select
                   value={histClientFilter}
@@ -1729,7 +1755,7 @@ export default function FinancesPage() {
                 {/* Clear button */}
                 {histHasFilter && (
                   <button
-                    onClick={() => { setHistFilter('all'); setHistClientFilter('all'); setHistDateFrom(''); setHistDateTo('') }}
+                    onClick={() => { setHistFilter('all'); setHistClientFilter('all'); setHistDateFrom(''); setHistDateTo(''); setHistSearch('') }}
                     className="flex items-center gap-1 px-2 py-1.5 bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-[10px] font-semibold rounded-lg hover:bg-[rgba(248,113,113,0.2)] transition-all"
                   >
                     <X size={10} /> Clear
