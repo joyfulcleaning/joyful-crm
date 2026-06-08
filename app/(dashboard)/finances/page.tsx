@@ -1127,7 +1127,8 @@ export default function FinancesPage() {
   const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
   const netIncome      = totalInvoiced - pendingToPay - totalExpenses
   const filteredInvoices = invoices.filter(i => {
-    if (histFilter !== 'all' && i.status !== histFilter) return false
+    if (histFilter === 'pending' && i.status !== 'sent' && i.status !== 'draft') return false
+    if (histFilter !== 'all' && histFilter !== 'pending' && i.status !== histFilter) return false
     if (histClientFilter !== 'all' && i.clientId !== histClientFilter) return false
     if (histDateFrom && i.issuedAt?.split('T')[0] < histDateFrom) return false
     if (histDateTo   && i.issuedAt?.split('T')[0] > histDateTo)   return false
@@ -1162,7 +1163,7 @@ export default function FinancesPage() {
   const histTotal      = filteredInvoices.reduce((s, i) => s + Number(i.total       || 0), 0)
   const histPaid       = filteredInvoices.reduce((s, i) => s + Number(i.amountPaid  || 0), 0)
   const histBalance    = filteredInvoices.reduce((s, i) => s + Number(i.balanceDue  || 0), 0)
-  const histPending    = filteredInvoices.filter(i => i.status === 'sent').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
+  const histPending    = filteredInvoices.filter(i => i.status === 'sent' || i.status === 'draft').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
   const histOverdue    = filteredInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
   const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
@@ -1703,7 +1704,7 @@ export default function FinancesPage() {
               <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between flex-wrap gap-2">
                 <div className="text-xs font-bold text-[#e8eaf0]">📋 Invoice History</div>
                 <div className="flex gap-2 flex-wrap">
-                  {[{ key: 'all', label: 'All' }, { key: 'paid', label: 'Paid' }, { key: 'sent', label: 'Pending' }, { key: 'overdue', label: 'Overdue' }].map(f => (
+                  {[{ key: 'all', label: 'All' }, { key: 'paid', label: 'Paid' }, { key: 'pending', label: 'Pending' }, { key: 'overdue', label: 'Overdue' }].map(f => (
                     <button key={f.key} onClick={() => setHistFilter(f.key)}
                       className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-all ${
                         histFilter === f.key ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'
