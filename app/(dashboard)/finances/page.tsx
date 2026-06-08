@@ -41,10 +41,9 @@ const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check',
 
 const PAYMENT_TERMS = [
   { label: 'Due on Receipt', days: 0 },
+  { label: 'Net 7',  days: 7  },
   { label: 'Net 15', days: 15 },
   { label: 'Net 30', days: 30 },
-  { label: 'Net 45', days: 45 },
-  { label: 'Net 60', days: 60 },
 ]
 
 function formatDate(dateStr: string) {
@@ -310,11 +309,11 @@ export default function FinancesPage() {
     if (!invPaymentTerm) return
     const term = PAYMENT_TERMS.find(t => t.label === invPaymentTerm)
     if (!term) return
-    const base = invForm.periodTo || invForm.periodFrom || new Date().toISOString().split('T')[0]
+    const base = invForm.issuedAt || new Date().toLocaleDateString('en-CA')
     const date = new Date(base + 'T12:00:00Z')
     date.setUTCDate(date.getUTCDate() + term.days)
     setInvForm(f => ({ ...f, dueDate: date.toISOString().split('T')[0] }))
-  }, [invPaymentTerm, invForm.periodTo, invForm.periodFrom])
+  }, [invPaymentTerm, invForm.issuedAt])
 
   useEffect(() => {
     if (!searchQ || searchQ.length < 2) { setSearchResults([]); return }
