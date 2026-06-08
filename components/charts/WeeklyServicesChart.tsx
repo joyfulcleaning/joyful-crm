@@ -138,7 +138,7 @@ export default function WeeklyServicesChart() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-semibold text-[var(--text)]">Weekly Services</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">Service volume per week — {year}</p>
+          <p className="text-xs text-[var(--muted)] mt-0.5">Count of services · per week · {year}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Avg per day badge */}

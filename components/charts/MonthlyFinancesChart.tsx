@@ -140,7 +140,7 @@ export default function MonthlyFinancesChart() {
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="text-sm font-bold text-[var(--text)]">Monthly Finances</div>
-          <div className="text-xs text-[var(--muted)] mt-0.5">Invoices paid vs. expenses by month — {year}</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">Collected − Expenses = Net Income · per month · {year}</div>
         </div>
         <div className="flex items-center gap-3">
           {/* Legend */}

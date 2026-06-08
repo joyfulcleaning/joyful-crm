@@ -35,32 +35,36 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: 'Total Services',
-      value: totalServices,
+      label:   'Total Services',
+      value:   totalServices,
+      formula: 'all statuses combined',
       icon: Briefcase,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10',
       border: 'border-blue-500/20',
     },
     {
-      label: 'Completed',
-      value: completedServices,
+      label:   'Completed',
+      value:   completedServices,
+      formula: `${totalServices ? Math.round(completedServices / totalServices * 100) : 0}% of total services`,
       icon: CheckCircle,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10',
       border: 'border-emerald-500/20',
     },
     {
-      label: 'Pending',
-      value: pendingServices,
+      label:   'Pending',
+      value:   pendingServices,
+      formula: `${totalServices ? Math.round(pendingServices / totalServices * 100) : 0}% of total services`,
       icon: Clock,
       color: 'text-amber-400',
       bg: 'bg-amber-500/10',
       border: 'border-amber-500/20',
     },
     {
-      label: 'Active Clients',
-      value: totalClients,
+      label:   'Active Clients',
+      value:   totalClients,
+      formula: 'all registered clients',
       icon: Users,
       color: 'text-purple-400',
       bg: 'bg-purple-500/10',
@@ -103,6 +107,7 @@ export default async function DashboardPage() {
             <div className={`text-3xl font-bold ${stat.color}`}>
               {stat.value}
             </div>
+            <div className="text-[10px] text-[var(--muted)] mt-1.5 font-mono">{stat.formula}</div>
           </div>
         ))}
       </div>

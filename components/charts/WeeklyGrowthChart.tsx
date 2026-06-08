@@ -148,7 +148,7 @@ export default function WeeklyGrowthChart() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-semibold text-[var(--text)]">Net Income Growth</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">Weekly net income — {year}</p>
+          <p className="text-xs text-[var(--muted)] mt-0.5">Collected − Expenses · per week · {year}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">

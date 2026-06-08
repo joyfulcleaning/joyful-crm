@@ -143,7 +143,7 @@ export default function CumulativeNetIncomeChart() {
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="text-sm font-bold text-[var(--text)]">Cumulative Net Income</div>
-          <div className="text-xs text-[var(--muted)] mt-0.5">Running total accumulated by week — {year}</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">Σ (Collected − Expenses) · running total · {year}</div>
         </div>
         <div className="flex items-center gap-3">
           {!loading && !allZero && (
