@@ -224,6 +224,16 @@ export default function CalendarPage() {
           calApi.removeAllEvents()
           mapped.forEach((ev: any) => calApi.addEvent(ev))
         }
+        // Re-sync the daily services table for the currently selected date
+        setSelectedDate(prev => {
+          if (prev) {
+            const filtered = data
+              .filter((s: any) => getDateStr(s.serviceDate) === prev)
+              .sort((a: any, b: any) => a.serviceTime.localeCompare(b.serviceTime))
+            setSelectedServices(filtered)
+          }
+          return prev
+        })
         injectBadges()
       })
       .catch(() => setEvents([]))
