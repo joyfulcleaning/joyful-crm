@@ -203,7 +203,7 @@ export default function CalendarPage() {
   }, [injectBadges, measureRows])
 
   function loadServices() {
-    fetch('/api/services')
+    fetch('/api/services', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setServices(data)
@@ -218,6 +218,12 @@ export default function CalendarPage() {
           extendedProps: s,
         }))
         setEvents(mapped)
+        // Force FullCalendar to re-render events (it doesn't always react to prop changes for existing IDs)
+        const calApi = calendarRef.current?.getApi?.()
+        if (calApi) {
+          calApi.removeAllEvents()
+          mapped.forEach((ev: any) => calApi.addEvent(ev))
+        }
         injectBadges()
       })
       .catch(() => setEvents([]))
