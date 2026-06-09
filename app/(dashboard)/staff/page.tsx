@@ -120,7 +120,11 @@ export default function StaffPage() {
   function loadStaff() {
     fetch('/api/staff')
       .then(r => r.json())
-      .then(d => { setStaff(d); setLoading(false) })
+      .then(d => {
+        setStaff(d)
+        setLoading(false)
+        setSelectedMember((prev: any) => prev ? (d.find((s: any) => s.id === prev.id) ?? prev) : null)
+      })
       .catch(() => setLoading(false))
   }
 

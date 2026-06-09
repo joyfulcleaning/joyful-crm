@@ -20,7 +20,11 @@ function ClientsTab() {
   function loadClients() {
     fetch('/api/clients')
       .then(res => res.json())
-      .then(data => { setClients(data); setLoading(false) })
+      .then(data => {
+        setClients(data)
+        setLoading(false)
+        setSelectedClient((prev: any) => prev ? (data.find((c: any) => c.id === prev.id) ?? prev) : null)
+      })
       .catch(() => setLoading(false))
   }
 
