@@ -225,15 +225,12 @@ export default function CalendarPage() {
           mapped.forEach((ev: any) => calApi.addEvent(ev))
         }
         // Re-sync the daily services table for the currently selected date
-        setSelectedDate(prev => {
-          if (prev) {
-            const filtered = data
-              .filter((s: any) => getDateStr(s.serviceDate) === prev)
-              .sort((a: any, b: any) => a.serviceTime.localeCompare(b.serviceTime))
-            setSelectedServices(filtered)
-          }
-          return prev
-        })
+        if (selectedDate) {
+          const filtered = data
+            .filter((s: any) => getDateStr(s.serviceDate) === selectedDate)
+            .sort((a: any, b: any) => a.serviceTime.localeCompare(b.serviceTime))
+          setSelectedServices(filtered)
+        }
         injectBadges()
       })
       .catch(() => setEvents([]))
