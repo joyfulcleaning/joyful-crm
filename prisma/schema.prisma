@@ -249,6 +249,7 @@ model Service {
   type            String
   address         String?
   unit            String?
+  numericKey      String?
   roomSize        String?
   basePrice       Decimal        @db.Decimal(10, 2)
   additionalFee   Decimal?       @default(0) @db.Decimal(10, 2)

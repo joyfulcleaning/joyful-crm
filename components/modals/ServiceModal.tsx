@@ -235,6 +235,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     serviceTime: '',
     address: '',
     unit: '',
+    numericKey: '',
     roomSize: '',
     frequency: 'one_time',
     basePrice: '',
@@ -258,6 +259,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
         serviceTime:   initialService.serviceTime   || '',
         address:       initialService.address       || '',
         unit:          initialService.unit          || '',
+        numericKey:    initialService.numericKey    || '',
         roomSize:      initialService.roomSize      || '',
         frequency:     initialService.frequency     || 'one_time',
         basePrice:     String(initialService.basePrice     || ''),
@@ -391,7 +393,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
   function resetForm() {
     setForm({
       clientId: '', type: 'Standard Clean', serviceDate: '',
-      serviceTime: '', address: '', unit: '', roomSize: '',
+      serviceTime: '', address: '', unit: '', numericKey: '', roomSize: '',
       frequency: 'one_time', basePrice: '', additionalFee: '',
       paymentMethod: 'zelle', status: 'pending',
       internalNotes: '', staffNotes: '', sendEmail: false, staffIds: [],
@@ -622,8 +624,8 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
             </div>
           )}
 
-          {/* Unit + Room Size */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Unit + Clave Numerico + Room Size */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Unit</label>
               <input
@@ -631,6 +633,16 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                 value={form.unit}
                 onChange={e => set('unit', e.target.value)}
                 placeholder="Apt 2B, Unit 101..."
+                className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Clave Numerico</label>
+              <input
+                type="text"
+                value={form.numericKey}
+                onChange={e => set('numericKey', e.target.value)}
+                placeholder="Ej: 1234"
                 className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
               />
             </div>

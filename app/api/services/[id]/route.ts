@@ -39,6 +39,7 @@ export async function PATCH(
     if (body.status        !== undefined) data.status        = body.status
     if (body.address       !== undefined) data.address       = body.address
     if (body.unit          !== undefined) data.unit          = body.unit
+    if (body.numericKey    !== undefined) data.numericKey    = body.numericKey
     if (body.roomSize      !== undefined) data.roomSize      = body.roomSize
     if (body.frequency     !== undefined) data.frequency     = body.frequency
     if (body.basePrice     !== undefined) data.basePrice     = parseFloat(body.basePrice)
@@ -87,6 +88,7 @@ export async function PATCH(
         if (body.serviceTime   !== undefined) bulkData.serviceTime   = body.serviceTime
         if (body.address       !== undefined) bulkData.address       = body.address
         if (body.unit          !== undefined) bulkData.unit          = body.unit
+        if (body.numericKey    !== undefined) bulkData.numericKey    = body.numericKey
         if (body.roomSize      !== undefined) bulkData.roomSize      = body.roomSize
         if (body.frequency     !== undefined) bulkData.frequency     = body.frequency
         if (body.basePrice     !== undefined) bulkData.basePrice     = parseFloat(body.basePrice)

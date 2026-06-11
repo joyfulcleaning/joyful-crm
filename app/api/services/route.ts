@@ -78,6 +78,7 @@ export async function POST(request: Request) {
         status: body.status || 'pending',
         address: body.address,
         unit: body.unit || null,
+        numericKey: body.numericKey || null,
         roomSize: body.roomSize || null,
         frequency: body.frequency || null,
         parentService: body.parentServiceId ? { connect: { id: body.parentServiceId } } : undefined,
