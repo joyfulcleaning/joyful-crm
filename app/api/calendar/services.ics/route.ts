@@ -60,8 +60,13 @@ export async function GET() {
     const abbr       = TYPE_ABBR[s.type] ?? s.type
     const staffNames = s.staff.map(st => st.user?.name?.split(' ')[0]).filter(Boolean).join(', ') || 'Unassigned'
 
-    // Title: Unit · Room · SC  (omit missing parts)
-    const titleParts = [s.unit, s.roomSize, abbr].filter(Boolean)
+    // Title: Unit · Room · Clave #### · DC/TU/HDC  (omit missing parts; SC is implicit/omitted)
+    const titleParts = [
+      s.unit,
+      s.roomSize,
+      s.numericKey ? `Clave ${s.numericKey}` : null,
+      abbr !== 'SC' ? abbr : null,
+    ].filter(Boolean)
     const summary    = titleParts.join(' · ')
 
     // Address parts for Maps
@@ -77,7 +82,11 @@ export async function GET() {
     const location = [s.client.name, address].filter(Boolean).join(', ')
 
     // Description: real \n so escape() converts them correctly to ICS line breaks
-    const unitRoom = [s.unit ? `Unit: ${s.unit}` : null, s.roomSize ? `Room: ${s.roomSize}` : null].filter(Boolean).join(' | ')
+    const unitRoom = [
+      s.unit       ? `Unit: ${s.unit}`             : null,
+      s.roomSize   ? `Room: ${s.roomSize}`         : null,
+      s.numericKey ? `Clave: ${s.numericKey}`      : null,
+    ].filter(Boolean).join(' | ')
     const descLines = [
       `Client: ${s.client.name}`,
       `Type: ${s.type}`,

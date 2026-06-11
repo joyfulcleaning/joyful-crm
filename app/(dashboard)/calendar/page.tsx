@@ -14,6 +14,7 @@ const CAL_COLS = [
   { key: 'time',    label: 'Time' },
   { key: 'client',  label: 'Client' },
   { key: 'unit',    label: 'Unit' },
+  { key: 'numericKey', label: 'Clave' },
   { key: 'roomSize',label: 'Room Size' },
   { key: 'address', label: 'Address' },
   { key: 'type',    label: 'Type' },
@@ -477,6 +478,7 @@ export default function CalendarPage() {
                   {ccol('time')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Time</th>}
                   {ccol('client')   && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Client</th>}
                   {ccol('unit')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Unit</th>}
+                  {ccol('numericKey') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Clave</th>}
                   {ccol('roomSize') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Room Size</th>}
                   {ccol('address')  && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Address</th>}
                   {ccol('type')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Type</th>}
@@ -493,6 +495,7 @@ export default function CalendarPage() {
                     {ccol('time')     && <td className="py-2 text-[var(--muted2)]">{s.serviceTime}</td>}
                     {ccol('client')   && <td className="py-2 text-[var(--text)]">{s.client?.name}</td>}
                     {ccol('unit')     && <td className="py-2 text-[var(--muted)] text-xs">{s.unit || '—'}</td>}
+                    {ccol('numericKey') && <td className="py-2 text-[var(--muted)] text-xs">{s.numericKey ? `Clave ${s.numericKey}` : '—'}</td>}
                     {ccol('roomSize') && <td className="py-2 text-[var(--muted)] text-xs">{s.roomSize || '—'}</td>}
                     {ccol('address')  && <td className="py-2 text-[var(--muted)] text-xs max-w-32 truncate">{s.address || '—'}</td>}
                     {ccol('type')     && <td className="py-2">
