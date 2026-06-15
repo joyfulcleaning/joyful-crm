@@ -10,6 +10,12 @@ export async function PATCH(
     const { id } = await context.params
     const body = await request.json()
 
+    let hashedPassword: string | undefined
+    if (body.password) {
+      const bcrypt = await import('bcryptjs')
+      hashedPassword = await bcrypt.hash(body.password, 12)
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -18,6 +24,7 @@ export async function PATCH(
         phone: body.phone ?? null,
         role: body.role,
         status: body.status,
+        ...(hashedPassword ? { password: hashedPassword } : {}),
         scheduleType:          body.scheduleType          ?? null,
         hourlyRate:            body.hourlyRate != null ? parseFloat(body.hourlyRate) : null,
         payRates:              body.payRates              ?? null,

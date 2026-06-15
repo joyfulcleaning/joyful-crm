@@ -39,7 +39,7 @@ export default function StaffDetailModal({ member, open, onClose, onSuccess }: P
   const [error, setError]     = useState('')
   const [form, setForm]       = useState<any>(null)
 
-  function startEdit() { setForm({ ...member }); setEditing(true) }
+  function startEdit() { setForm({ ...member, password: '' }); setEditing(true) }
 
   function cancelEdit() { setEditing(false); setForm(null); setError('') }
 
@@ -196,6 +196,16 @@ export default function StaffDetailModal({ member, open, onClose, onSuccess }: P
               <div className="text-xs font-bold capitalize" style={{ color: statusColor }}>{data.status}</div>
             )}
           </div>
+
+          {/* Reset Password */}
+          {editing && (
+            <div>
+              <label className={LABEL}>Reset Password</label>
+              <input type="text" value={form.password || ''} onChange={e => set('password', e.target.value)}
+                placeholder="Leave blank to keep current password" className={INPUT} />
+              <p className="text-[10px] text-[#6b7280] mt-1">Only fill this in to set a new password for this user.</p>
+            </div>
+          )}
 
           {/* ── Employee Info ── */}
           <div className="bg-[#1e2330] border border-[#2a2f3d] rounded-xl p-4 space-y-4">

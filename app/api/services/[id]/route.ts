@@ -1,13 +1,36 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
+import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
+
+async function assertUserCanAccess(serviceId: string, userId: string) {
+  const visibleDates = getVisibleServiceDates()
+  const service = await prisma.service.findFirst({
+    where: {
+      id: serviceId,
+      serviceDate: { in: visibleDates.map(d => new Date(d)) },
+      staff: { some: { userId } },
+    },
+    select: { id: true },
+  })
+  return !!service
+}
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
+
+    if (authUser.role === 'user' && !(await assertUserCanAccess(id, authUser.id))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const service = await prisma.service.findUnique({
       where: { id },
       include: {
@@ -18,19 +41,38 @@ export async function GET(
       }
     })
     if (!service) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json(service)
+    return NextResponse.json(authUser.role === 'user' ? stripPriceFields(service) : service)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch service' }, { status: 500 })
   }
 }
+
+const USER_EDITABLE_FIELDS = ['status', 'staffNotes', 'completionNotes'] as const
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
-    const body = await request.json()
+    const rawBody = await request.json()
+
+    if (authUser.role === 'user') {
+      if (!(await assertUserCanAccess(id, authUser.id))) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      const allowed: Record<string, unknown> = {}
+      for (const field of USER_EDITABLE_FIELDS) {
+        if (rawBody[field] !== undefined) allowed[field] = rawBody[field]
+      }
+      const service = await prisma.service.update({ where: { id }, data: allowed })
+      return NextResponse.json(stripPriceFields(service))
+    }
+
+    const body = rawBody
 
     const data: Record<string, unknown> = {}
     if (body.serviceDate   !== undefined) data.serviceDate   = new Date(body.serviceDate)

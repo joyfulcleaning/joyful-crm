@@ -1,0 +1,37 @@
+export const dynamic = 'force-dynamic'
+import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import { prisma } from '@/lib/prisma'
+import { signMobileToken } from '@/lib/mobile-auth'
+
+export async function POST(request: Request) {
+  try {
+    const { email, password } = await request.json()
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user || !user.password) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+    if (!passwordMatch) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+
+    if (user.status !== 'active') {
+      return NextResponse.json({ error: 'Account is not active' }, { status: 403 })
+    }
+
+    const token = signMobileToken(user)
+    return NextResponse.json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    })
+  } catch (error) {
+    console.error('Error in mobile login:', error)
+    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+  }
+}

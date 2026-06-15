@@ -3,10 +3,23 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
+import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const where = authUser.role === 'user'
+      ? {
+          serviceDate: { in: getVisibleServiceDates().map(d => new Date(d)) },
+          staff: { some: { userId: authUser.id } },
+        }
+      : undefined
+
     const services = await prisma.service.findMany({
+      where,
       include: {
         client: {
           select: { id: true, name: true }
@@ -27,7 +40,9 @@ export async function GET() {
         { serviceTime: 'asc' },
       ]
     })
-    return NextResponse.json(services)
+
+    const result = authUser.role === 'user' ? services.map(stripPriceFields) : services
+    return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json([], { status: 200 })
   }

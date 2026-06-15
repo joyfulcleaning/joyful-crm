@@ -2,6 +2,21 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin, PHOTOS_BUCKET } from '@/lib/supabase'
+import { getAuthUser } from '@/lib/mobile-auth'
+import { getVisibleServiceDates } from '@/lib/serviceVisibility'
+
+async function assertUserCanAccess(serviceId: string, userId: string) {
+  const visibleDates = getVisibleServiceDates()
+  const service = await prisma.service.findFirst({
+    where: {
+      id: serviceId,
+      serviceDate: { in: visibleDates.map(d => new Date(d)) },
+      staff: { some: { userId } },
+    },
+    select: { id: true },
+  })
+  return !!service
+}
 
 async function ensureBucket() {
   const admin = supabaseAdmin()
@@ -12,11 +27,19 @@ async function ensureBucket() {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
+
+    if (authUser.role === 'user' && !(await assertUserCanAccess(id, authUser.id))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const photos = await prisma.servicePhoto.findMany({
       where: { serviceId: id },
       orderBy: { uploadedAt: 'asc' },
@@ -33,7 +56,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
+
+    if (authUser.role === 'user' && !(await assertUserCanAccess(id, authUser.id))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     await ensureBucket()
 
     const formData = await req.formData()
