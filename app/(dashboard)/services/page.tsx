@@ -156,6 +156,11 @@ export default function ServicesPage() {
 
   useEffect(() => { loadServices() }, [])
 
+  useEffect(() => {
+    const id = setInterval(loadServices, 25000)
+    return () => clearInterval(id)
+  }, [])
+
   function handleDuplicate(s: any) {
     const duplicated = {
       ...s,

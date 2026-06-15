@@ -247,6 +247,21 @@ export default function CalendarPage() {
   useEffect(() => { loadServices() }, [])
   useEffect(() => { loadExpenses() }, [])
 
+  // Keep refs to the latest loaders so the polling interval below
+  // (set up once) always runs with up-to-date closures (e.g. selectedDate).
+  const loadServicesRef = useRef(loadServices)
+  loadServicesRef.current = loadServices
+  const loadExpensesRef = useRef(loadExpenses)
+  loadExpensesRef.current = loadExpenses
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      loadServicesRef.current()
+      loadExpensesRef.current()
+    }, 25000)
+    return () => clearInterval(id)
+  }, [])
+
   useEffect(() => {
     function handler(e: Event) {
       const date = (e as CustomEvent<{ date: string }>).detail.date

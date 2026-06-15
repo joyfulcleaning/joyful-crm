@@ -291,6 +291,11 @@ export default function FinancesPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  useEffect(() => {
+    const id = setInterval(loadData, 25000)
+    return () => clearInterval(id)
+  }, [loadData])
+
   function applyAutoInvoiceNum(clientId: string, currentInvoices: any[], year: string) {
     const client = clients.find(c => c.id === clientId)
     if (!client) return
