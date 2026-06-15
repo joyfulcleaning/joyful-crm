@@ -281,27 +281,24 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             background: '#ffffff', borderRadius: 9, padding: '36px 40px',
             color: '#1a1a2e', fontFamily: 'Joyful, cursive', fontSize: 12, lineHeight: 1.5,
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)', maxWidth: 680, margin: '0 auto',
+            position: 'relative',
           }}>
 
             {/* ══ HEADER ══ */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services Corp."
-                  style={{ height: 115, width: 'auto', objectFit: 'contain' }} />
-                <div>
-                  <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4 })}>
-                    Joyful Cleaning Services Corp.
-                  </div>
-                  <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
-                    320 Laketree Blvd, Spring Lake NC 28390<br />
-                    (919) 322-9092 · joyfulcleaningservicescorp@gmail.com<br />
-                    joyfulcleaningservicesnc.com
-                  </div>
+            <div style={{ position: 'absolute', top: 110, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
+              INVOICE
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+              <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services Corp."
+                style={{ height: 115, width: 'auto', objectFit: 'contain' }} />
+              <div>
+                <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4, whiteSpace: 'nowrap' })}>
+                  Joyful Cleaning Services Corp.
                 </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.4)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
-                  INVOICE
+                <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
+                  320 Laketree Blvd, Spring Lake NC 28390<br />
+                  (919) 322-9092 · joyfulcleaningservicescorp@gmail.com<br />
+                  joyfulcleaningservicesnc.com
                 </div>
               </div>
             </div>
