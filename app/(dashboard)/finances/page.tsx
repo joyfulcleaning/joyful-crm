@@ -10,6 +10,7 @@ import InvoicePaymentsModal from '@/components/modals/InvoicePaymentsModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import EstimatePDFModal, { type EstimateData } from '@/components/modals/EstimatePDFModal'
 import ClientModal from '@/components/modals/ClientModal'
+import { useSyncPoll } from '@/lib/useSyncPoll'
 import ServiceModal from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 
@@ -291,10 +292,7 @@ export default function FinancesPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  useEffect(() => {
-    const id = setInterval(loadData, 25000)
-    return () => clearInterval(id)
-  }, [loadData])
+  useSyncPoll(['invoices', 'expenses', 'clients', 'recurringExpenses', 'inventory', 'assets', 'services'], loadData)
 
   function applyAutoInvoiceNum(clientId: string, currentInvoices: any[], year: string) {
     const client = clients.find(c => c.id === clientId)

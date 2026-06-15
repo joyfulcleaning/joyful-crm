@@ -7,6 +7,7 @@ import ServiceModal from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import ClientModal from '@/components/modals/ClientModal'
+import { useSyncPoll } from '@/lib/useSyncPoll'
 
 const COLS = [
   { key: 'id',        label: 'ID' },
@@ -156,10 +157,7 @@ export default function ServicesPage() {
 
   useEffect(() => { loadServices() }, [])
 
-  useEffect(() => {
-    const id = setInterval(loadServices, 25000)
-    return () => clearInterval(id)
-  }, [])
+  useSyncPoll(['services'], loadServices)
 
   function handleDuplicate(s: any) {
     const duplicated = {

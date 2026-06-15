@@ -8,6 +8,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { Copy, Pencil, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
+import { useSyncPoll } from '@/lib/useSyncPoll'
 
 const CAL_COLS = [
   { key: 'id',      label: 'ID' },
@@ -254,13 +255,10 @@ export default function CalendarPage() {
   const loadExpensesRef = useRef(loadExpenses)
   loadExpensesRef.current = loadExpenses
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      loadServicesRef.current()
-      loadExpensesRef.current()
-    }, 25000)
-    return () => clearInterval(id)
-  }, [])
+  useSyncPoll(['services', 'expenses'], () => {
+    loadServicesRef.current()
+    loadExpensesRef.current()
+  })
 
   useEffect(() => {
     function handler(e: Event) {
