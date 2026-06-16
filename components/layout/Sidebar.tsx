@@ -92,8 +92,8 @@ export default function Sidebar() {
         'px-4 py-3 border-t',
         light ? 'border-[#D3D7E0]' : 'border-gray-800'
       )}>
-        <p className={cn('text-[10px]', light ? 'text-gray-500' : 'text-gray-500')}>Joyful Services LLC</p>
-        <p className={cn('text-[10px]', light ? 'text-gray-400' : 'text-gray-600')}>Fayetteville, NC</p>
+        <p className={cn('text-[10px]', light ? 'text-gray-500' : 'text-gray-500')}>Joyful Cleaning Services Corp.</p>
+        <p className={cn('text-[10px]', light ? 'text-gray-400' : 'text-gray-600')}>NC</p>
       </div>
     </aside>
   )
