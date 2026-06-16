@@ -1129,9 +1129,14 @@ export default function FinancesPage() {
   const pendingToPay   = invoices.filter(i => i.status === 'sent' || i.status === 'draft' || i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
   const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
   const netIncome      = totalInvoiced - pendingToPay - totalExpenses
+  const _today = new Date().toISOString().split('T')[0]
+  const isOverdue = (i: { status: string; dueDate?: string | null | Date }) =>
+    i.status === 'overdue' || (i.status === 'sent' && !!i.dueDate && String(i.dueDate).split('T')[0] < _today)
+
   const filteredInvoices = invoices.filter(i => {
-    if (histFilter === 'pending' && i.status !== 'sent' && i.status !== 'draft') return false
-    if (histFilter !== 'all' && histFilter !== 'pending' && i.status !== histFilter) return false
+    if (histFilter === 'pending'  && i.status !== 'sent' && i.status !== 'draft') return false
+    if (histFilter === 'overdue'  && !isOverdue(i)) return false
+    if (histFilter !== 'all' && histFilter !== 'pending' && histFilter !== 'overdue' && i.status !== histFilter) return false
     if (histClientFilter !== 'all' && i.clientId !== histClientFilter) return false
     if (histDateFrom && i.issuedAt?.split('T')[0] < histDateFrom) return false
     if (histDateTo   && i.issuedAt?.split('T')[0] > histDateTo)   return false
@@ -1155,7 +1160,7 @@ export default function FinancesPage() {
     else if (histSortKey === 'client')   { av = a.client?.name ?? ''; bv = b.client?.name ?? '' }
     else if (histSortKey === 'total')    { av = Number(a.total || 0); bv = Number(b.total || 0) }
     else if (histSortKey === 'paid')     { av = Number(a.amountPaid || 0); bv = Number(b.amountPaid || 0) }
-    else if (histSortKey === 'balance')  { av = Number(a.balanceDue ?? a.total ?? 0); bv = Number(b.balanceDue ?? b.total ?? 0) }
+    else if (histSortKey === 'balance')  { av = Math.max(0, Number(a.total||0) - Number(a.amountPaid||0)); bv = Math.max(0, Number(b.total||0) - Number(b.amountPaid||0)) }
     else if (histSortKey === 'status')   { av = a.status; bv = b.status }
     else if (histSortKey === 'paidAt')   { av = a.paidAt ?? ''; bv = b.paidAt ?? '' }
     else                                 { av = a.issuedAt ?? ''; bv = b.issuedAt ?? '' }
@@ -1166,9 +1171,8 @@ export default function FinancesPage() {
   const histTotal      = filteredInvoices.reduce((s, i) => s + Number(i.total       || 0), 0)
   const histPaid       = filteredInvoices.reduce((s, i) => s + Number(i.amountPaid  || 0), 0)
   const histBalance    = histTotal - histPaid
-  const histPending    = filteredInvoices.filter(i => i.status === 'sent' || i.status === 'draft').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
-  const _today         = new Date().toISOString().split('T')[0]
-  const histOverdue    = filteredInvoices.filter(i => i.status === 'overdue' || (i.status === 'sent' && i.dueDate && String(i.dueDate).split('T')[0] < _today)).reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
+  const histPending    = filteredInvoices.filter(i => (i.status === 'sent' || i.status === 'draft') && !isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
+  const histOverdue    = filteredInvoices.filter(i => isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
   const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
   const tabs = [
