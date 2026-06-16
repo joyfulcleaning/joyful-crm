@@ -105,7 +105,7 @@ function MoonIcon() {
 
 export default function LoginForm() {
   const router = useRouter()
-  const [mode,     setMode]     = useState<Mode>('dark')
+  const [mode,     setMode]     = useState<Mode>('light')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
