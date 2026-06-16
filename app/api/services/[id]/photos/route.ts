@@ -24,7 +24,7 @@ async function ensureBucket() {
   if (!data) {
     await admin.storage.createBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
   } else {
-    await admin.storage.updateBucket(PHOTOS_BUCKET, { fileSizeLimit: 209715200 })
+    await admin.storage.updateBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
   }
 }
 
