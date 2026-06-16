@@ -1165,9 +1165,10 @@ export default function FinancesPage() {
   })
   const histTotal      = filteredInvoices.reduce((s, i) => s + Number(i.total       || 0), 0)
   const histPaid       = filteredInvoices.reduce((s, i) => s + Number(i.amountPaid  || 0), 0)
-  const histBalance    = filteredInvoices.reduce((s, i) => s + Number(i.balanceDue  || 0), 0)
+  const histBalance    = histTotal - histPaid
   const histPending    = filteredInvoices.filter(i => i.status === 'sent' || i.status === 'draft').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
-  const histOverdue    = filteredInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
+  const _today         = new Date().toISOString().split('T')[0]
+  const histOverdue    = filteredInvoices.filter(i => i.status === 'overdue' || (i.status === 'sent' && i.dueDate && String(i.dueDate).split('T')[0] < _today)).reduce((s, i) => s + Math.max(0, Number(i.total) - Number(i.amountPaid || 0)), 0)
   const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
   const tabs = [
