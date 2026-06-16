@@ -285,7 +285,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
           }}>
 
             {/* ══ HEADER ══ */}
-            <div style={{ position: 'absolute', top: 148, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
+            <div style={{ position: 'absolute', top: 136, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
               INVOICE
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
