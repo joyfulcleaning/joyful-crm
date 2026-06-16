@@ -65,6 +65,7 @@ export default function FinancesPage() {
   const [invoices, setInvoices] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [completedServices, setCompletedServices] = useState<any[]>([])
+  const [pendingServices, setPendingServices] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -147,6 +148,7 @@ export default function FinancesPage() {
   const [histSearch, setHistSearch]             = useState('')
   const [histSortKey, setHistSortKey]           = useState('issuedAt')
   const [histSortDir, setHistSortDir]           = useState<'asc'|'desc'>('desc')
+  const [showBalanceCol, setShowBalanceCol]     = useState(true)
 
   // ── Expenses tab ──
   const [recurring, setRecurring] = useState<any[]>([])
@@ -286,6 +288,7 @@ export default function FinancesPage() {
       setInventory(Array.isArray(products) ? products : [])
       setAssets(Array.isArray(ass) ? ass : [])
       setCompletedServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'completed') : [])
+      setPendingServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'pending') : [])
       setLoading(false)
     })
   }, [])
@@ -1128,10 +1131,18 @@ export default function FinancesPage() {
   const totalInvoiced  = invoices.reduce((s, i) => s + Number(i.total || 0), 0)
   const pendingToPay   = invoices.filter(i => i.status === 'sent' || i.status === 'draft' || i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
   const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
-  const netIncome      = totalInvoiced - pendingToPay - totalExpenses
+  const netIncome               = totalInvoiced - pendingToPay - totalExpenses
+  const notInvoicedCompleted    = completedServices.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
+  const notInvoicedPending      = pendingServices.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
+  const serviceVsInvoiceDiff    = completedTotal - totalInvoiced
+  const totalCollected          = invoices.reduce((s, i) => s + Number(i.amountPaid || 0), 0)
+  const completedNet            = completedTotal - totalExpenses
   const _today = new Date().toISOString().split('T')[0]
   const isOverdue = (i: { status: string; dueDate?: string | null | Date }) =>
     i.status === 'overdue' || (i.status === 'sent' && !!i.dueDate && String(i.dueDate).split('T')[0] < _today)
+
+  const sentBalance    = invoices.filter(i => i.status === 'sent' && !isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
+  const overdueBalance = invoices.filter(i => isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
 
   const filteredInvoices = invoices.filter(i => {
     if (histFilter === 'pending'  && i.status !== 'sent' && i.status !== 'draft') return false
@@ -1273,19 +1284,92 @@ export default function FinancesPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-5 gap-3">
             {[
-              { label: 'Completed Services', value: fmt(completedTotal), icon: CheckCircle, color: '#26BD97', border: 'border-t-[#26BD97]' },
-              { label: 'Total Invoiced',     value: fmt(totalInvoiced),  icon: DollarSign,  color: '#4f8ef7', border: 'border-t-[#4f8ef7]' },
-              { label: 'Pending to Pay',     value: fmt(pendingToPay),   icon: TrendingUp,  color: '#f59e0b', border: 'border-t-[#f59e0b]' },
-              { label: 'Expenses',           value: fmt(totalExpenses),  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]' },
-              { label: 'Net Income',         value: fmt(netIncome),      icon: TrendingUp,  color: '#a78bfa', border: 'border-t-[#a78bfa]' },
+              { label: 'Completed Services', value: fmt(completedTotal), icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
+                sub: [{ k: 'Invoiced', v: fmt(completedTotal - notInvoicedCompleted), sep: '+' }, { k: 'Not yet', v: fmt(notInvoicedCompleted), sep: '' }] },
+              { label: 'Total Invoiced',     value: fmt(totalInvoiced),  icon: DollarSign,   color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
+                sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '+' }, { k: 'Pending', v: fmt(pendingToPay), sep: '' }] },
+              { label: 'Pending to Pay',     value: fmt(pendingToPay),   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
+                sub: [{ k: 'Sent', v: fmt(sentBalance), sep: '+' }, { k: 'Overdue', v: fmt(overdueBalance), sep: '' }] },
+              { label: 'Expenses',           value: fmt(totalExpenses),  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
+                sub: [{ k: `${expenses.length} items`, v: '', sep: '·' }, { k: 'Recurring/mo', v: fmt(recurringTotal), sep: '' }] },
+              { label: 'Net Income',         value: fmt(netIncome),      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
+                sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '−' }, { k: 'Expenses', v: fmt(totalExpenses), sep: '' }] },
             ].map(card => (
               <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}>
                 <card.icon size={20} className="absolute right-3 top-3 opacity-20" style={{ color: card.color }} />
                 <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
                 <div className="text-2xl font-bold mt-2" style={{ color: card.color, fontFamily: 'var(--font-display)' }}>{card.value}</div>
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280] flex-wrap">
+                  {card.sub.map(s => (
+                    <React.Fragment key={s.k}>
+                      <span>{s.k}{s.v ? ': ' : ''}<span className="text-[#e8eaf0] font-semibold">{s.v}</span></span>
+                      {s.sep && <span className="text-[#4b5563] font-bold">{s.sep}</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
+
+          {/* ── 4 nuevas tarjetas ── */}
+          <div className="grid grid-cols-4 gap-3">
+            {/* Card: Not Invoiced */}
+            <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#fb923c] rounded-xl p-4 relative overflow-hidden">
+              <ReceiptText size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#fb923c' }} />
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Not Invoiced</div>
+              <div className="text-2xl font-bold mt-2" style={{ color: '#fb923c', fontFamily: 'var(--font-display)' }}>
+                {fmt(notInvoicedCompleted + notInvoicedPending)}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedCompleted)}</span></span>
+                <span className="text-[#4b5563] font-bold">+</span>
+                <span>Pending: <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedPending)}</span></span>
+              </div>
+            </div>
+
+            {/* Card: Completed vs Invoiced */}
+            <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#818cf8] rounded-xl p-4 relative overflow-hidden">
+              <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#818cf8' }} />
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Completed vs Invoiced</div>
+              <div className="text-2xl font-bold mt-2" style={{ color: serviceVsInvoiceDiff >= 0 ? '#38d9a9' : '#f87171', fontFamily: 'var(--font-display)' }}>
+                {serviceVsInvoiceDiff >= 0 ? '+' : ''}{fmt(serviceVsInvoiceDiff)}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
+                <span className="text-[#4b5563] font-bold">−</span>
+                <span>Invoiced: <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
+              </div>
+            </div>
+
+            {/* Card: Total Collected */}
+            <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#38d9a9] rounded-xl p-4 relative overflow-hidden">
+              <DollarSign size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#38d9a9' }} />
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Total Collected</div>
+              <div className="text-2xl font-bold mt-2" style={{ color: '#38d9a9', fontFamily: 'var(--font-display)' }}>
+                {fmt(totalCollected)}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                <span>Invoiced: <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
+                <span className="text-[#4b5563] font-bold">−</span>
+                <span>Pending: <span className="text-[#e8eaf0] font-semibold">{fmt(pendingToPay)}</span></span>
+              </div>
+            </div>
+
+            {/* Card: Service Net */}
+            <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#2dd4bf] rounded-xl p-4 relative overflow-hidden">
+              <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#2dd4bf' }} />
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Service Net</div>
+              <div className="text-2xl font-bold mt-2" style={{ color: completedNet >= 0 ? '#2dd4bf' : '#f87171', fontFamily: 'var(--font-display)' }}>
+                {completedNet >= 0 ? '+' : ''}{fmt(completedNet)}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
+                <span className="text-[#4b5563] font-bold">−</span>
+                <span>Expenses: <span className="text-[#e8eaf0] font-semibold">{fmt(totalExpenses)}</span></span>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
               <div className="text-xs font-bold text-[#e8eaf0]">Recent Invoices</div>
@@ -1772,6 +1856,18 @@ export default function FinancesPage() {
                   </button>
                 )}
 
+                {/* Balance toggle */}
+                <button
+                  onClick={() => setShowBalanceCol(v => !v)}
+                  className={`flex items-center gap-1 px-2 py-1.5 border rounded-lg text-[10px] font-semibold transition-all ${
+                    showBalanceCol
+                      ? 'bg-[rgba(79,142,247,0.1)] border-[rgba(79,142,247,0.25)] text-[#4f8ef7]'
+                      : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
+                  }`}
+                >
+                  Balance
+                </button>
+
                 {/* Count badge */}
                 <span className="ml-auto text-[10px] text-[#6b7280]">
                   {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}
@@ -1816,7 +1912,7 @@ export default function FinancesPage() {
                       { label: 'Period',    key: null },
                       { label: 'Total',     key: 'total' },
                       { label: 'Paid',      key: 'paid' },
-                      { label: 'Balance',   key: 'balance' },
+                      ...(showBalanceCol ? [{ label: 'Balance', key: 'balance' }] : []),
                       { label: 'Status',    key: 'status' },
                       { label: 'Issued',    key: 'issuedAt' },
                       { label: 'Paid On',   key: 'paidAt' },
@@ -1839,11 +1935,11 @@ export default function FinancesPage() {
                 </thead>
                 <tbody>
                   {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={10} className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</td></tr>
+                    <tr><td colSpan={showBalanceCol ? 10 : 9} className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</td></tr>
                   ) : filteredInvoices.map((inv: any) => {
                     const color      = INVOICE_COLORS[inv.status] || '#6b7280'
                     const amountPaid = Number(inv.amountPaid || 0)
-                    const balanceDue = Number(inv.balanceDue ?? inv.total)
+                    const balanceDue = Math.max(0, Number(inv.total || 0) - amountPaid)
                     return (
                       <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                         <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
@@ -1851,9 +1947,11 @@ export default function FinancesPage() {
                         <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.periodFrom)} — {formatDate(inv.periodTo)}</td>
                         <td className="px-4 py-2.5 text-xs font-bold text-[#e8eaf0] font-mono">{fmt(Number(inv.total))}</td>
                         <td className="px-4 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">{fmt(amountPaid)}</td>
-                        <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>
-                          {fmt(balanceDue)}
-                        </td>
+                        {showBalanceCol && (
+                          <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>
+                            {fmt(balanceDue)}
+                          </td>
+                        )}
                         <td className="px-4 py-2.5">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
                             style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>

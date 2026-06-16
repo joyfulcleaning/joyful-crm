@@ -208,6 +208,7 @@ export default function ServicesPage() {
   const filtered = useMemo(() => {
     const list = services.filter(s => {
       const matchSearch = !search ||
+        String(s.serviceNumber).includes(search) ||
         s.client?.name?.toLowerCase().includes(search.toLowerCase()) ||
         s.type?.toLowerCase().includes(search.toLowerCase()) ||
         s.address?.toLowerCase().includes(search.toLowerCase())

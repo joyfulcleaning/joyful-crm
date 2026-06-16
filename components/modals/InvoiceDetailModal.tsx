@@ -243,22 +243,25 @@ export default function InvoiceDetailModal({ invoice, open, onClose, onSuccess }
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#2a2f3d]">
-                    {['Description', 'Qty', 'Unit Price', 'Total'].map(h => (
+                    {['Description', 'Qty', 'Unit Price', 'Fee', 'Total'].map(h => (
                       <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center py-4 text-[#6b7280] text-xs">No items</td></tr>
-                  ) : items.map((item: any, i: number) => (
+                    <tr><td colSpan={5} className="text-center py-4 text-[#6b7280] text-xs">No items</td></tr>
+                  ) : items.map((item: any, i: number) => {
+                    const fee = Number(item.service?.additionalFee || 0)
+                    return (
                     <tr key={i} className="border-t border-[#2a2f3d]/50">
                       <td className="px-3 py-2 text-xs text-[#e8eaf0]">{item.description}</td>
                       <td className="px-3 py-2 text-xs text-[#9ca3af]">{item.quantity}</td>
                       <td className="px-3 py-2 text-xs text-[#9ca3af] font-mono">${Number(item.unitPrice).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-xs font-mono" style={{ color: fee > 0 ? '#f59e0b' : '#4b5563' }}>{fee > 0 ? `+$${fee.toFixed(2)}` : '—'}</td>
                       <td className="px-3 py-2 text-xs font-bold text-[#38d9a9] font-mono">${Number(item.total).toFixed(2)}</td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>

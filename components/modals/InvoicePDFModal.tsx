@@ -220,7 +220,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#2a2f3d]">
             <div className="flex items-center gap-2.5">
               <FileText size={16} color="#4f8ef7" />
-              <span className="text-sm font-semibold text-[#e2e8f0]">
+              <span className="text-sm font-semibold text-[#4f8ef7]">
                 Invoice Preview — {invoice.invoiceNumber}
               </span>
             </div>
