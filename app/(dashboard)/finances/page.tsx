@@ -1126,7 +1126,7 @@ export default function FinancesPage() {
 
   const completedTotal = completedServices.reduce((s, sv) => s + Number(sv.total || 0), 0)
   const totalInvoiced  = invoices.reduce((s, i) => s + Number(i.total || 0), 0)
-  const pendingToPay   = invoices.reduce((s, i) => s + Number(i.balanceDue || 0), 0)
+  const pendingToPay   = invoices.filter(i => i.status === 'sent' || i.status === 'draft' || i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
   const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
   const netIncome      = totalInvoiced - pendingToPay - totalExpenses
   const filteredInvoices = invoices.filter(i => {
