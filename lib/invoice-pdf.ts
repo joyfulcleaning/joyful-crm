@@ -85,7 +85,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
     .client-name { font-size: 15px; font-weight: 700; color: #111827; }
     .client-info { font-size: 11px; color: #4b5563; line-height: 1.7; margin-top: 2px; }
-    .inv-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: monospace; }
+    .inv-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: Joyful, cursive; }
     .inv-meta { font-size: 11px; color: #6b7280; line-height: 1.9; margin-top: 4px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
     thead tr { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }

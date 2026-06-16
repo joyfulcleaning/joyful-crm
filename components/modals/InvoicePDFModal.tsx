@@ -325,7 +325,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
     </div>
   </div>
   <div style={{ textAlign: 'right' }}>
-    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 19, fontWeight: 500, color: '#4f8ef7', marginBottom: 3 }}>
+    <div style={{ fontFamily: 'Joyful, cursive', fontSize: 19, fontWeight: 700, color: '#4f8ef7', marginBottom: 3 }}>
       Number: {invoice.invoiceNumber}
     </div>
     <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
