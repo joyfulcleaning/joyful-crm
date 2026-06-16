@@ -22,7 +22,9 @@ async function ensureBucket() {
   const admin = supabaseAdmin()
   const { data } = await admin.storage.getBucket(PHOTOS_BUCKET)
   if (!data) {
-    await admin.storage.createBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 52428800 })
+    await admin.storage.createBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
+  } else {
+    await admin.storage.updateBucket(PHOTOS_BUCKET, { fileSizeLimit: 209715200 })
   }
 }
 
