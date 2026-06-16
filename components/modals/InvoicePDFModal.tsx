@@ -326,7 +326,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
   </div>
   <div style={{ textAlign: 'right' }}>
     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 19, fontWeight: 500, color: '#4f8ef7', marginBottom: 3 }}>
-      {invoice.invoiceNumber}
+      Number: {invoice.invoiceNumber}
     </div>
     <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
       Issued: <span style={{ color: '#374151', fontWeight: 600 }}>{formatDate(invoice.issuedAt)}</span><br />

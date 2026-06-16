@@ -128,7 +128,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     </div>
     <div style="text-align:right">
       <div class="label">Invoice Details</div>
-      <div class="inv-number">${invoice.invoiceNumber}</div>
+      <div class="inv-number">Number: ${invoice.invoiceNumber}</div>
       <div class="inv-meta">
         Issue Date: ${formatDate(invoice.issuedAt)}<br/>
         ${invoice.dueDate ? `Due Date: ${formatDate(invoice.dueDate)}<br/>` : ''}
