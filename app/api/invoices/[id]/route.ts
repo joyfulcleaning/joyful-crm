@@ -60,6 +60,17 @@ export async function PATCH(
       ...(body.issuedAt           !== undefined && { issuedAt:           body.issuedAt ? new Date(body.issuedAt + 'T12:00:00.000Z') : new Date() }),
     }
 
+    // When marking as sent: auto-set dueDate 30 days from issuedAt if not already set
+    if (body.status === 'sent') {
+      const current = await prisma.invoice.findUnique({ where: { id }, select: { dueDate: true, issuedAt: true } })
+      if (!current?.dueDate && !body.dueDate) {
+        const base = current?.issuedAt ?? new Date()
+        const due  = new Date(base)
+        due.setDate(due.getDate() + 30)
+        updateData.dueDate = due
+      }
+    }
+
     // When marking as paid: stamp paidAt (use provided date or keep existing or now)
     if (body.status === 'paid') {
       const current = await prisma.invoice.findUnique({ where: { id }, select: { total: true, paidAt: true } })

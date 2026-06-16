@@ -6,6 +6,14 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
+    // Auto-transition sent invoices past their dueDate to overdue
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await prisma.invoice.updateMany({
+      where: { status: 'sent', dueDate: { lt: today, not: null } },
+      data:  { status: 'overdue' },
+    })
+
     const invoices = await prisma.invoice.findMany({
       include: {
         client: { select: { name: true, email: true, phone: true, address: true, city: true, state: true, zip: true, propertyCode: true } },
