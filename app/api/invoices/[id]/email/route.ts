@@ -129,14 +129,8 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     <div style="text-align:right">
       <div class="inv-number">Number: ${invoice.invoiceNumber}</div>
       <div class="inv-meta">
-        Issued: <span style="color:#374151;font-weight:600">${formatDateShort(invoice.issuedAt)}</span><br/>
-        ${invoice.dueDate ? `Due: <span style="color:#374151;font-weight:600">${formatDateShort(invoice.dueDate)}</span>` : ''}
-      </div>
-      <div style="margin-top:5px">
-        ${invoice.status === 'paid'    ? `<span class="status-badge" style="background:#d1fae5;color:#059669;border:1px solid #6ee7b7">✓ PAID</span>` : ''}
-        ${invoice.status === 'sent'    ? `<span class="status-badge" style="background:rgba(79,142,247,0.1);color:#4f8ef7;border:1px solid #4f8ef7">✈ SENT</span>` : ''}
-        ${invoice.status === 'overdue' ? `<span class="status-badge" style="background:#fee2e2;color:#ef4444;border:1px solid #fca5a5">⚠ OVERDUE</span>` : ''}
-        ${invoice.status === 'draft'   ? `<span class="status-badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db">◻ DRAFT</span>` : ''}
+        Issued: <strong>${formatDate(invoice.issuedAt)}</strong><br/>
+        ${invoice.dueDate ? `Due: <strong style="color:#f87171">${formatDate(invoice.dueDate)}</strong>` : ''}
       </div>
     </div>
   </div>
