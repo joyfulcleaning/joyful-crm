@@ -70,18 +70,19 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff; }
-    .page { padding: 32px 40px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
+    .page { padding: 36px 40px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
-    .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
-    .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
-    .invoice-word { position: absolute; top: 100px; right: 40px; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
+    .brand-name { font-size: 28px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
+    .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.65; }
+    .invoice-word { position: absolute; top: 136px; right: 40px; font-size: 32px; font-weight: 800; color: rgba(75,63,160,0.5); letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
-    .bill-section { display: flex; justify-content: space-between; margin-bottom: 22px; }
-    .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
-    .client-name { font-size: 15px; font-weight: 700; color: #111827; }
+    .bill-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+    .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+    .client-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 1px; }
     .client-info { font-size: 11px; color: #4b5563; line-height: 1.7; margin-top: 2px; }
-    .inv-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: Joyful, cursive; }
+    .inv-number { font-size: 19px; font-weight: 700; color: #4f8ef7; font-family: Joyful, cursive; margin-bottom: 3px; }
     .inv-meta { font-size: 11px; color: #6b7280; line-height: 1.8; margin-top: 4px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 5px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
     thead tr { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
     th { padding: 8px 10px; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
@@ -128,8 +129,14 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     <div style="text-align:right">
       <div class="inv-number">Number: ${invoice.invoiceNumber}</div>
       <div class="inv-meta">
-        Issued: <strong>${formatDate(invoice.issuedAt)}</strong><br/>
-        ${invoice.dueDate ? `Due: <strong style="color:#f87171">${formatDate(invoice.dueDate)}</strong>` : ''}
+        Issued: <span style="color:#374151;font-weight:600">${formatDateShort(invoice.issuedAt)}</span><br/>
+        ${invoice.dueDate ? `Due: <span style="color:#374151;font-weight:600">${formatDateShort(invoice.dueDate)}</span>` : ''}
+      </div>
+      <div style="margin-top:5px">
+        ${invoice.status === 'paid'    ? `<span class="status-badge" style="background:#d1fae5;color:#059669;border:1px solid #6ee7b7">✓ PAID</span>` : ''}
+        ${invoice.status === 'sent'    ? `<span class="status-badge" style="background:rgba(79,142,247,0.1);color:#4f8ef7;border:1px solid #4f8ef7">✈ SENT</span>` : ''}
+        ${invoice.status === 'overdue' ? `<span class="status-badge" style="background:#fee2e2;color:#ef4444;border:1px solid #fca5a5">⚠ OVERDUE</span>` : ''}
+        ${invoice.status === 'draft'   ? `<span class="status-badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db">◻ DRAFT</span>` : ''}
       </div>
     </div>
   </div>
