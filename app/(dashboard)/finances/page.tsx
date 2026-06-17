@@ -141,6 +141,9 @@ export default function FinancesPage() {
   const [invDetailOpen, setInvDetailOpen] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [invError, setInvError] = useState('')
+  const [summaryDateFrom, setSummaryDateFrom] = useState('')
+  const [summaryDateTo, setSummaryDateTo]     = useState('')
+
   const [histFilter, setHistFilter]           = useState('all')
   const [histClientFilter, setHistClientFilter] = useState('all')
   const [histDateFrom, setHistDateFrom]         = useState('')
@@ -1127,22 +1130,49 @@ export default function FinancesPage() {
     }
   }
 
-  const completedTotal = completedServices.reduce((s, sv) => s + Number(sv.total || 0), 0)
-  const totalInvoiced  = invoices.reduce((s, i) => s + Number(i.total || 0), 0)
-  const pendingToPay   = invoices.filter(i => i.status === 'sent' || i.status === 'draft' || i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
-  const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
-  const netIncome               = totalInvoiced - pendingToPay - totalExpenses
-  const notInvoicedCompleted    = completedServices.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
-  const notInvoicedPending      = pendingServices.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
-  const serviceVsInvoiceDiff    = completedTotal - totalInvoiced
-  const totalCollected          = invoices.reduce((s, i) => s + Number(i.amountPaid || 0), 0)
-  const completedNet            = completedTotal - totalExpenses
   const _today = new Date().toISOString().split('T')[0]
   const isOverdue = (i: { status: string; dueDate?: string | null | Date }) =>
     i.status === 'overdue' || (i.status === 'sent' && !!i.dueDate && String(i.dueDate).split('T')[0] < _today)
 
-  const sentBalance    = invoices.filter(i => i.status === 'sent' && !isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
-  const overdueBalance = invoices.filter(i => isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
+  // Summary-tab filtered slices (respect summaryDateFrom / summaryDateTo)
+  const sumCompletedSvcs = completedServices.filter(s => {
+    const d = (s.serviceDate ?? '').split('T')[0]
+    if (summaryDateFrom && d < summaryDateFrom) return false
+    if (summaryDateTo   && d > summaryDateTo)   return false
+    return true
+  })
+  const sumPendingSvcs = pendingServices.filter(s => {
+    const d = (s.serviceDate ?? '').split('T')[0]
+    if (summaryDateFrom && d < summaryDateFrom) return false
+    if (summaryDateTo   && d > summaryDateTo)   return false
+    return true
+  })
+  const sumInvoices = invoices.filter(i => {
+    const d = (i.issuedAt ?? '').split('T')[0]
+    if (summaryDateFrom && d < summaryDateFrom) return false
+    if (summaryDateTo   && d > summaryDateTo)   return false
+    return true
+  })
+  const sumExpenses = expenses.filter(e => {
+    const d = (e.expenseDate ?? '').split('T')[0]
+    if (summaryDateFrom && d < summaryDateFrom) return false
+    if (summaryDateTo   && d > summaryDateTo)   return false
+    return true
+  })
+
+  const completedTotal = sumCompletedSvcs.reduce((s, sv) => s + Number(sv.total || 0), 0)
+  const totalInvoiced  = sumInvoices.reduce((s, i) => s + Number(i.total || 0), 0)
+  const pendingToPay   = sumInvoices.filter(i => i.status === 'sent' || i.status === 'draft' || i.status === 'overdue').reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
+  const totalExpenses  = sumExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+  const netIncome               = totalInvoiced - pendingToPay - totalExpenses
+  const notInvoicedCompleted    = sumCompletedSvcs.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
+  const notInvoicedPending      = sumPendingSvcs.filter(s => !s.invoicedAt).reduce((sum, s) => sum + Number(s.total || 0), 0)
+  const serviceVsInvoiceDiff    = completedTotal - totalInvoiced
+  const totalCollected          = sumInvoices.reduce((s, i) => s + Number(i.amountPaid || 0), 0)
+  const completedNet            = completedTotal - totalExpenses
+
+  const sentBalance    = sumInvoices.filter(i => i.status === 'sent' && !isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
+  const overdueBalance = sumInvoices.filter(i => isOverdue(i)).reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.amountPaid || 0)), 0)
 
   const filteredInvoices = invoices.filter(i => {
     if (histFilter === 'pending'  && i.status !== 'sent' && i.status !== 'draft') return false
@@ -1282,6 +1312,42 @@ export default function FinancesPage() {
       {/* ── Summary Tab ── */}
       {activeTab === 'summary' && (
         <div className="space-y-4">
+
+          {/* Date range filter */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider shrink-0">Period</span>
+            <input
+              type="date"
+              value={summaryDateFrom}
+              onChange={e => setSummaryDateFrom(e.target.value)}
+              className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg px-2.5 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
+            />
+            <span className="text-[#4b5563] text-xs font-bold">—</span>
+            <input
+              type="date"
+              value={summaryDateTo}
+              onChange={e => setSummaryDateTo(e.target.value)}
+              className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg px-2.5 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
+            />
+            {(summaryDateFrom || summaryDateTo) && (
+              <button
+                onClick={() => { setSummaryDateFrom(''); setSummaryDateTo('') }}
+                className="flex items-center gap-1 text-[10px] text-[#6b7280] hover:text-[#e8eaf0] transition-colors ml-1"
+              >
+                <X size={11} /> Clear
+              </button>
+            )}
+            {(summaryDateFrom || summaryDateTo) && (
+              <span className="text-[10px] text-[#4f8ef7] ml-1">
+                {summaryDateFrom && summaryDateTo
+                  ? `${formatDate(summaryDateFrom)} – ${formatDate(summaryDateTo)}`
+                  : summaryDateFrom
+                    ? `From ${formatDate(summaryDateFrom)}`
+                    : `Until ${formatDate(summaryDateTo)}`}
+              </span>
+            )}
+          </div>
+
           <div className="grid grid-cols-5 gap-3">
             {[
               { label: 'Completed Services', value: fmt(completedTotal), icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
@@ -1291,7 +1357,7 @@ export default function FinancesPage() {
               { label: 'Pending to Pay',     value: fmt(pendingToPay),   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
                 sub: [{ k: 'Sent', v: fmt(sentBalance), sep: '+' }, { k: 'Overdue', v: fmt(overdueBalance), sep: '' }] },
               { label: 'Expenses',           value: fmt(totalExpenses),  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
-                sub: [{ k: `${expenses.length} items`, v: '', sep: '·' }, { k: 'Recurring/mo', v: fmt(recurringTotal), sep: '' }] },
+                sub: [{ k: `${sumExpenses.length} items`, v: '', sep: '·' }, { k: 'Recurring/mo', v: fmt(recurringTotal), sep: '' }] },
               { label: 'Net Income',         value: fmt(netIncome),      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
                 sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '−' }, { k: 'Expenses', v: fmt(totalExpenses), sep: '' }] },
             ].map(card => (
