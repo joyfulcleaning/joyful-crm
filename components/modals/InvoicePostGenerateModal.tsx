@@ -23,31 +23,34 @@ export default function InvoicePostGenerateModal({ invoice, open, onClose, onSuc
   const [qrSquare, setQrSquare]         = useState('')
   const [clientEmail, setClientEmail]   = useState('')
   const [autoSaving, setAutoSaving]     = useState(false)
+  const [bccEnabled, setBccEnabled]     = useState(false)
+  const [companyEmail, setCompanyEmail] = useState('')
   const stripeTimer = useRef<any>(null)
   const squareTimer = useRef<any>(null)
 
-  // Carga el invoice completo con email del cliente
+  // Carga el invoice completo con email del cliente + email de la empresa
   useEffect(() => {
     if (!open || !invoice?.id) return
     setStripeLink(invoice.paymentLinkStripe || '')
     setSquareLink(invoice.paymentLinkSquare || '')
     setEmailSent(!!invoice.emailSentAt)
+    setBccEnabled(false)
 
-    // Fetch invoice completo para obtener el email
-    fetch(`/api/invoices/${invoice.id}`)
-      .then(r => r.json())
-      .then(data => {
-        setClientEmail(data.client?.email || '')
-        if (data.paymentLinkStripe) {
-          setStripeLink(data.paymentLinkStripe)
-          generateQR(data.paymentLinkStripe, 'stripe')
-        }
-        if (data.paymentLinkSquare) {
-          setSquareLink(data.paymentLinkSquare)
-          generateQR(data.paymentLinkSquare, 'square')
-        }
-      })
-      .catch(() => {})
+    Promise.all([
+      fetch(`/api/invoices/${invoice.id}`).then(r => r.json()),
+      fetch('/api/settings').then(r => r.json()).catch(() => ({})),
+    ]).then(([data, settings]) => {
+      setClientEmail(data.client?.email || '')
+      setCompanyEmail(settings['biz.email'] || '')
+      if (data.paymentLinkStripe) {
+        setStripeLink(data.paymentLinkStripe)
+        generateQR(data.paymentLinkStripe, 'stripe')
+      }
+      if (data.paymentLinkSquare) {
+        setSquareLink(data.paymentLinkSquare)
+        generateQR(data.paymentLinkSquare, 'square')
+      }
+    }).catch(() => {})
   }, [open, invoice?.id])
 
   function generateQR(url: string, type: 'stripe' | 'square') {
@@ -97,7 +100,10 @@ export default function InvoicePostGenerateModal({ invoice, open, onClose, onSuc
       const res = await fetch(`/api/invoices/${invoice.id}/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toEmail: clientEmail }),
+        body: JSON.stringify({
+          toEmail: clientEmail,
+          ...(bccEnabled && companyEmail ? { bcc: companyEmail } : {}),
+        }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -285,6 +291,30 @@ export default function InvoicePostGenerateModal({ invoice, open, onClose, onSuc
                     No email registered — enter one to send
                   </div>
                 )}
+              </div>
+
+              {/* BCC toggle */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-[#6b7280]">BCC company email</span>
+                  {bccEnabled && companyEmail && (
+                    <span className="text-[9px] text-[#4f8ef7] mt-0.5">{companyEmail}</span>
+                  )}
+                  {bccEnabled && !companyEmail && (
+                    <span className="text-[9px] text-[#f87171] mt-0.5">No company email set in Settings</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBccEnabled(v => !v)}
+                  className={`w-9 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+                    bccEnabled ? 'bg-[#4f8ef7]' : 'bg-[#2a2f3d]'
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
+                    bccEnabled ? 'left-[18px]' : 'left-0.5'
+                  }`} />
+                </button>
               </div>
             </div>
             <button

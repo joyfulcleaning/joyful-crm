@@ -81,10 +81,15 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
   const [sending, setSending]       = useState(false)
   const [sent, setSent]             = useState(false)
   const [emailError, setEmailError] = useState('')
+  const [bccEnabled, setBccEnabled] = useState(false)
+  const [companyEmail, setCompanyEmail] = useState('')
 
   useEffect(() => {
     if (open && invoice?.client?.email) setEmailTo(invoice.client.email)
-    if (open) { setSent(false); setShowEmail(false); setEmailError('') }
+    if (open) {
+      setSent(false); setShowEmail(false); setEmailError(''); setBccEnabled(false)
+      fetch('/api/settings').then(r => r.json()).then(s => setCompanyEmail(s['biz.email'] || '')).catch(() => {})
+    }
   }, [open, invoice?.client?.email])
 
   useEffect(() => {
@@ -103,7 +108,10 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
       const res = await fetch(`/api/invoices/${invoice.id}/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toEmail: emailTo }),
+        body: JSON.stringify({
+          toEmail: emailTo,
+          ...(bccEnabled && companyEmail ? { bcc: companyEmail } : {}),
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -247,26 +255,52 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
 
           {/* ── Email form panel ── */}
           {showEmail && (
-            <div className="px-6 py-3 bg-[#0d0f14] border-b border-[#2a2f3d] flex items-center gap-3">
-              <Mail size={14} className="text-[#4f8ef7] flex-shrink-0" />
-              <div className="flex-1">
-                <input
-                  type="email"
-                  value={emailTo}
-                  onChange={e => { setEmailTo(e.target.value); setEmailError('') }}
-                  onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
-                  placeholder="client@email.com"
-                  className="w-full px-3 py-1.5 bg-[#161922] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
-                />
-                {emailError && <p className="text-[10px] text-[#f87171] mt-1">{emailError}</p>}
+            <div className="px-6 py-3 bg-[#0d0f14] border-b border-[#2a2f3d] space-y-2">
+              <div className="flex items-center gap-3">
+                <Mail size={14} className="text-[#4f8ef7] flex-shrink-0" />
+                <div className="flex-1">
+                  <input
+                    type="email"
+                    value={emailTo}
+                    onChange={e => { setEmailTo(e.target.value); setEmailError('') }}
+                    onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                    placeholder="client@email.com"
+                    className="w-full px-3 py-1.5 bg-[#161922] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
+                  />
+                  {emailError && <p className="text-[10px] text-[#f87171] mt-1">{emailError}</p>}
+                </div>
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sending || !emailTo}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#4f8ef7] hover:bg-[#3a7ee0] disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all flex-shrink-0"
+                >
+                  {sending ? <><Loader2 size={12} className="animate-spin" /> Sending…</> : <><Send size={12} /> Send</>}
+                </button>
               </div>
-              <button
-                onClick={handleSendEmail}
-                disabled={sending || !emailTo}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#4f8ef7] hover:bg-[#3a7ee0] disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all flex-shrink-0"
-              >
-                {sending ? <><Loader2 size={12} className="animate-spin" /> Sending…</> : <><Send size={12} /> Send</>}
-              </button>
+
+              {/* BCC toggle */}
+              <div className="flex items-center justify-between pl-6">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-[#6b7280]">BCC company email</span>
+                  {bccEnabled && companyEmail && (
+                    <span className="text-[9px] text-[#4f8ef7] mt-0.5">{companyEmail}</span>
+                  )}
+                  {bccEnabled && !companyEmail && (
+                    <span className="text-[9px] text-[#f87171] mt-0.5">No company email set in Settings</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBccEnabled(v => !v)}
+                  className={`w-9 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+                    bccEnabled ? 'bg-[#4f8ef7]' : 'bg-[#2a2f3d]'
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
+                    bccEnabled ? 'left-[18px]' : 'left-0.5'
+                  }`} />
+                </button>
+              </div>
               <button onClick={() => { setShowEmail(false); setEmailError('') }}
                 className="p-1.5 text-[#6b7280] hover:text-[#e8eaf0] transition-colors flex-shrink-0">
                 <X size={14} />

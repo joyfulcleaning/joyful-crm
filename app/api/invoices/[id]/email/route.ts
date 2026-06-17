@@ -217,6 +217,7 @@ export async function POST(
     const { id } = await context.params
     const body = await request.json().catch(() => ({}))
     const toEmailOverride: string | undefined = body?.toEmail
+    const bccEmail: string | undefined = body?.bcc || undefined
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
@@ -349,6 +350,7 @@ export async function POST(
     await transporter.sendMail({
       from:        `"Joyful Cleaning Services" <${process.env.GMAIL_USER}>`,
       to:          toEmail,
+      ...(bccEmail ? { bcc: bccEmail } : {}),
       subject:     `Invoice ${invoice.invoiceNumber} — Joyful Cleaning Services`,
       html:        emailHtml,
       attachments: [{
