@@ -334,16 +334,16 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     if (client?.address) setForm(f => ({ ...f, address: client.address }))
   }, [form.clientId, clients])
 
-  // Auto-price when client / type / roomSize / frequency changes
+  // Auto-price only for NEW services (not edits) — only Base Price, never Additional Fee
   useEffect(() => {
+    if (initialService) return  // editing: never overwrite existing prices
     const client = clients.find(c => c.id === form.clientId)
     if (!form.clientId || !client) { setPricedFromMgmt(false); return }
 
     if (client.management?.name === PRIVATE_CUSTOMER_NAME) {
-      // Private Customer: frequency-based pricing for all types
       const result = calcPrivatePrices(client, form.frequency)
       if (result) {
-        setForm(f => ({ ...f, basePrice: result.base.toString(), additionalFee: '' }))
+        setForm(f => ({ ...f, basePrice: result.base.toString() }))
         setPricedFromMgmt(true)
       } else {
         setPricedFromMgmt(false)
@@ -355,16 +355,12 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     if (!form.roomSize || !AUTO_PRICE_TYPES.has(form.type)) { setPricedFromMgmt(false); return }
     const result = calcPrices(client, form.type, form.roomSize)
     if (result) {
-      setForm(f => ({
-        ...f,
-        basePrice: result.base.toString(),
-        additionalFee: result.fee > 0 ? result.fee.toString() : '',
-      }))
+      setForm(f => ({ ...f, basePrice: result.base.toString() }))
       setPricedFromMgmt(true)
     } else {
       setPricedFromMgmt(false)
     }
-  }, [form.clientId, form.type, form.roomSize, form.frequency, clients])
+  }, [form.clientId, form.type, form.roomSize, form.frequency, clients, initialService])
 
   const total = (parseFloat(form.basePrice) || 0) + (parseFloat(form.additionalFee) || 0)
 
@@ -698,17 +694,10 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                 </div>
               </div>
 
-              {/* Additional Fee */}
+              {/* Additional Fee — always manual, never auto-filled */}
               <div>
-                <label className="text-[10px] text-[var(--muted)] block mb-1">
-                  {feeLabel}
-                  {pricedFromMgmt && (form.type === 'Deep Clean' || form.type === 'Heavy Deep Clean') && (
-                    <span className="ml-1 text-[var(--accent)]">(+)</span>
-                  )}
-                </label>
-                <div className={`relative rounded-lg border transition-all ${
-                  pricedFromMgmt && parseFloat(form.additionalFee) > 0 ? 'border-[var(--accent)]' : 'border-[var(--border)]'
-                }`}>
+                <label className="text-[10px] text-[var(--muted)] block mb-1">{feeLabel}</label>
+                <div className="relative rounded-lg border border-[var(--border)]">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-xs">$</span>
                   <input
                     type="number"

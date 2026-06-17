@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Pencil, Save, Copy, Layers, DollarSign, Camera, Trash2, ZoomIn, ImagePlus, Repeat2 } from 'lucide-react'
+import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2 } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import ServiceModal from './ServiceModal'
 
@@ -43,14 +43,6 @@ const TIME_SLOTS = Array.from({ length: 29 }, (_, i) => {
   return { value: `${hh}:${mm}`, label: `${h12}:${mm} ${ampm}` }
 })
 
-const ROOM_TO_KEY: Record<string, string> = {
-  '1BR': 'std1BR',
-  '2BR': 'std2BR',
-  '3BR': 'std3BR',
-}
-
-const AUTO_PRICE_TYPES = new Set(['Standard Clean', 'Deep Clean', 'Heavy Deep Clean', 'Office Clean'])
-
 const FREQUENCIES = [
   { value: 'one_time', label: 'One-time' },
   { value: 'weekly', label: 'Weekly' },
@@ -65,40 +57,6 @@ interface Props {
   onSuccess: () => void
 }
 
-function calcPrices(client: any, type: string, roomSize: string) {
-  const conds = client?.management?.priceConditions
-  if (!conds) return null
-
-  const stdKey = ROOM_TO_KEY[roomSize]
-  const stdPrice = stdKey && conds[stdKey]?.active && conds[stdKey]?.value
-    ? parseFloat(conds[stdKey].value) : null
-
-  const officePrice = conds.office?.active && conds.office?.value
-    ? parseFloat(conds.office.value)
-    : conds.officeAlt?.active && conds.officeAlt?.value
-    ? parseFloat(conds.officeAlt.value) : null
-
-  if (type === 'Standard Clean') {
-    if (roomSize === 'Office/Amenities') return officePrice != null ? { base: officePrice, fee: 0 } : null
-    return stdPrice != null ? { base: stdPrice, fee: 0 } : null
-  }
-  if (type === 'Deep Clean') {
-    if (stdPrice == null) return null
-    const fee = conds.deepCleanFee?.active && conds.deepCleanFee?.value
-      ? parseFloat(conds.deepCleanFee.value) : 0
-    return { base: stdPrice, fee }
-  }
-  if (type === 'Heavy Deep Clean') {
-    if (stdPrice == null) return null
-    const fee = conds.hdcFee?.active && conds.hdcFee?.value
-      ? parseFloat(conds.hdcFee.value) : 0
-    return { base: stdPrice, fee }
-  }
-  if (type === 'Office Clean') {
-    return officePrice != null ? { base: officePrice, fee: 0 } : null
-  }
-  return null
-}
 
 function fmtDate(raw: string | undefined) {
   if (!raw) return '—'
@@ -115,7 +73,6 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
   const [form, setForm] = useState<any>(null)
   const [clients, setClients] = useState<any[]>([])
   const [staff, setStaff] = useState<any[]>([])
-  const [pricedFromMgmt, setPricedFromMgmt] = useState(false)
   const [recurOpen, setRecurOpen] = useState(false)
   const [seriesDialogOpen, setSeriesDialogOpen] = useState(false)
 
@@ -190,24 +147,7 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
     }
   }, [open, isDuplicate, service])
 
-  // Auto-price in edit mode when client / type / roomSize changes
-  useEffect(() => {
-    if (!editing || !form?.clientId || !form?.roomSize || !AUTO_PRICE_TYPES.has(form?.type)) {
-      return
-    }
-    const client = clients.find(c => c.id === form.clientId)
-    const result = calcPrices(client, form.type, form.roomSize)
-    if (result) {
-      setForm((f: any) => ({
-        ...f,
-        basePrice: result.base.toString(),
-        additionalFee: result.fee > 0 ? result.fee.toString() : '',
-      }))
-      setPricedFromMgmt(true)
-    } else {
-      setPricedFromMgmt(false)
-    }
-  }, [form?.clientId, form?.type, form?.roomSize, clients, editing])
+  // No auto-price on edit — prices are manually managed
 
   function startEdit() {
     setForm({
@@ -215,7 +155,6 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
       serviceDate: service.serviceDate?.split('T')[0],
       staffIds: service.staff?.map((st: any) => st.userId) || [],
     })
-    setPricedFromMgmt(false)
     setEditing(true)
   }
 
@@ -223,7 +162,6 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
     setEditing(false)
     setForm(null)
     setError('')
-    setPricedFromMgmt(false)
     if (isDuplicate) onClose()
   }
 
@@ -533,26 +471,20 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
           {/* Pricing */}
           <div>
             {editing && (
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-2">
                 <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Pricing</label>
-                {pricedFromMgmt && mgmtName && (
-                  <div className="flex items-center gap-1">
-                    <DollarSign size={9} className="text-[var(--accent)]" />
-                    <span className="text-[10px] text-[var(--accent)]">Auto-filled from {mgmtName}</span>
-                  </div>
-                )}
               </div>
             )}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Base Price</label>
                 {editing ? (
-                  <div className={`relative rounded-lg border transition-all ${pricedFromMgmt ? 'border-[var(--accent)]' : 'border-[var(--border)]'}`}>
+                  <div className="relative rounded-lg border border-[var(--border)]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-xs">$</span>
                     <input
                       type="number"
                       value={form.basePrice}
-                      onChange={e => { set('basePrice', e.target.value); setPricedFromMgmt(false) }}
+                      onChange={e => set('basePrice', e.target.value)}
                       className="w-full pl-6 pr-3 py-2 bg-[var(--surface2)] rounded-lg text-xs text-[var(--text)] focus:outline-none"
                     />
                   </div>
@@ -565,9 +497,7 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
                   {editing ? feeLabel : 'Additional Fee'}
                 </label>
                 {editing ? (
-                  <div className={`relative rounded-lg border transition-all ${
-                    pricedFromMgmt && parseFloat(form.additionalFee) > 0 ? 'border-[var(--accent)]' : 'border-[var(--border)]'
-                  }`}>
+                  <div className="relative rounded-lg border border-[var(--border)]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-xs">$</span>
                     <input
                       type="number"
@@ -592,14 +522,6 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
               </div>
             </div>
 
-            {/* Breakdown hint */}
-            {editing && pricedFromMgmt && (form?.type === 'Deep Clean' || form?.type === 'Heavy Deep Clean') && form?.basePrice && form?.additionalFee && (
-              <div className="mt-2 text-[10px] text-[var(--muted)] bg-[rgba(74,63,176,0.06)] border border-[rgba(74,63,176,0.15)] rounded-lg px-3 py-2">
-                Base (STD {form.roomSize}) <span className="text-[var(--text)]">${form.basePrice}</span>
-                {' '}+ {form.type === 'Deep Clean' ? 'Deep Clean' : 'HDC'} Fee <span className="text-[var(--text)]">${form.additionalFee}</span>
-                {' '}= <span className="text-[#38d9a9] font-bold">${total.toFixed(2)}</span>
-              </div>
-            )}
           </div>
 
           {/* Status */}
