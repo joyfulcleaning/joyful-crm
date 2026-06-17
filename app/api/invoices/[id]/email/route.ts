@@ -74,13 +74,13 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
-    .invoice-word { position: absolute; top: 88px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
+    .invoice-word { position: absolute; top: 100px; right: 40px; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
     .bill-section { display: flex; justify-content: space-between; margin-bottom: 22px; }
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
     .client-name { font-size: 15px; font-weight: 700; color: #111827; }
     .client-info { font-size: 11px; color: #4b5563; line-height: 1.7; margin-top: 2px; }
-    .inv-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: monospace; }
+    .inv-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: Joyful, cursive; }
     .inv-meta { font-size: 11px; color: #6b7280; line-height: 1.8; margin-top: 4px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
     thead tr { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
