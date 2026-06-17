@@ -70,6 +70,7 @@ export default function ServicesPage() {
   const [clientFilter, setClientFilter] = useState('')
   const [dateFrom, setDateFrom]       = useState('')
   const [dateTo, setDateTo]           = useState('')
+  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'uninvoiced' | 'invoiced'>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -212,12 +213,14 @@ export default function ServicesPage() {
         s.client?.name?.toLowerCase().includes(search.toLowerCase()) ||
         s.type?.toLowerCase().includes(search.toLowerCase()) ||
         s.address?.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = filter === 'all' || s.status === filter
-      const matchClient = !clientFilter || s.client?.id === clientFilter
+      const matchStatus  = filter === 'all' || s.status === filter
+      const matchClient  = !clientFilter || s.client?.id === clientFilter
       const sDate = s.serviceDate ? s.serviceDate.split('T')[0] : ''
-      const matchFrom = !dateFrom || sDate >= dateFrom
-      const matchTo   = !dateTo   || sDate <= dateTo
-      return matchSearch && matchStatus && matchClient && matchFrom && matchTo
+      const matchFrom    = !dateFrom || sDate >= dateFrom
+      const matchTo      = !dateTo   || sDate <= dateTo
+      const matchInvoice = invoiceFilter === 'all'
+        || (invoiceFilter === 'uninvoiced' ? !s.invoicedAt : !!s.invoicedAt)
+      return matchSearch && matchStatus && matchClient && matchFrom && matchTo && matchInvoice
     })
     return list.sort((a, b) => {
       let av: any, bv: any
@@ -444,10 +447,31 @@ export default function ServicesPage() {
             />
           </div>
 
+          {/* Invoice filter toggle */}
+          <div className="flex items-center bg-[#1e2330] border border-[#2a2f3d] rounded-lg overflow-hidden">
+            {([
+              { key: 'all',        label: 'All' },
+              { key: 'uninvoiced', label: 'No Invoice' },
+              { key: 'invoiced',   label: 'Invoiced' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setInvoiceFilter(opt.key)}
+                className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                  invoiceFilter === opt.key
+                    ? 'bg-[#4f8ef7] text-white'
+                    : 'text-[#6b7280] hover:text-[#e8eaf0]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* Clear filters */}
-          {(clientFilter || dateFrom || dateTo) && (
+          {(clientFilter || dateFrom || dateTo || invoiceFilter !== 'all') && (
             <button
-              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo('') }}
+              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all') }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-[#6b7280] hover:text-[#f87171] border border-[#2a2f3d] hover:border-[#f87171] transition-all"
             >
               <X size={11} />Clear
