@@ -31,6 +31,12 @@ export async function GET(request: Request) {
             }
           }
         },
+        invoiceItems: {
+          select: {
+            invoice: { select: { id: true, invoiceNumber: true } }
+          },
+          take: 1,
+        },
         _count: {
           select: { duplicates: true }
         },

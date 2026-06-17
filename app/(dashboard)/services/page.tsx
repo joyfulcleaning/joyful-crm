@@ -24,6 +24,7 @@ const COLS = [
   { key: 'status',    label: 'Status' },
   { key: 'staff',     label: 'Staff' },
   { key: 'payment',   label: 'Payment' },
+  { key: 'invoice',   label: 'Invoice #' },
 ] as const
 type ColKey = typeof COLS[number]['key']
 
@@ -241,7 +242,7 @@ export default function ServicesPage() {
       if (av > bv) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir])
+  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter])
 
   const stats = useMemo(() => {
     const counts:  Record<string, number> = { pending: 0, in_progress: 0, completed: 0, cancelled: 0 }
@@ -509,6 +510,7 @@ export default function ServicesPage() {
                 { colKey: 'status',    label: 'Status',    sk: 'status'        },
                 { colKey: 'staff',     label: 'Staff',     sk: null            },
                 { colKey: 'payment',   label: 'Payment',   sk: 'payment'       },
+                { colKey: 'invoice',   label: 'Invoice #', sk: null            },
               ] as const).map(({ colKey, label, sk }) => col(colKey as any) && (
                 <th
                   key={colKey}
@@ -587,7 +589,12 @@ export default function ServicesPage() {
                         ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ')
                         : '—'}
                     </td>}
-                    {col('payment')   && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.paymentMethod || '—'}</td>}
+                    {col('payment') && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.paymentMethod || '—'}</td>}
+                    {col('invoice') && <td className="px-3 py-2.5 text-xs font-mono">
+                      {s.invoiceItems?.[0]?.invoice?.invoiceNumber
+                        ? <span className="text-[#f59e0b] font-semibold">{s.invoiceItems[0].invoice.invoiceNumber}</span>
+                        : <span className="text-[#4b5563]">—</span>}
+                    </td>}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
                         <button
