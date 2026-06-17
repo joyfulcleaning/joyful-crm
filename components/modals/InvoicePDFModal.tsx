@@ -255,7 +255,15 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
 
           {/* ── Email form panel ── */}
           {showEmail && (
-            <div className="px-6 py-3 bg-[#0d0f14] border-b border-[#2a2f3d] space-y-2">
+            <div className="relative px-6 pt-6 pb-3 bg-[#0d0f14] border-b border-[#2a2f3d] space-y-2">
+              {/* Close button — top right */}
+              <button
+                onClick={() => { setShowEmail(false); setEmailError('') }}
+                className="absolute top-2 right-3 p-1 text-[#6b7280] hover:text-[#e8eaf0] transition-colors"
+              >
+                <X size={14} />
+              </button>
+
               <div className="flex items-center gap-3">
                 <Mail size={14} className="text-[#4f8ef7] flex-shrink-0" />
                 <div className="flex-1">
@@ -301,10 +309,6 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
                   }`} />
                 </button>
               </div>
-              <button onClick={() => { setShowEmail(false); setEmailError('') }}
-                className="p-1.5 text-[#6b7280] hover:text-[#e8eaf0] transition-colors flex-shrink-0">
-                <X size={14} />
-              </button>
             </div>
           )}
         </div>

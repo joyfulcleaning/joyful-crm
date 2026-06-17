@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 
+process.env.TZ = 'America/New_York'
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client', '@sparticuz/chromium', 'puppeteer-core'],
   outputFileTracingIncludes: {

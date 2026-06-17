@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         status:        body.status || 'draft',
         dueDate:       body.dueDate ? new Date(body.dueDate) : null,
         notes:         body.notes,
-        issuedAt:      body.issuedAt ? new Date(body.issuedAt + 'T12:00:00.000Z') : new Date(),
+        issuedAt:      new Date((body.issuedAt ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })) + 'T12:00:00.000Z'),
         // ── Crea los items con serviceId ──
         items: {
           create: body.items?.map((item: any) => ({

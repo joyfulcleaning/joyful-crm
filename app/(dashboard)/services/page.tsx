@@ -254,7 +254,8 @@ export default function ServicesPage() {
       totalAmount += t
       if (s.status in counts) { counts[s.status]++; amounts[s.status] += t }
     })
-    return { total: filtered.length, totalAmount, counts, amounts, completedRevenue: amounts.completed }
+    const completedUninvoiced = filtered.filter(s => s.status === 'completed' && !s.invoicedAt).length
+    return { total: filtered.length, totalAmount, counts, amounts, completedRevenue: amounts.completed, completedUninvoiced }
   }, [filtered])
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(s => selectedIds.has(s.id))
@@ -361,7 +362,7 @@ export default function ServicesPage() {
       {!loading && (
         <div className="grid grid-cols-6 gap-2">
           {[
-            { label: 'Total',       value: stats.total,               color: '#6b7280', bg: 'rgba(107,114,128,0.1)'  },
+            { label: 'Total Services', value: stats.total,               color: '#6b7280', bg: 'rgba(107,114,128,0.1)'  },
             { label: 'Pending',     value: stats.counts.pending,      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'   },
             { label: 'In Progress', value: stats.counts.in_progress,  color: '#4f8ef7', bg: 'rgba(79,142,247,0.1)'   },
             { label: 'Completed',   value: stats.counts.completed,    color: '#26BD97', bg: 'rgba(38,189,151,0.1)'   },
@@ -370,7 +371,7 @@ export default function ServicesPage() {
             <div key={card.label}
               className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-opacity-60 transition-all"
               style={{ borderColor: `${card.color}40` }}
-              onClick={() => setFilter(card.label === 'Total' ? 'all' : Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k] === card.label) || 'all')}
+              onClick={() => setFilter(card.label === 'Total Services' ? 'all' : Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k] === card.label) || 'all')}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
                 style={{ background: card.bg, color: card.color }}>
@@ -379,19 +380,14 @@ export default function ServicesPage() {
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">{card.label}</div>
             </div>
           ))}
-          {/* Completed revenue */}
+          {/* Completed not invoiced */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3"
-            style={{ borderColor: 'rgba(38,189,151,0.3)' }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
-              style={{ background: 'rgba(38,189,151,0.12)', color: '#26BD97' }}>
-              $
+            style={{ borderColor: 'rgba(167,139,250,0.3)' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
+              style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
+              {stats.completedUninvoiced}
             </div>
-            <div>
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Completed</div>
-              <div className="text-sm font-bold text-[#26BD97] font-mono leading-tight">
-                ${stats.completedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
+            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">Completed not Invoiced</div>
           </div>
         </div>
       )}
@@ -593,7 +589,7 @@ export default function ServicesPage() {
                     {col('payment') && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.paymentMethod || '—'}</td>}
                     {col('invoice') && <td className="px-3 py-2.5 text-xs font-mono">
                       {s.invoiceItems?.[0]?.invoice?.invoiceNumber
-                        ? <span className="text-[#f59e0b] font-semibold">{s.invoiceItems[0].invoice.invoiceNumber}</span>
+                        ? <span className="text-[#4f8ef7] font-semibold">{s.invoiceItems[0].invoice.invoiceNumber}</span>
                         : <span className="text-[#4b5563]">—</span>}
                     </td>}
                     <td className="px-3 py-2.5">
