@@ -214,7 +214,8 @@ export default function ServicesPage() {
         String(s.serviceNumber).includes(search) ||
         s.client?.name?.toLowerCase().includes(search.toLowerCase()) ||
         s.type?.toLowerCase().includes(search.toLowerCase()) ||
-        s.address?.toLowerCase().includes(search.toLowerCase())
+        s.address?.toLowerCase().includes(search.toLowerCase()) ||
+        s.invoiceItems?.[0]?.invoice?.invoiceNumber?.toLowerCase().includes(search.toLowerCase())
       const matchStatus  = filter === 'all' || s.status === filter
       const matchClient  = !clientFilter || s.client?.id === clientFilter
       const sDate = s.serviceDate ? s.serviceDate.split('T')[0] : ''
