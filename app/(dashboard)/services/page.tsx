@@ -27,13 +27,7 @@ const COLS = [
 ] as const
 type ColKey = typeof COLS[number]['key']
 
-function initVisibleCols(): Set<ColKey> {
-  try {
-    const saved = localStorage.getItem('services-visible-cols')
-    if (saved) return new Set(JSON.parse(saved) as ColKey[])
-  } catch {}
-  return new Set(COLS.map(c => c.key))
-}
+const DEFAULT_VISIBLE_COLS = new Set(COLS.map(c => c.key)) as Set<ColKey>
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b',
@@ -80,9 +74,16 @@ export default function ServicesPage() {
   const [sortDir, setSortDir]   = useState<'asc'|'desc'>('desc')
 
   // ── Column picker ──
-  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(initVisibleCols)
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(DEFAULT_VISIBLE_COLS)
   const [colPickerOpen, setColPickerOpen] = useState(false)
   const colPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('services-visible-cols')
+      if (saved) setVisibleCols(new Set(JSON.parse(saved) as ColKey[]))
+    } catch {}
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
