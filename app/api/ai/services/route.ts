@@ -7,6 +7,50 @@ import { HOURLY_SLOTS } from '@/lib/scheduling'
 import { calcPrices, calcPrivatePrices, PRIVATE_CUSTOMER_NAME } from '@/lib/pricing'
 import { stripPriceFields } from '@/lib/serviceVisibility'
 
+// GET /api/ai/services?clientId=&phone=
+// Lists a client's services (past and upcoming) so the assistant can find
+// which one a caller means before rescheduling/cancelling, or answer
+// questions about a past visit. Requires clientId or phone.
+export async function GET(request: Request) {
+  if (!isAiAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const clientIdParam = searchParams.get('clientId')
+  const phoneParam = searchParams.get('phone')
+  if (!clientIdParam && !phoneParam) {
+    return NextResponse.json({ error: 'clientId or phone query param is required' }, { status: 400 })
+  }
+
+  try {
+    let clientId = clientIdParam
+    if (!clientId && phoneParam) {
+      const target = normalizePhone(phoneParam)
+      const candidates = await prisma.client.findMany({ where: { phone: { not: null } }, select: { id: true, phone: true } })
+      clientId = candidates.find(c => c.phone && normalizePhone(c.phone) === target)?.id ?? null
+    }
+
+    if (!clientId) {
+      return NextResponse.json({ found: false, services: [] })
+    }
+
+    const services = await prisma.service.findMany({
+      where: { clientId },
+      select: {
+        id: true, serviceDate: true, serviceTime: true, type: true,
+        address: true, status: true, frequency: true,
+      },
+      orderBy: { serviceDate: 'asc' },
+    })
+
+    return NextResponse.json({ found: true, services })
+  } catch (error) {
+    console.error('Error in GET /api/ai/services:', error)
+    return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 })
+  }
+}
+
 // POST /api/ai/services
 // Books a real cleaning service from a phone call. If the caller isn't an
 // existing client, a new Client is created with price 0 (the owner fills it

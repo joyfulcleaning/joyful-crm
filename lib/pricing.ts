@@ -61,3 +61,16 @@ export function calcPrivatePrices(client: any, frequency: string) {
   const price = priceRef[frequency] ? parseFloat(priceRef[frequency]) : null
   return price != null ? { base: price, fee: 0 } : null
 }
+
+// ─── Post-construction estimate, priced per square foot ───────────────────────
+export const SQFT_RATES: Record<string, number> = {
+  'Rough Clean': 0.35,
+  'Final Clean': 0.45,
+  'Touch Up':    0.25,
+}
+
+export function calcSqftEstimate(type: string, sqft: number) {
+  const rate = SQFT_RATES[type]
+  if (rate == null || !(sqft > 0)) return null
+  return Math.round(rate * sqft * 100) / 100
+}
