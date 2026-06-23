@@ -11,12 +11,24 @@ export async function GET(request: Request) {
     const authUser = await getAuthUser(request)
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { searchParams } = new URL(request.url)
+    const from = searchParams.get('from')
+    const to   = searchParams.get('to')
+    const cal  = searchParams.get('cal') === '1'
+
+    const dateFilter = from && to ? {
+      serviceDate: {
+        gte: new Date(from + 'T00:00:00.000Z'),
+        lte: new Date(to   + 'T23:59:59.999Z'),
+      }
+    } : {}
+
     const where = authUser.role === 'user'
       ? {
           serviceDate: { in: getVisibleServiceDates().map(d => new Date(d)) },
           staff: { some: { userId: authUser.id } },
         }
-      : undefined
+      : dateFilter
 
     const services = await prisma.service.findMany({
       where,
@@ -31,12 +43,14 @@ export async function GET(request: Request) {
             }
           }
         },
-        invoiceItems: {
-          select: {
-            invoice: { select: { id: true, invoiceNumber: true } }
+        ...(!cal ? {
+          invoiceItems: {
+            select: {
+              invoice: { select: { id: true, invoiceNumber: true } }
+            },
+            take: 1,
           },
-          take: 1,
-        },
+        } : {}),
         _count: {
           select: { duplicates: true }
         },

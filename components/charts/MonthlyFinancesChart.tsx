@@ -190,7 +190,7 @@ export default function MonthlyFinancesChart() {
         <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">No data for {year}</div>
       ) : (
         <div style={{ height: 200 }}>
-          <Bar data={chartData} options={options} />
+          <Bar key={data.length} data={chartData} options={{ ...options, animation: { duration: 900, easing: 'easeOutQuart', delay: 100 } } as any} />
         </div>
       )}
     </div>

@@ -28,7 +28,8 @@ export default function RootLayout({
       lang="en"
       className={`${dmSans.variable} ${dmMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col font-[family-name:var(--font-sans)]">
+      <body className="min-h-full flex flex-col font-[family-name:var(--font-sans)]" suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme');if(t==='light')document.body.classList.add('light')}catch(e){}` }} />
         {children}
       </body>
     </html>

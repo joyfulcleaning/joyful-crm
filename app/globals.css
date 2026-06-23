@@ -100,6 +100,51 @@ body {
 body.light ::-webkit-scrollbar-thumb { background: rgba(74,63,176,.18); border: 2px solid var(--bg); }
 body.light ::-webkit-scrollbar-thumb:hover { background: rgba(74,63,176,.32); }
 
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Reveals chart content from bottom to top — mimics bars growing from baseline */
+@keyframes chartReveal {
+  from { clip-path: inset(100% 0 0 0); }
+  to   { clip-path: inset(0% 0 0 0); }
+}
+
+@keyframes chartLineIn {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes caDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes caWipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes caGrowUp {
+  from { clip-path: inset(100% 0 0 0); }
+  to   { clip-path: inset(0% 0 0 0); }
+}
+
+@keyframes caFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes caSegGrow {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes caLegIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Font utilities ── */
 .font-display { font-family: var(--font-display); }
 .font-mono-custom { font-family: var(--font-mono); }

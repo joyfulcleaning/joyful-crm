@@ -8,6 +8,7 @@ import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
+import CountUp from '@/components/ui/CountUp'
 
 const COLS = [
   { key: 'id',        label: 'ID' },
@@ -375,7 +376,7 @@ export default function ServicesPage() {
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
                 style={{ background: card.bg, color: card.color }}>
-                {card.value}
+                <CountUp value={card.value} />
               </div>
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">{card.label}</div>
             </div>
@@ -385,7 +386,7 @@ export default function ServicesPage() {
             style={{ borderColor: 'rgba(167,139,250,0.3)' }}>
             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
               style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
-              {stats.completedUninvoiced}
+              <CountUp value={stats.completedUninvoiced} />
             </div>
             <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">Completed not Invoiced</div>
           </div>

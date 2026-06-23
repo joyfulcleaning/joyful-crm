@@ -1,12 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import {
-  Briefcase,
-  CheckCircle,
-  Clock,
-  Users,
-} from 'lucide-react'
+
+import DashboardStats from '@/components/dashboard/DashboardStats'
 import WeeklyGrowthChart from '@/components/charts/WeeklyGrowthChart'
 import WeeklyServicesChart from '@/components/charts/WeeklyServicesChart'
 import CumulativeNetIncomeChart from '@/components/charts/CumulativeNetIncomeChart'
@@ -33,44 +29,6 @@ export default async function DashboardPage() {
   })
 
 
-  const stats = [
-    {
-      label:   'Total Services',
-      value:   totalServices,
-      formula: 'all statuses combined',
-      icon: Briefcase,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/20',
-    },
-    {
-      label:   'Completed',
-      value:   completedServices,
-      formula: `${totalServices ? Math.round(completedServices / totalServices * 100) : 0}% of total services`,
-      icon: CheckCircle,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/20',
-    },
-    {
-      label:   'Pending',
-      value:   pendingServices,
-      formula: `${totalServices ? Math.round(pendingServices / totalServices * 100) : 0}% of total services`,
-      icon: Clock,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-    },
-    {
-      label:   'Active Clients',
-      value:   totalClients,
-      formula: 'all registered clients',
-      icon: Users,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10',
-      border: 'border-purple-500/20',
-    },
-  ]
 
   const statusColors: Record<string, string> = {
     pending:     'bg-[rgba(245,158,11,0.1)] text-[#f59e0b]',
@@ -92,25 +50,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className={`bg-[var(--surface)] border ${stat.border} rounded-xl p-5 shadow-[var(--shadow-rest,none)]`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[var(--muted)]">{stat.label}</span>
-              <div className={`w-8 h-8 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                <stat.icon size={16} className={stat.color} />
-              </div>
-            </div>
-            <div className={`text-3xl font-bold ${stat.color}`}>
-              {stat.value}
-            </div>
-            <div className="text-[10px] text-[var(--muted)] mt-1.5 font-mono">{stat.formula}</div>
-          </div>
-        ))}
-      </div>
+      <DashboardStats
+        totalServices={totalServices}
+        completedServices={completedServices}
+        pendingServices={pendingServices}
+        totalClients={totalClients}
+      />
 
       {/* Net Income Growth */}
       <WeeklyGrowthChart />

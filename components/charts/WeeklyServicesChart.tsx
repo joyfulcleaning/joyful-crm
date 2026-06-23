@@ -65,18 +65,17 @@ export default function WeeklyServicesChart() {
 
   useEffect(() => { fetchData(year) }, [year, fetchData])
 
-  // Avg services/day over last 12 weeks
   const last12      = data.slice(-12)
   const totalLast12 = last12.reduce((s, d) => s + d.count, 0)
   const avgPerDay   = last12.length > 0 ? totalLast12 / (last12.length * 7) : 0
 
-  const blue       = '#4f8ef7'
-  const blueBg     = light ? 'rgba(79,142,247,0.07)' : 'rgba(79,142,247,0.08)'
-  const chartBg    = light ? '#FFFFFF'               : '#161922'
-  const chartBorder= light ? '#D3D7E0'               : '#2a2f3d'
-  const chartText  = light ? '#1F1A3D'               : '#e8eaf0'
-  const chartMuted = light ? '#6B7280'               : '#6b7280'
-  const chartGrid  = light ? '#E8EAF0'               : '#1e2330'
+  const blue        = '#4f8ef7'
+  const blueBg      = light ? 'rgba(79,142,247,0.07)' : 'rgba(79,142,247,0.08)'
+  const chartBg     = light ? '#FFFFFF'               : '#161922'
+  const chartBorder = light ? '#D3D7E0'               : '#2a2f3d'
+  const chartText   = light ? '#1F1A3D'               : '#e8eaf0'
+  const chartMuted  = light ? '#6B7280'               : '#6b7280'
+  const chartGrid   = light ? '#E8EAF0'               : '#1e2330'
 
   const hasData = data.some(d => d.count > 0)
 
@@ -99,39 +98,42 @@ export default function WeeklyServicesChart() {
     }],
   }
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: chartBg,
-        borderColor: chartBorder,
-        borderWidth: 1,
-        titleColor: chartText,
-        bodyColor: chartMuted,
-        padding: 10,
-        callbacks: {
-          title: (items: any[]) => {
-              const i = items[0].dataIndex
-              return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
-            },
-          label: (ctx: any) => `  Services: ${ctx.raw}`,
-        },
+  const tooltip = {
+    backgroundColor: chartBg, borderColor: chartBorder, borderWidth: 1,
+    titleColor: chartText, bodyColor: chartMuted, padding: 10,
+    callbacks: {
+      title: (items: any[]) => {
+        const i = items[0].dataIndex
+        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
       },
+      label: (ctx: any) => `  Services: ${ctx.raw}`,
     },
+  }
+
+  const bgOptions = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
     scales: {
-      x: {
-        ticks: { color: chartMuted, font: { size: 9 }, maxRotation: 0 },
-        grid: { color: chartGrid },
-      },
-      y: {
-        ticks: { color: chartMuted, font: { size: 9 }, stepSize: 1 },
-        grid: { color: chartGrid },
-        min: 0,
-      },
+      x: { ticks: { color: chartMuted, font: { size: 9 }, maxRotation: 0 }, grid: { color: chartGrid } },
+      y: { ticks: { color: chartMuted, font: { size: 9 }, stepSize: 1 }, grid: { color: chartGrid }, min: 0 },
     },
   } as any
+
+  const fgOptions = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip },
+    scales: {
+      x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, stepSize: 1 }, grid: { display: false }, border: { display: false }, min: 0 },
+    },
+  } as any
+
+  const bgData = {
+    labels,
+    datasets: chartData.datasets.map((d: any) => ({
+      ...d, borderColor: 'transparent', backgroundColor: 'transparent', pointRadius: 0, pointHoverRadius: 0,
+    })),
+  }
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow-rest,none)]">
@@ -187,8 +189,13 @@ export default function WeeklyServicesChart() {
       ) : !hasData ? (
         <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">No data for {year}</div>
       ) : (
-        <div style={{ height: 156 }}>
-          <Line data={chartData} options={options} />
+        <div key={data.length} style={{ position: 'relative', height: 156 }}>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <Line data={bgData} options={bgOptions} />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, animation: 'caWipe 1.5s cubic-bezier(.45,.05,.35,1) .2s both' }}>
+            <Line data={chartData} options={fgOptions} />
+          </div>
         </div>
       )}
     </div>

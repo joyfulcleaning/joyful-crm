@@ -74,7 +74,6 @@ export default function WeeklyGrowthChart() {
 
   const hasData = data.some(d => d.netIncome !== 0 || d.revenue !== 0)
 
-  // Thin x-axis labels for 52 weeks: show W1, W5, W9 ... every 4 weeks
   const labels = data.map((d, i) => i % 4 === 0 ? d.week : '')
 
   const chartData = {
@@ -95,53 +94,52 @@ export default function WeeklyGrowthChart() {
     }],
   }
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: chartBg,
-        borderColor: chartBorder,
-        borderWidth: 1,
-        titleColor: chartText,
-        bodyColor: chartMuted,
-        padding: 10,
-        callbacks: {
-          title: (items: any[]) => {
-              const i = items[0].dataIndex
-              return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
-            },
-          label: (ctx: any) => {
-            const i   = ctx.dataIndex
-            const rev = data[i]?.revenue  ?? 0
-            const exp = data[i]?.expenses ?? 0
-            const net = ctx.raw as number
-            const fmtN = (n: number) => `${n >= 0 ? '$' : '-$'}${Math.abs(Math.round(n)).toLocaleString()}`
-            return [
-              `  Completed:   ${fmtN(rev)}`,
-              `  Expenses:    ${fmtN(exp)}`,
-              `  Net income:  ${fmtN(net)}`,
-            ]
-          },
-        },
+  const yTickCb = (v: any) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+  const tooltip = {
+    backgroundColor: chartBg, borderColor: chartBorder, borderWidth: 1,
+    titleColor: chartText, bodyColor: chartMuted, padding: 10,
+    callbacks: {
+      title: (items: any[]) => {
+        const i = items[0].dataIndex
+        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
+      },
+      label: (ctx: any) => {
+        const i   = ctx.dataIndex
+        const rev = data[i]?.revenue  ?? 0
+        const exp = data[i]?.expenses ?? 0
+        const net = ctx.raw as number
+        const fmtN = (n: number) => `${n >= 0 ? '$' : '-$'}${Math.abs(Math.round(n)).toLocaleString()}`
+        return [`  Completed:   ${fmtN(rev)}`, `  Expenses:    ${fmtN(exp)}`, `  Net income:  ${fmtN(net)}`]
       },
     },
+  }
+
+  // Background layer: grid + axes appear immediately
+  const bgOptions = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
     scales: {
-      x: {
-        ticks: { color: chartMuted, font: { size: 9 }, maxRotation: 0 },
-        grid: { color: chartGrid },
-      },
-      y: {
-        ticks: {
-          color: chartMuted,
-          font: { size: 9 },
-          callback: (v: any) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`,
-        },
-        grid: { color: chartGrid },
-      },
+      x: { ticks: { color: chartMuted, font: { size: 9 }, maxRotation: 0 }, grid: { color: chartGrid } },
+      y: { ticks: { color: chartMuted, font: { size: 9 }, callback: yTickCb }, grid: { color: chartGrid } },
     },
   } as any
+
+  // Foreground layer: lines only (axes invisible but keep same size for alignment)
+  const fgOptions = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip },
+    scales: {
+      x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, callback: yTickCb }, grid: { display: false }, border: { display: false } },
+    },
+  } as any
+
+  const bgData = {
+    labels,
+    datasets: chartData.datasets.map((d: any) => ({
+      ...d, borderColor: 'transparent', backgroundColor: 'transparent', pointRadius: 0, pointHoverRadius: 0,
+    })),
+  }
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow-rest,none)]">
@@ -190,8 +188,13 @@ export default function WeeklyGrowthChart() {
       ) : !hasData ? (
         <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">No data for {year}</div>
       ) : (
-        <div style={{ height: 156 }}>
-          <Line data={chartData} options={options} />
+        <div key={data.length} style={{ position: 'relative', height: 156 }}>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <Line data={bgData} options={bgOptions} />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, animation: 'caWipe 1.5s cubic-bezier(.45,.05,.35,1) .2s both' }}>
+            <Line data={chartData} options={fgOptions} />
+          </div>
         </div>
       )}
     </div>

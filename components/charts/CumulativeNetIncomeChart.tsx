@@ -54,7 +54,6 @@ export default function CumulativeNetIncomeChart() {
 
   useEffect(() => { fetchData(year) }, [year, fetchData])
 
-  // Build cumulative totals
   let running = 0
   const cumulative  = raw.map(d => { running += d.netIncome; return running })
   const weekDeltas  = raw.map(d => d.netIncome)
@@ -69,7 +68,6 @@ export default function CumulativeNetIncomeChart() {
   const muted     = light ? '#6b7280'              : '#6b7280'
   const grid      = light ? '#E8EAF0'              : '#1e2330'
 
-  // Thin x-axis labels every 4 weeks
   const labels = raw.map((d, i) => i % 4 === 0 ? d.week : '')
 
   const chartData = {
@@ -90,52 +88,51 @@ export default function CumulativeNetIncomeChart() {
     }],
   }
 
-  const options: any = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: chartBg,
-        borderColor: border,
-        borderWidth: 1,
-        titleColor: textColor,
-        bodyColor: muted,
-        padding: 10,
-        callbacks: {
-          title: (items: any[]) => raw[items[0].dataIndex]?.week ?? '',
-          label: (ctx: any) => {
-            const i       = ctx.dataIndex
-            const weekly  = weekDeltas[i]
-            const cum     = ctx.parsed.y
-            const rev     = raw[i]?.revenue  ?? 0
-            const exp     = raw[i]?.expenses ?? 0
-            return [
-              `  Completed:   ${fmt(rev)}`,
-              `  Expenses:    ${fmt(exp)}`,
-              `  Net income:  ${fmt(weekly)}`,
-              `  Cumulative:  ${fmt(cum)}`,
-            ]
-          },
-        },
+  const yTickCb = (v: number) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+  const tooltip = {
+    backgroundColor: chartBg, borderColor: border, borderWidth: 1,
+    titleColor: textColor, bodyColor: muted, padding: 10,
+    callbacks: {
+      title: (items: any[]) => raw[items[0].dataIndex]?.week ?? '',
+      label: (ctx: any) => {
+        const i      = ctx.dataIndex
+        const weekly = weekDeltas[i]
+        const cum    = ctx.parsed.y
+        const rev    = raw[i]?.revenue  ?? 0
+        const exp    = raw[i]?.expenses ?? 0
+        return [
+          `  Completed:   ${fmt(rev)}`,
+          `  Expenses:    ${fmt(exp)}`,
+          `  Net income:  ${fmt(weekly)}`,
+          `  Cumulative:  ${fmt(cum)}`,
+        ]
       },
     },
+  }
+
+  const bgOptions: any = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
     scales: {
-      x: {
-        grid: { color: grid },
-        ticks: { color: muted, font: { size: 9 }, maxRotation: 0 },
-        border: { display: false },
-      },
-      y: {
-        grid: { color: grid },
-        ticks: {
-          color: muted,
-          font: { size: 9 },
-          callback: (v: number) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`,
-        },
-        border: { display: false },
-      },
+      x: { grid: { color: grid }, ticks: { color: muted, font: { size: 9 }, maxRotation: 0 }, border: { display: false } },
+      y: { grid: { color: grid }, ticks: { color: muted, font: { size: 9 }, callback: yTickCb }, border: { display: false } },
     },
+  }
+
+  const fgOptions: any = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: false }, tooltip },
+    scales: {
+      x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, callback: yTickCb }, grid: { display: false }, border: { display: false } },
+    },
+  }
+
+  const bgData = {
+    labels,
+    datasets: chartData.datasets.map((d: any) => ({
+      ...d, borderColor: 'transparent', backgroundColor: 'transparent', fill: false, pointRadius: 0, pointHoverRadius: 0,
+    })),
   }
 
   return (
@@ -187,8 +184,13 @@ export default function CumulativeNetIncomeChart() {
       ) : allZero ? (
         <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">No data for {year}</div>
       ) : (
-        <div style={{ height: 200 }}>
-          <Line data={chartData} options={options} />
+        <div key={raw.length} style={{ position: 'relative', height: 200 }}>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <Line data={bgData} options={bgOptions} />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, animation: 'caWipe 1.5s cubic-bezier(.45,.05,.35,1) .2s both' }}>
+            <Line data={chartData} options={fgOptions} />
+          </div>
         </div>
       )}
     </div>

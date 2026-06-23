@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement, LineElement,
-  PointElement, ArcElement, Title, Tooltip, Legend, Filler,
+  CategoryScale, LinearScale, BarElement,
+  LineElement, PointElement, Filler,
+  Title, Tooltip, Legend,
 } from 'chart.js'
-import { Bar, Line, Doughnut } from 'react-chartjs-2'
+import { Bar, Line } from 'react-chartjs-2'
 import { TrendingDown, DollarSign, Briefcase, Activity } from 'lucide-react'
+import CountUp from '@/components/ui/CountUp'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Title, Tooltip, Legend)
 
 const RANGE = [
   { label: '7D',     days: 7   },
@@ -59,6 +61,67 @@ function Skeleton() {
   )
 }
 
+
+const _DOUGHNUT_R    = 92
+const _DOUGHNUT_CIRC = +(2 * Math.PI * _DOUGHNUT_R).toFixed(2) // ≈ 578.05
+
+function SVGDoughnut({
+  labels, values, colors, showLegend = true, legendColor = '#9ca3af',
+}: {
+  labels: string[]; values: number[]; colors: string[]
+  showLegend?: boolean; legendColor?: string
+}) {
+  const total = values.reduce((a, b) => a + b, 0)
+  if (total === 0) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+      <span style={{ fontSize: 11, color: '#6b7280' }}>No data</span>
+    </div>
+  )
+  let angle = -90
+  const segs = labels.map((label, i) => {
+    const frac = values[i] / total
+    const arcLen = +(frac * _DOUGHNUT_CIRC).toFixed(2)
+    const startDeg = +angle.toFixed(2)
+    angle += frac * 360
+    return { label, arcLen, startDeg, color: colors[i % colors.length], delay: +(0.1 + i * 0.13).toFixed(2) }
+  }).filter(s => s.arcLen > 0.5)
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg viewBox="0 0 280 280" style={{ width: '100%', height: '100%' }}>
+          <g fill="none" strokeWidth={46}>
+            {segs.map((seg, i) => (
+              <circle key={i} cx={140} cy={140} r={_DOUGHNUT_R} stroke={seg.color}
+                style={{
+                  transformOrigin: '140px 140px',
+                  transform: `rotate(${seg.startDeg}deg)`,
+                  strokeDasharray: `${seg.arcLen} ${_DOUGHNUT_CIRC}`,
+                  strokeDashoffset: seg.arcLen,
+                  animation: `caSegGrow .9s cubic-bezier(.45,.05,.35,1) ${seg.delay}s forwards`,
+                } as any}
+              />
+            ))}
+          </g>
+        </svg>
+      </div>
+      {showLegend && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', justifyContent: 'center', paddingBottom: 2 }}>
+          {segs.map((seg, i) => (
+            <span key={i} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 10, color: legendColor, opacity: 0,
+              animation: `caLegIn .4s ease ${0.8 + i * 0.07}s both`,
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: seg.color, flexShrink: 0, display: 'inline-block' }} />
+              {seg.label}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AnalyticsPage() {
   const [days,       setDays]       = useState(30)
   const [customFrom, setCustomFrom] = useState('')
@@ -66,13 +129,16 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [light, setLight] = useState(false)
+  const [themeReady, setThemeReady] = useState(false)
 
   useEffect(() => {
+    setLight(document.body.classList.contains('light'))
+    setThemeReady(true)
     const update = () => setLight(document.body.classList.contains('light'))
-    update()
     window.addEventListener('theme-change', update)
     return () => window.removeEventListener('theme-change', update)
   }, [])
+
 
   const chartBg     = light ? '#FFFFFF'  : '#161922'
   const chartBorder = light ? '#D3D7E0'  : '#2a2f3d'
@@ -81,9 +147,8 @@ export default function AnalyticsPage() {
   const chartGrid   = light ? '#E8EAF0'  : '#1e2330'
   const green       = light ? '#2C7355'  : '#38d9a9'
   const greenBg     = light ? 'rgba(62,155,117,0.08)' : 'rgba(56,217,169,0.08)'
-  const greenFill   = light ? 'rgba(62,155,117,0.12)' : 'rgba(56,217,169,0.12)'
 
-  const pluginBase = {
+  const pluginBase = useMemo(() => ({
     legend: { labels: { color: chartMuted, font: { size: 10 }, boxWidth: 8, padding: 10 } },
     tooltip: {
       backgroundColor: chartBg,
@@ -93,12 +158,12 @@ export default function AnalyticsPage() {
       bodyColor: chartMuted,
       padding: 8,
     },
-  }
+  }), [chartMuted, chartBg, chartBorder, chartText])
 
-  const scalesBase = {
+  const scalesBase = useMemo(() => ({
     x: { ticks: { color: chartMuted, font: { size: 9 } }, grid: { color: chartGrid } },
     y: { ticks: { color: chartMuted, font: { size: 9 } }, grid: { color: chartGrid } },
-  }
+  }), [chartMuted, chartGrid])
 
   const isCustom = days === 0
 
@@ -122,59 +187,63 @@ export default function AnalyticsPage() {
   const marginLabel = (kpi.netMargin || 0) >= 70 ? 'Excellent' : (kpi.netMargin || 0) >= 40 ? 'Good' : 'Needs Focus'
 
   // ── Chart data ──
-  const lineData = data ? {
-    labels: data.timeSeries.labels,
-    datasets: [
-      {
-        label: 'Revenue', data: data.timeSeries.revenue,
-        borderColor: green, backgroundColor: greenBg,
-        borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: green,
-      },
-      {
-        label: 'Expenses', data: data.timeSeries.expenses,
-        borderColor: '#f87171', backgroundColor: 'transparent',
-        borderWidth: 2, borderDash: [5, 3], fill: false, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#f87171',
-      },
-    ],
-  } : null
-
-  const typeData = data ? {
-    labels: data.servicesByType.length ? data.servicesByType.map((s: any) => s.type) : ['No data'],
-    datasets: [{
-      data: data.servicesByType.length ? data.servicesByType.map((s: any) => s.count) : [1],
-      backgroundColor: PALETTE.map(c => c + 'cc'),
-      borderColor: 'transparent',
-      borderWidth: 0,
-    }],
-  } : null
-
-  const staffData = data ? {
+  const staffData = useMemo(() => data ? {
     labels: data.byStaff.length ? data.byStaff.map((s: any) => s.name.split(' ')[0]) : ['—'],
     datasets: [{
       label: 'Services',
       data: data.byStaff.length ? data.byStaff.map((s: any) => s.count) : [0],
       backgroundColor: 'rgba(79,142,247,0.7)', borderColor: '#4f8ef7', borderWidth: 1, borderRadius: 4,
     }],
-  } : null
+  } : null, [data])
 
-  const weekData = data ? {
+  const staffBgData = useMemo(() => staffData ? {
+    ...staffData,
+    datasets: staffData.datasets.map((d: any) => ({ ...d, backgroundColor: 'transparent', borderColor: 'transparent' })),
+  } : null, [staffData])
+
+  const staffBgOptions = useMemo(() => ({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { ...pluginBase, legend: { display: false }, tooltip: { enabled: false } },
+    scales: { x: scalesBase.x, y: { ...scalesBase.y, ticks: { ...scalesBase.y.ticks, stepSize: 1 } } },
+  }), [pluginBase, scalesBase])
+
+  const staffOptions = useMemo(() => ({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { ...pluginBase, legend: { display: false } },
+    scales: {
+      x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 } }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, stepSize: 1 }, grid: { display: false }, border: { display: false } },
+    },
+  }), [pluginBase])
+
+  const weekData = useMemo(() => data ? {
     labels: data.weeklyVolume.map((v: any) => v.day),
     datasets: [{
       label: 'Services',
       data: data.weeklyVolume.map((v: any) => v.count),
       backgroundColor: 'rgba(167,139,250,0.7)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4,
     }],
-  } : null
+  } : null, [data])
 
-  const invStatusData = data ? {
-    labels: ['Paid', 'Pending', 'Overdue', 'Draft'],
-    datasets: [{
-      data: [data.invoiceStatus.paid, data.invoiceStatus.sent, data.invoiceStatus.overdue, data.invoiceStatus.draft],
-      backgroundColor: ['rgba(56,217,169,0.8)', 'rgba(79,142,247,0.7)', 'rgba(248,113,113,0.8)', 'rgba(107,114,128,0.5)'],
-      borderColor: [green, '#4f8ef7', '#f87171', '#6b7280'],
-      borderWidth: 2,
-    }],
-  } : null
+  const weekBgData = useMemo(() => weekData ? {
+    ...weekData,
+    datasets: weekData.datasets.map((d: any) => ({ ...d, backgroundColor: 'transparent', borderColor: 'transparent' })),
+  } : null, [weekData])
+
+  const weekBgOptions = useMemo(() => ({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { ...pluginBase, legend: { display: false }, tooltip: { enabled: false } },
+    scales: { x: scalesBase.x, y: { ...scalesBase.y, ticks: { ...scalesBase.y.ticks, stepSize: 1 } } },
+  }), [pluginBase, scalesBase])
+
+  const weekOptions = useMemo(() => ({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { ...pluginBase, legend: { display: false } },
+    scales: {
+      x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 } }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, stepSize: 1 }, grid: { display: false }, border: { display: false } },
+    },
+  }), [pluginBase])
 
   return (
     <div className="space-y-4">
@@ -226,31 +295,34 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-4 gap-3">
             {[
               {
-                label: 'Total Revenue', value: fmt(kpi.totalRevenue ?? 0),
+                label: 'Total Revenue', value: kpi.totalRevenue ?? 0, format: fmt,
                 icon: DollarSign, color: green, border: 'border-t-[#38d9a9]',
                 sub: `${kpi.servicesCount ?? 0} services this period`,
               },
               {
-                label: 'Total Expenses', value: fmt(kpi.totalExpenses ?? 0),
+                label: 'Total Expenses', value: kpi.totalExpenses ?? 0, format: fmt,
                 icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
                 sub: `${pct(kpi.totalRevenue ? (kpi.totalExpenses / kpi.totalRevenue) * 100 : 0)} of revenue`,
               },
               {
-                label: 'Net Balance', value: fmt(kpi.netBalance ?? 0),
+                label: 'Net Balance', value: kpi.netBalance ?? 0, format: fmt,
                 icon: Activity, color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
                 sub: `Margin: ${pct(kpi.netMargin ?? 0)}`,
               },
               {
-                label: 'Services Done', value: String(kpi.completedServices ?? 0),
+                label: 'Services Done', value: kpi.completedServices ?? 0, format: undefined,
                 icon: Briefcase, color: '#a78bfa', border: 'border-t-[#a78bfa]',
                 sub: `of ${kpi.servicesCount ?? 0} total`,
               },
-            ].map(card => (
-              <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}>
+            ].map((card, i) => (
+              <div key={card.label}
+                className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}
+                style={{ animation: 'fadeSlideUp 0.4s ease both', animationDelay: `${i * 80}ms` }}
+              >
                 <card.icon size={18} className="absolute right-3 top-3 opacity-20" style={{ color: card.color }} />
                 <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
                 <div className="text-2xl font-bold mt-1.5" style={{ color: card.color, fontFamily: 'var(--font-display)' }}>
-                  {card.value}
+                  <CountUp value={card.value} format={card.format} />
                 </div>
                 <div className="text-[10px] text-[#6b7280] mt-0.5">{card.sub}</div>
               </div>
@@ -262,19 +334,43 @@ export default function AnalyticsPage() {
             <div className="col-span-2 bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
               <div className="text-xs font-bold text-[#e8eaf0] mb-3">Revenue vs Expenses</div>
               <div style={{ height: 220 }}>
-                {lineData && (
-                  <Line data={lineData as any} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { ...pluginBase, legend: { ...pluginBase.legend, position: 'top' } },
-                    scales: {
-                      x: scalesBase.x,
-                      y: {
-                        ...scalesBase.y,
-                        ticks: { ...scalesBase.y.ticks, callback: (v: any) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}` },
-                      },
+                {themeReady && data?.timeSeries?.labels?.length > 0 && (() => {
+                  const pts = data.timeSeries.labels.length > 26 ? 0 : 3
+                  const yTickCb = (v: any) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+                  const lineDatasets = [
+                    {
+                      label: 'Revenue', data: data.timeSeries.revenue,
+                      borderColor: green, backgroundColor: greenBg, borderWidth: 2.5,
+                      fill: true, tension: 0.4, pointRadius: pts, pointHoverRadius: 5,
+                      pointBackgroundColor: green, pointBorderColor: chartBg, pointBorderWidth: 2,
                     },
-                  } as any} />
-                )}
+                    {
+                      label: 'Expenses', data: data.timeSeries.expenses,
+                      borderColor: '#f87171', backgroundColor: 'transparent', borderWidth: 2,
+                      borderDash: [5, 3], fill: false, tension: 0.4, pointRadius: pts, pointHoverRadius: 5,
+                      pointBackgroundColor: '#f87171', pointBorderColor: chartBg, pointBorderWidth: 2,
+                    },
+                  ]
+                  const legendCfg = { display: true, position: 'top' as const, align: 'start' as const, labels: { color: chartMuted, font: { size: 10 }, boxWidth: 12, padding: 12 } }
+                  return (
+                    <div key={`line-${light}-${days}-${data.timeSeries.labels.length}`} style={{ position: 'relative', height: '100%' }}>
+                      {/* Background: grid + axes + legend */}
+                      <div style={{ position: 'absolute', inset: 0 }}>
+                        <Line
+                          data={{ labels: data.timeSeries.labels, datasets: lineDatasets.map(d => ({ ...d, borderColor: 'transparent', backgroundColor: 'transparent', pointRadius: 0, pointHoverRadius: 0 })) }}
+                          options={{ responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: legendCfg, tooltip: { enabled: false } }, scales: { x: { ticks: { color: chartMuted, font: { size: 9 } }, grid: { color: chartGrid }, border: { display: false } }, y: { ticks: { color: chartMuted, font: { size: 9 }, callback: yTickCb }, grid: { color: chartGrid }, border: { display: false } } } } as any}
+                        />
+                      </div>
+                      {/* Foreground: lines animate left-to-right */}
+                      <div style={{ position: 'absolute', inset: 0, animation: 'caWipe 1.5s cubic-bezier(.45,.05,.35,1) .2s both' }}>
+                        <Line
+                          data={{ labels: data.timeSeries.labels, datasets: lineDatasets }}
+                          options={{ responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: legendCfg, tooltip: pluginBase.tooltip }, scales: { x: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 } }, grid: { display: false }, border: { display: false } }, y: { ticks: { color: 'rgba(0,0,0,0)', font: { size: 9 }, callback: yTickCb }, grid: { display: false }, border: { display: false } } } } as any}
+                        />
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
@@ -283,10 +379,15 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-center h-48 text-xs text-[#6b7280]">No data</div>
               ) : (
                 <div style={{ height: 200 }}>
-                  <Doughnut data={typeData as any} options={{
-                    responsive: true, maintainAspectRatio: false, cutout: '55%',
-                    plugins: { ...pluginBase, legend: { ...pluginBase.legend, position: 'bottom' } },
-                  } as any} />
+                  {themeReady && (
+                    <SVGDoughnut
+                      key={`type-${light}-${days}-${data.servicesByType.length}`}
+                      labels={data.servicesByType.map((s: any) => s.type)}
+                      values={data.servicesByType.map((s: any) => s.count)}
+                      colors={PALETTE}
+                      legendColor={chartMuted}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -299,23 +400,25 @@ export default function AnalyticsPage() {
               {data.byStaff.length === 0 ? (
                 <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">No staff data</div>
               ) : (
-                <div style={{ height: 180 }}>
-                  <Bar data={staffData as any} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { ...pluginBase, legend: { display: false } },
-                    scales: { x: scalesBase.x, y: { ...scalesBase.y, ticks: { ...scalesBase.y.ticks, stepSize: 1 } } },
-                  } as any} />
+                <div style={{ position: 'relative', height: 180 }}>
+                  <div style={{ position: 'absolute', inset: 0 }}>
+                    <Bar data={staffBgData as any} options={staffBgOptions as any} />
+                  </div>
+                  <div style={{ position: 'absolute', inset: 0, animation: 'caGrowUp 0.9s cubic-bezier(.45,.05,.35,1) .1s both' }}>
+                    <Bar data={staffData as any} options={staffOptions as any} />
+                  </div>
                 </div>
               )}
             </div>
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
               <div className="text-xs font-bold text-[#e8eaf0] mb-3">Weekly Volume</div>
-              <div style={{ height: 180 }}>
-                <Bar data={weekData as any} options={{
-                  responsive: true, maintainAspectRatio: false,
-                  plugins: { ...pluginBase, legend: { display: false } },
-                  scales: { x: scalesBase.x, y: { ...scalesBase.y, ticks: { ...scalesBase.y.ticks, stepSize: 1 } } },
-                } as any} />
+              <div style={{ position: 'relative', height: 180 }}>
+                <div style={{ position: 'absolute', inset: 0 }}>
+                  <Bar data={weekBgData as any} options={weekBgOptions as any} />
+                </div>
+                <div style={{ position: 'absolute', inset: 0, animation: 'caGrowUp 0.9s cubic-bezier(.45,.05,.35,1) .1s both' }}>
+                  <Bar data={weekData as any} options={weekOptions as any} />
+                </div>
               </div>
             </div>
           </div>
@@ -326,10 +429,15 @@ export default function AnalyticsPage() {
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
               <div className="text-xs font-bold text-[#e8eaf0] mb-3">Invoice Status</div>
               <div style={{ height: 110 }} className="mb-3">
-                <Doughnut data={invStatusData as any} options={{
-                  responsive: true, maintainAspectRatio: false, cutout: '62%',
-                  plugins: { ...pluginBase, legend: { display: false } },
-                } as any} />
+                {themeReady && (
+                  <SVGDoughnut
+                    key={`inv-${light}-${days}-${data.invoiceStatus.paid + data.invoiceStatus.sent}`}
+                    labels={['Paid', 'Pending', 'Overdue', 'Draft']}
+                    values={[data.invoiceStatus.paid, data.invoiceStatus.sent, data.invoiceStatus.overdue, data.invoiceStatus.draft]}
+                    colors={[green, '#4f8ef7', '#f87171', '#6b7280']}
+                    showLegend={false}
+                  />
+                )}
               </div>
               {[
                 { label: 'Paid', count: data.invoiceStatus.paid, color: green },
