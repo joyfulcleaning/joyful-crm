@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       estimateNumber, issueDate, validUntil,
       clientName, clientEmail, clientPhone, clientAddress,
       notes, taxRate, subtotal, tax, total, items,
-      clientId,
+      clientId, visitDate, visitTime,
     } = body
 
     const estimate = await prisma.estimate.create({
@@ -50,7 +50,24 @@ export async function POST(req: Request) {
         invoice: { select: { id: true, invoiceNumber: true, status: true } },
       },
     })
-    return NextResponse.json(estimate)
+
+    let estimateVisit = null
+    if (visitDate) {
+      estimateVisit = await prisma.estimateVisit.create({
+        data: {
+          clientId: estimate.clientId,
+          name: estimate.clientName,
+          phone: estimate.clientPhone,
+          email: estimate.clientEmail,
+          address: estimate.clientAddress,
+          visitDate: new Date(`${visitDate}T00:00:00.000Z`),
+          visitTime,
+          estimateId: estimate.id,
+        },
+      })
+    }
+
+    return NextResponse.json({ ...estimate, estimateVisit })
   } catch (error: any) {
     console.error('POST /api/estimates error:', error)
     if (error.code === 'P2002') {

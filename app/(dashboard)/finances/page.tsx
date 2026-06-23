@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import CountUp from '@/components/ui/CountUp'
 import { DollarSign, TrendingUp, TrendingDown, Search, Check, CheckCircle, Plus, RefreshCw, ReceiptText, X, ChevronDown, SlidersHorizontal, GripVertical } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import InvoiceDetailModal from '@/components/modals/InvoiceDetailModal'
@@ -11,7 +12,7 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import EstimatePDFModal, { type EstimateData } from '@/components/modals/EstimatePDFModal'
 import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
-import ServiceModal from '@/components/modals/ServiceModal'
+import ServiceModal, { TIME_SLOTS } from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 
 const INV_COL_DEFS = [
@@ -261,6 +262,9 @@ export default function FinancesPage() {
   const [estItems, setEstItems] = useState([
     { description: '', qty: 1, unitPrice: 0, total: 0 },
   ])
+  const [estScheduleVisit, setEstScheduleVisit] = useState(false)
+  const [estVisitDate, setEstVisitDate] = useState(new Date().toISOString().split('T')[0])
+  const [estVisitTime, setEstVisitTime] = useState(TIME_SLOTS[0]?.value || '')
   const [estPDFOpen, setEstPDFOpen] = useState(false)
   const [estPDFData, setEstPDFData] = useState<EstimateData | null>(null)
   const [estimates, setEstimates] = useState<any[]>([])
@@ -359,10 +363,13 @@ export default function FinancesPage() {
     try {
       const url  = estEditId ? `/api/estimates/${estEditId}` : '/api/estimates'
       const method = estEditId ? 'PUT' : 'POST'
+      const visitFields = !estEditId && estScheduleVisit
+        ? { visitDate: estVisitDate, visitTime: estVisitTime }
+        : {}
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, clientId: registeredClientId }),
+        body: JSON.stringify({ ...data, clientId: registeredClientId, ...visitFields }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -398,6 +405,9 @@ export default function FinancesPage() {
     setEstClientId('')
     setEstClientMode('manual')
     setEstSaveError('')
+    setEstScheduleVisit(false)
+    setEstVisitDate(new Date().toISOString().split('T')[0])
+    setEstVisitTime(TIME_SLOTS[0]?.value || '')
   }
 
   function loadEstimateForEdit(est: any) {
@@ -1350,21 +1360,23 @@ export default function FinancesPage() {
 
           <div className="grid grid-cols-5 gap-3">
             {[
-              { label: 'Completed Services', value: fmt(completedTotal), icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
+              { label: 'Completed Services', value: completedTotal, icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
                 sub: [{ k: 'Invoiced', v: fmt(completedTotal - notInvoicedCompleted), sep: '+' }, { k: 'Not yet', v: fmt(notInvoicedCompleted), sep: '' }] },
-              { label: 'Total Invoiced',     value: fmt(totalInvoiced),  icon: DollarSign,   color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
+              { label: 'Total Invoiced',     value: totalInvoiced,  icon: DollarSign,   color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
                 sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '+' }, { k: 'Pending', v: fmt(pendingToPay), sep: '' }] },
-              { label: 'Pending to Pay',     value: fmt(pendingToPay),   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
+              { label: 'Pending to Pay',     value: pendingToPay,   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
                 sub: [{ k: 'Sent', v: fmt(sentBalance), sep: '+' }, { k: 'Overdue', v: fmt(overdueBalance), sep: '' }] },
-              { label: 'Expenses',           value: fmt(totalExpenses),  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
+              { label: 'Expenses',           value: totalExpenses,  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
                 sub: [{ k: `${sumExpenses.length} items`, v: '', sep: '·' }, { k: 'Recurring/mo', v: fmt(recurringTotal), sep: '' }] },
-              { label: 'Net Income',         value: fmt(netIncome),      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
+              { label: 'Net Income',         value: netIncome,      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
                 sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '−' }, { k: 'Expenses', v: fmt(totalExpenses), sep: '' }] },
             ].map(card => (
               <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}>
                 <card.icon size={20} className="absolute right-3 top-3 opacity-20" style={{ color: card.color }} />
                 <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
-                <div className="text-2xl font-bold mt-2" style={{ color: card.color, fontFamily: 'var(--font-display)' }}>{card.value}</div>
+                <div className="text-2xl font-bold mt-2" style={{ color: card.color, fontFamily: 'var(--font-display)' }}>
+                  <CountUp value={card.value} format={fmt} />
+                </div>
                 <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280] flex-wrap">
                   {card.sub.map(s => (
                     <React.Fragment key={s.k}>
@@ -1384,7 +1396,7 @@ export default function FinancesPage() {
               <ReceiptText size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#fb923c' }} />
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Not Invoiced</div>
               <div className="text-2xl font-bold mt-2" style={{ color: '#fb923c', fontFamily: 'var(--font-display)' }}>
-                {fmt(notInvoicedCompleted + notInvoicedPending)}
+                <CountUp value={notInvoicedCompleted + notInvoicedPending} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                 <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedCompleted)}</span></span>
@@ -1398,7 +1410,7 @@ export default function FinancesPage() {
               <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#818cf8' }} />
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Completed vs Invoiced</div>
               <div className="text-2xl font-bold mt-2" style={{ color: serviceVsInvoiceDiff >= 0 ? '#38d9a9' : '#f87171', fontFamily: 'var(--font-display)' }}>
-                {serviceVsInvoiceDiff >= 0 ? '+' : ''}{fmt(serviceVsInvoiceDiff)}
+                {serviceVsInvoiceDiff >= 0 ? '+' : ''}<CountUp value={serviceVsInvoiceDiff} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                 <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
@@ -1412,7 +1424,7 @@ export default function FinancesPage() {
               <DollarSign size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#38d9a9' }} />
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Total Collected</div>
               <div className="text-2xl font-bold mt-2" style={{ color: '#38d9a9', fontFamily: 'var(--font-display)' }}>
-                {fmt(totalCollected)}
+                <CountUp value={totalCollected} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                 <span>Invoiced: <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
@@ -1426,7 +1438,7 @@ export default function FinancesPage() {
               <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#2dd4bf' }} />
               <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Service Net</div>
               <div className="text-2xl font-bold mt-2" style={{ color: completedNet >= 0 ? '#2dd4bf' : '#f87171', fontFamily: 'var(--font-display)' }}>
-                {completedNet >= 0 ? '+' : ''}{fmt(completedNet)}
+                {completedNet >= 0 ? '+' : ''}<CountUp value={completedNet} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                 <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
@@ -3129,6 +3141,31 @@ export default function FinancesPage() {
                       <input type="date" className={inputCls} value={estForm.validUntil} onChange={e => setEstForm(f => ({ ...f, validUntil: e.target.value }))} />
                     </div>
                   </div>
+                  {!estEditId && (
+                    <div className="pt-1 border-t border-[#2a2f3d]">
+                      <label className="flex items-center gap-2 text-xs font-semibold text-[#9ca3af] cursor-pointer pt-2">
+                        <input type="checkbox" checked={estScheduleVisit} onChange={e => setEstScheduleVisit(e.target.checked)} className="w-3.5 h-3.5" />
+                        Schedule a visit to this property
+                      </label>
+                      {estScheduleVisit && (
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                          <div>
+                            <label className={labelCls}>Visit Date</label>
+                            <input type="date" className={inputCls} value={estVisitDate} onChange={e => setEstVisitDate(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Visit Time</label>
+                            <select className={inputCls} value={estVisitTime} onChange={e => setEstVisitTime(e.target.value)}>
+                              <option value="">— Select time —</option>
+                              {TIME_SLOTS.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className={labelCls}>Notes</label>
                     <textarea rows={3} className={inputCls} value={estForm.notes} onChange={e => setEstForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes for the client…" />

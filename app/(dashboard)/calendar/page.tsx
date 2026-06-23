@@ -49,6 +49,16 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
 }
 function typeColor(t: string) { return TYPE_COLORS[t] ?? { bg: 'rgba(79,142,247,0.12)', text: '#4f8ef7' } }
 
+const ESTIMATE_VISIT_COLOR = '#ec4899'
+
+function initShowEstimateVisits(): boolean {
+  try {
+    const saved = localStorage.getItem('cal-show-estimate-visits')
+    if (saved !== null) return saved === '1'
+  } catch {}
+  return true
+}
+
 function getDateStr(dateVal: string) {
   return dateVal?.split('T')[0]
 }
@@ -87,8 +97,12 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
+  const [estimateVisits, setEstimateVisits] = useState<any[]>([])
+  const [selectedVisits, setSelectedVisits] = useState<any[]>([])
+  const [showEstimateVisits, setShowEstimateVisits] = useState<boolean>(initShowEstimateVisits)
   const [viewStart, setViewStart] = useState<Date | null>(null)
   const [viewEnd, setViewEnd] = useState<Date | null>(null)
+  const viewRangeRef = useRef<{ from: string; to: string } | null>(null)
   const [rowPositions, setRowPositions] = useState<{ top: number; height: number }[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedServices, setSelectedServices] = useState<any[]>([])
@@ -99,8 +113,10 @@ export default function CalendarPage() {
   const [newServiceOpen, setNewServiceOpen] = useState(false)
   const [newServiceDate, setNewServiceDate] = useState('')
   const servicesRef = useRef<any[]>([])
+  const estimateVisitsRef = useRef<any[]>([])
   const calendarRef = useRef<any>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const loadServicesRef = useRef<(from?: string, to?: string) => void>(() => {})
   const [light, setLight] = useState(false)
 
   const [calVisibleCols, setCalVisibleCols] = useState<Set<CalColKey>>(initCalCols)
@@ -200,12 +216,19 @@ export default function CalendarPage() {
   const handleDatesSet = useCallback((info: any) => {
     setViewStart(info.start)
     setViewEnd(info.end)
+    const from = utcStr(info.start)
+    const to   = utcStr(info.end)
+    viewRangeRef.current = { from, to }
+    loadServicesRef.current(from, to)
+    loadEstimateVisitsRef.current(from, to)
     injectBadges()
     measureRows()
   }, [injectBadges, measureRows])
 
-  function loadServices() {
-    fetch('/api/services', { cache: 'no-store' })
+  function loadServices(from?: string, to?: string) {
+    const range = from && to ? { from, to } : viewRangeRef.current
+    const qs = range ? `?from=${range.from}&to=${range.to}&cal=1` : '?cal=1'
+    fetch(`/api/services${qs}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setServices(data)
@@ -220,13 +243,6 @@ export default function CalendarPage() {
           extendedProps: s,
         }))
         setEvents(mapped)
-        // Force FullCalendar to re-render events (it doesn't always react to prop changes for existing IDs)
-        const calApi = calendarRef.current?.getApi?.()
-        if (calApi) {
-          calApi.removeAllEvents()
-          mapped.forEach((ev: any) => calApi.addEvent(ev))
-        }
-        // Re-sync the daily services table for the currently selected date
         if (selectedDate) {
           const filtered = data
             .filter((s: any) => getDateStr(s.serviceDate) === selectedDate)
@@ -245,19 +261,44 @@ export default function CalendarPage() {
       .catch(() => {})
   }
 
-  useEffect(() => { loadServices() }, [])
+  function loadEstimateVisits(from?: string, to?: string) {
+    const range = from && to ? { from, to } : viewRangeRef.current
+    const qs = range ? `?from=${range.from}&to=${range.to}` : ''
+    fetch(`/api/estimate-visits${qs}`, { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : []
+        setEstimateVisits(list)
+        estimateVisitsRef.current = list
+        if (selectedDate) {
+          setSelectedVisits(list.filter((v: any) => getDateStr(v.visitDate) === selectedDate))
+        }
+      })
+      .catch(() => setEstimateVisits([]))
+  }
+
   useEffect(() => { loadExpenses() }, [])
+
+  function toggleShowEstimateVisits() {
+    setShowEstimateVisits(prev => {
+      const next = !prev
+      try { localStorage.setItem('cal-show-estimate-visits', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
 
   // Keep refs to the latest loaders so the polling interval below
   // (set up once) always runs with up-to-date closures (e.g. selectedDate).
-  const loadServicesRef = useRef(loadServices)
   loadServicesRef.current = loadServices
   const loadExpensesRef = useRef(loadExpenses)
   loadExpensesRef.current = loadExpenses
+  const loadEstimateVisitsRef = useRef(loadEstimateVisits)
+  loadEstimateVisitsRef.current = loadEstimateVisits
 
-  useSyncPoll(['services', 'expenses'], () => {
+  useSyncPoll(['services', 'expenses', 'estimateVisits'], () => {
     loadServicesRef.current()
     loadExpensesRef.current()
+    loadEstimateVisitsRef.current()
   })
 
   useEffect(() => {
@@ -276,6 +317,11 @@ export default function CalendarPage() {
       .filter(s => getDateStr(s.serviceDate) === date)
       .sort((a, b) => a.serviceTime.localeCompare(b.serviceTime))
     setSelectedServices(filtered)
+    setSelectedVisits(
+      estimateVisitsRef.current
+        .filter(v => getDateStr(v.visitDate) === date)
+        .sort((a, b) => a.visitTime.localeCompare(b.visitTime))
+    )
   }
 
   function handleDateClick(info: any) { selectDay(info.dateStr) }
@@ -310,6 +356,17 @@ export default function CalendarPage() {
     ? 'TODAY'
     : new Date(activeDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
+  const visitEvents = showEstimateVisits ? estimateVisits.map(v => ({
+    id: `visit-${v.id}`,
+    title: `${v.visitTime?.slice(0,5)} · ${v.name}`,
+    start: `${getDateStr(v.visitDate)}T${v.visitTime}`,
+    backgroundColor: `${ESTIMATE_VISIT_COLOR}20`,
+    borderColor: ESTIMATE_VISIT_COLOR,
+    textColor: ESTIMATE_VISIT_COLOR,
+    extendedProps: { kind: 'estimateVisit', ...v },
+  })) : []
+  const calendarEvents = [...events, ...visitEvents]
+
   const calWeeks = viewStart && viewEnd ? getCalWeeks(viewStart, viewEnd) : []
   const weeklySummaries = calWeeks.map(({ start, end }) => {
     const wSvcs = services.filter(s => { const d = getDateStr(s.serviceDate); return d >= start && d < end })
@@ -334,12 +391,25 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-bold text-[var(--text)]">Calendar</h1>
           <p className="text-[var(--muted)] text-sm mt-1">Monthly operational overview</p>
         </div>
-        <button
-          onClick={() => { setNewServiceDate(todayStr); setNewServiceOpen(true) }}
-          className="px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          + New Service
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEstimateVisits}
+              onChange={toggleShowEstimateVisits}
+              className="w-3 h-3"
+              style={{ accentColor: ESTIMATE_VISIT_COLOR }}
+            />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
+            Estimate Visits
+          </label>
+          <button
+            onClick={() => { setNewServiceDate(todayStr); setNewServiceOpen(true) }}
+            className="px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            + New Service
+          </button>
+        </div>
       </div>
 
       {/* Calendar + weekly sidebar */}
@@ -386,7 +456,7 @@ export default function CalendarPage() {
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
-            events={events}
+            events={calendarEvents}
             height="auto"
             stickyHeaderDates={false}
             eventDisplay="block"
@@ -540,6 +610,37 @@ export default function CalendarPage() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {selectedDate && showEstimateVisits && selectedVisits.length > 0 && (
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-[var(--shadow-rest,none)]">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
+            <div className="text-sm font-semibold text-[var(--text)]">Estimate Visits</div>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Time</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Name</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Phone</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Address</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedVisits.map(v => (
+                <tr key={v.id} className="border-b border-[var(--border)] hover:bg-[var(--surface2)]">
+                  <td className="py-2 text-[var(--muted2)]">{v.visitTime}</td>
+                  <td className="py-2 text-[var(--text)]">{v.name}</td>
+                  <td className="py-2 text-[var(--muted)] text-xs">{v.phone || '—'}</td>
+                  <td className="py-2 text-[var(--muted)] text-xs max-w-32 truncate">{v.address || '—'}</td>
+                  <td className="py-2 text-[var(--muted)] text-xs max-w-40 truncate">{v.notes || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

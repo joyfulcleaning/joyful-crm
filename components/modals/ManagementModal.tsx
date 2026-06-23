@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { X, Plus, Save, DollarSign, ToggleLeft, ToggleRight } from 'lucide-react'
+import { PRIVATE_CUSTOMER_NAME } from '@/lib/pricing'
 
-// ─── Private Customer management identifier ────────────────────────────────────
-export const PRIVATE_CUSTOMER_NAME = 'Private Customer'
+export { PRIVATE_CUSTOMER_NAME }
 
 // ─── Private Customer per-client price fields ──────────────────────────────────
 export const PRIVATE_CUSTOMER_FIELDS = [

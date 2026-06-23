@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const authUser = await getAuthUser(request)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets] = await Promise.all([
+  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets, estimateVisits] = await Promise.all([
     prisma.service.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.expense.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.invoice.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     prisma.recurringExpense.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.inventoryProduct.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.asset.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
+    prisma.estimateVisit.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
   ])
 
   return NextResponse.json({
@@ -29,5 +30,6 @@ export async function GET(request: Request) {
     recurringExpenses: sig(recurringExpenses),
     inventory: sig(inventory),
     assets: sig(assets),
+    estimateVisits: sig(estimateVisits),
   })
 }
