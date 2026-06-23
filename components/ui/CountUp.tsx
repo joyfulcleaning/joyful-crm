@@ -10,7 +10,7 @@ interface Props {
 
 export default function CountUp({ value, format, duration = 650, className }: Props) {
   const [current, setCurrent] = useState(0)
-  const frameRef  = useRef<number>()
+  const frameRef  = useRef<number | undefined>(undefined)
   const stateRef  = useRef({ from: 0, target: 0, startTime: 0 })
 
   useEffect(() => {
