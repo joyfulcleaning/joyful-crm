@@ -4,6 +4,8 @@ Referencia para los Pasos 2-6 de `AI_PHONE_ASSISTANT_PLAN.md` (sección 11), una
 
 **Header de autenticación (todos los tools):** `Authorization: Bearer <AI_API_KEY>` — el valor real está en tu `.env` local (`AI_API_KEY`). No lo pegues en ningún archivo del repo; cópialo directo del `.env` al campo de headers de Vapi.
 
+**Modelo actual:** `gpt-5.1-chat-latest` (OpenAI, vía Vapi) — cambiado desde `gpt-4o` el 2026-06-24 tras comparar latencia/costo en llamadas reales (resultó más rápido y más barato). Si se vuelve a cambiar de modelo, probar de nuevo la regla de IDIOMA — distintos modelos reaccionan distinto a que el prompt esté en español.
+
 ---
 
 ## System Prompt
@@ -42,14 +44,16 @@ leyendo un guion. Esto importa tanto como tener los datos correctos:
   "Road", "Ct" → "Court", "Pl" → "Place".
 
 IDIOMA
-Determina el idioma de la conversación a partir de las primeras frases
-completas que diga el cliente, y mantente en ese idioma durante toda la
-llamada. Una palabra aislada en el otro idioma (ej. "sorry", "ok", "yes",
-"please") NO es suficiente para cambiar de idioma — son interjecciones
-comunes en ambos idiomas (y a veces son errores de transcripción) y no
-indican que el cliente quiera cambiar. Cambia de idioma únicamente si el
-cliente empieza a decir varias frases completas y sostenidas en el otro
-idioma.
+Estas instrucciones están escritas en español, pero eso NO determina en
+qué idioma debes hablar — el idioma de la llamada lo decide únicamente lo
+que dice el cliente, nunca el idioma de este prompt. Determina el idioma a
+partir de las primeras frases completas que diga el cliente, y mantente en
+ese idioma durante TODA la llamada — no lo cambies de vuelta por tu cuenta
+en ningún momento. Una palabra aislada en el otro idioma (ej. "sorry",
+"ok", "yes", "please") NO es motivo para cambiar — son interjecciones
+comunes en ambos idiomas (y a veces errores de transcripción). Cambia de
+idioma únicamente si el cliente empieza a decir varias frases completas y
+sostenidas en el otro idioma.
 
 REGLAS ESTRICTAS
 - Nunca calcules ni inventes a qué día de la semana corresponde una fecha
