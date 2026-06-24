@@ -1,54 +1,24 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { isAiAuthorized } from '@/lib/ai-auth'
+import {
+  findClientByPhone, checkAvailability, listClientServices,
+  createService, rescheduleOrCancelService, createSqftEstimate, scheduleEstimateVisit,
+} from '@/lib/ai-handlers'
 
 // Vapi calls every tool via POST to this single webhook, wrapping the call
-// in `message.toolCallList` regardless of the tool's own HTTP semantics.
-// This adapter unwraps that, forwards to the matching existing /api/ai/*
-// endpoint (already built, tested and authenticated independently), and
-// wraps the response back into Vapi's expected `results` shape.
-const BASE_URL = 'https://joyful-crm.vercel.app'
-
-function authHeaders() {
-  return { Authorization: `Bearer ${process.env.AI_API_KEY}`, 'Content-Type': 'application/json' }
-}
-
-function qs(params: Record<string, string | undefined>) {
-  const sp = new URLSearchParams()
-  for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v)
-  return sp.toString()
-}
-
-const HANDLERS: Record<string, (args: any) => Promise<Response>> = {
-  find_client_by_phone: (args) =>
-    fetch(`${BASE_URL}/api/ai/clients?${qs({ phone: args.phone })}`, { headers: authHeaders() }),
-
-  check_availability: (args) =>
-    fetch(`${BASE_URL}/api/ai/availability?${qs({ date: args.date })}`, { headers: authHeaders() }),
-
-  schedule_service: (args) =>
-    fetch(`${BASE_URL}/api/ai/services`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(args) }),
-
-  list_client_services: (args) =>
-    fetch(`${BASE_URL}/api/ai/services?${qs({ clientId: args.clientId, phone: args.phone })}`, { headers: authHeaders() }),
-
-  reschedule_or_cancel_service: (args) =>
-    fetch(`${BASE_URL}/api/ai/services/${args.serviceId}`, {
-      method: 'PATCH',
-      headers: authHeaders(),
-      body: JSON.stringify({
-        callerPhone: args.callerPhone,
-        serviceDate: args.serviceDate,
-        serviceTime: args.serviceTime,
-        status: args.status,
-      }),
-    }),
-
-  create_sqft_estimate: (args) =>
-    fetch(`${BASE_URL}/api/ai/estimates`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(args) }),
-
-  schedule_estimate_visit: (args) =>
-    fetch(`${BASE_URL}/api/ai/estimate-visits`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(args) }),
+// in `message.toolCallList` regardless of the tool's own semantics. This
+// adapter unwraps that and calls the same handler functions the /api/ai/*
+// REST routes use directly — no internal HTTP self-call, which added a slow
+// extra network hop in a live voice call.
+const HANDLERS: Record<string, (args: any) => Promise<{ status: number; body: any }>> = {
+  find_client_by_phone: (args) => findClientByPhone(args.phone),
+  check_availability: (args) => checkAvailability(args.date),
+  schedule_service: (args) => createService(args),
+  list_client_services: (args) => listClientServices(args.clientId, args.phone),
+  reschedule_or_cancel_service: (args) => rescheduleOrCancelService(args.serviceId, args),
+  create_sqft_estimate: (args) => createSqftEstimate(args),
+  schedule_estimate_visit: (args) => scheduleEstimateVisit(args),
 }
 
 export async function POST(request: Request) {
@@ -66,15 +36,11 @@ export async function POST(request: Request) {
       try {
         const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {}
         const handler = HANDLERS[name]
-        if (!handler) {
-          return { name, toolCallId, error: `Unknown tool: ${name}` }
-        }
-        const res = await handler(args)
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          return { name, toolCallId, error: data.error || `Request failed (${res.status})` }
-        }
-        return { name, toolCallId, result: JSON.stringify(data) }
+        if (!handler) return { name, toolCallId, error: `Unknown tool: ${name}` }
+
+        const { status, body: result } = await handler(args)
+        if (status >= 400) return { name, toolCallId, error: result.error || `Request failed (${status})` }
+        return { name, toolCallId, result: JSON.stringify(result) }
       } catch (err: any) {
         return { name, toolCallId, error: err?.message || 'Tool execution failed' }
       }
