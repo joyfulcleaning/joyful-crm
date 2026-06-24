@@ -34,7 +34,11 @@ export async function POST(request: Request) {
       const name = call.function?.name
       const toolCallId = call.id
       try {
-        const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {}
+        // Vapi's docs say `arguments` is a JSON-encoded string, but in
+        // practice the live webhook sends it already parsed as an object —
+        // handle both so a format change on either side doesn't break this.
+        const raw = call.function?.arguments
+        const args = typeof raw === 'string' ? JSON.parse(raw) : (raw || {})
         const handler = HANDLERS[name]
         if (!handler) return { name, toolCallId, error: `Unknown tool: ${name}` }
 
