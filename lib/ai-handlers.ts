@@ -140,6 +140,7 @@ export async function createService(args: {
         email: clientEmail || null,
         address, city: city || undefined, state: state || undefined, zip: zip || null,
         managementId: privateMgmt?.id ?? null,
+        notes: 'Created by AI phone assistant',
       },
       include: { management: true },
     })
@@ -219,6 +220,7 @@ export async function rescheduleOrCancelService(id: string, args: {
   if (!ownsService) return { status: 403, body: { error: 'This service does not belong to the caller' } }
 
   const data: Record<string, unknown> = {}
+  const actionNotes: string[] = []
 
   if (serviceDate || serviceTime) {
     const newDate = serviceDate || service.serviceDate.toISOString().slice(0, 10)
@@ -236,9 +238,19 @@ export async function rescheduleOrCancelService(id: string, args: {
     if (conflict) return { status: 409, body: { error: 'Time slot already booked' } }
     data.serviceDate = new Date(`${newDate}T00:00:00.000Z`)
     data.serviceTime = newTime
+    actionNotes.push(`Rescheduled by AI phone assistant to ${newDate} ${newTime}.`)
   }
 
-  if (status === 'cancelled') data.status = 'cancelled'
+  if (status === 'cancelled') {
+    data.status = 'cancelled'
+    actionNotes.push('Cancelled by AI phone assistant.')
+  }
+
+  if (actionNotes.length > 0) {
+    data.internalNotes = service.internalNotes
+      ? `${service.internalNotes}\n${actionNotes.join(' ')}`
+      : actionNotes.join(' ')
+  }
 
   const updated = await prisma.service.update({ where: { id }, data })
 
@@ -300,7 +312,8 @@ export async function createSqftEstimate(args: {
       data: {
         estimateNumber, issueDate, validUntil,
         clientName: name, clientEmail: email, clientPhone: phone || null, clientAddress: address,
-        notes: notes || null, taxRate: 0, subtotal: total, tax: 0, total,
+        notes: notes || null, internalNotes: 'Created by AI phone assistant',
+        taxRate: 0, subtotal: total, tax: 0, total,
         items: estimateData.items, clientId: resolvedClientId,
       },
     })
@@ -357,7 +370,7 @@ export async function scheduleEstimateVisit(args: {
       address: address || null,
       visitDate: new Date(`${visitDate}T00:00:00.000Z`),
       visitTime,
-      notes: notes || null,
+      notes: notes ? `Created by AI phone assistant. ${notes}` : 'Created by AI phone assistant',
     },
   })
 
