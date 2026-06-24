@@ -1,102 +1,110 @@
-# Guion de prueba — qué decirle al agente
+# Test script — what to say to the agent
 
-**Cliente de prueba (no es un cliente real):** Nathasha Rodriguez, teléfono **347-220-9090**, email **nathashasalcedo@gmail.com**. Dirección registrada: 123 Test St, Fayetteville, NC. Si el agente te saluda por ese nombre, confirma que encontró el registro correcto.
+**Test customer (not a real client):** Nathasha Rodriguez, phone **347-220-9090**, email **nathashasalcedo@gmail.com**. Registered address: 123 Test St, Fayetteville, NC. If the agent greets you by that name, it found the right record.
 
-Para la Llamada 2 (cliente nuevo) usa el teléfono **910-555-9999** — ese sí crea un cliente nuevo de verdad en la base, así que avísame al terminar para borrarlo.
+For Call 2 (new customer) use phone **910-555-9999** — that one creates a real new client in the database, so let me know once you're done testing so I can delete it.
 
-Haz cada llamada por separado. Al terminar todas, avísame para revisar las transcripciones.
+The agent's primary language is now English — that's why most calls below are in English. A few near the end specifically test Spanish as the secondary language.
+
+Make each call separately. Once you're done with all of them, let me know so I can review the transcripts.
 
 ---
 
-## Llamada 1 — Cliente existente: agendar, precio, reagendar, cancelar
+## Call 1 — Existing customer: schedule, price, reschedule, cancel
+
+1. "Hi, this is Nathasha Rodriguez, I'd like to schedule a standard cleaning."
+2. (If asked for your phone) "347-220-9090."
+3. "How much does it cost?"
+4. "Okay, schedule it for next week."
+5. (When asked which day) "Monday."
+6. (When offered times) "What times do you have?"
+7. Pick one of the offered times.
+8. "I want to change that appointment to a different time."
+9. Give a different time.
+10. "Actually, cancel it."
+11. "Thanks, that's it."
+
+## Call 2 — New customer
+
+1. "Hi, I'd like to schedule a cleaning, I'm a new customer."
+2. Give a made-up name (not Nathasha).
+3. "My phone number is 910-555-9999."
+4. Give a made-up address.
+5. "A standard cleaning for tomorrow."
+6. Pick one of the offered times.
+7. "Thanks, that's it."
+
+## Call 3 — Interruptions / incomplete data
+
+1. "Hi, I'd like to schedule a cleaning."
+2. "My number is three four seven..." (cut the sentence off, don't say the rest)
+3. Wait a few seconds without saying anything.
+4. When asked to repeat, give the full number: "347-220-9090."
+5. "I'd like to schedule a cleaning for Friday."
+6. End the call normally.
+
+## Call 4 — SQFT estimate (repeat this call 3 times, once per type)
+
+1. "I need an estimate for a property under construction."
+2. "What's the difference between the cleaning types you offer?"
+3. Say one of these three (one per call): "Rough Clean" / "Final Clean" / "Touch Up"
+4. "It's 1500 square feet."
+5. Give an address.
+6. "My email is nathashasalcedo@gmail.com." (to confirm the PDF arrives)
+7. "How much is it going to cost?"
+8. "Thanks, that's it."
+
+## Call 5 — In-person estimate visit
+
+1. "I'd rather have someone come look at the property instead of giving you the measurements."
+2. Give name, phone, address.
+3. "What day can you come?"
+4. Pick a date and time.
+5. "Thanks, that's it."
+
+## Call 6 — Check history
+
+1. "Hi, this is Nathasha Rodriguez, my phone number is 347-220-9090."
+2. "What services do I have scheduled?"
+3. "When was my last cleaning?"
+4. "Thanks, that's it."
+
+## Call 7 — Complaint / transfer
+
+1. "I want to talk to a person, not you."
+2. (If not transferred right away) "This is unacceptable, I've called twice now about the same thing."
+
+## Call 8 — Full Spanish (secondary language)
 
 1. "Hola, soy Nathasha Rodriguez, quiero agendar una limpieza estándar."
-2. (Si te pide el teléfono) "347-220-9090."
-3. "¿Cuánto cuesta?"
-4. "Está bien, agéndala para la próxima semana."
-5. (Cuando te pregunte el día) "El lunes."
-6. (Cuando te ofrezca horarios) "¿Qué horarios tienen?"
-7. Elige uno de los que te dé.
-8. "Quiero cambiar esa cita para otra hora."
-9. Da una hora distinta.
-10. "Mejor cancélala."
-11. "Gracias, eso es todo."
+2. "Mi número es 347-220-9090."
+3. "Para el lunes que viene."
+4. Pick an offered time.
+5. At some point say a single English word ("thanks" or "yes") and keep going in Spanish.
+6. "Gracias, eso es todo."
 
-## Llamada 2 — Cliente nuevo
-
-1. "Hola, quiero agendar una limpieza, soy cliente nuevo."
-2. Da un nombre inventado (distinto a Nathasha).
-3. "Mi teléfono es 910-555-9999."
-4. Da una dirección inventada.
-5. "Una limpieza estándar para mañana."
-6. Elige un horario de los que te ofrezca.
-7. "Gracias, eso es todo."
-
-## Llamada 3 — Interrupciones / datos incompletos
-
-1. "Hola, soy Nathasha, quiero agendar una limpieza."
-2. "Mi número es tres cuatro siete..." (deja la frase a la mitad, no digas el resto)
-3. Espera unos segundos sin decir nada.
-4. Cuando te pida que repitas, da el número completo: "347-220-9090."
-5. "Quiero agendar una limpieza para el viernes."
-6. Termina la llamada normal.
-
-## Llamada 4 — Estimate por SQFT (repite esta llamada 3 veces, una por cada tipo)
-
-1. "Necesito un estimate para una propiedad en construcción."
-2. "¿Cuál es la diferencia entre los tipos de limpieza que ofrecen?"
-3. Di uno de estos tres (uno por llamada): "Rough Clean" / "Final Clean" / "Touch Up"
-4. "Son 1500 pies cuadrados."
-5. Da una dirección.
-6. "Mi email es nathashasalcedo@gmail.com." (para confirmar que llega el PDF)
-7. "¿Cuánto va a costar?"
-8. "Gracias, eso es todo."
-
-## Llamada 5 — Visita de estimate en persona
-
-1. "Prefiero que alguien venga a ver la propiedad en vez de darte las medidas."
-2. Da nombre, teléfono, dirección.
-3. "¿Qué día pueden venir?"
-4. Elige una fecha y hora.
-5. "Gracias, eso es todo."
-
-## Llamada 6 — Consultar historial
-
-1. "Hola, soy Nathasha Rodriguez, mi teléfono es 347-220-9090."
-2. "¿Qué servicios tengo agendados?"
-3. "¿Cuándo fue mi última limpieza?"
-4. "Gracias, eso es todo."
-
-## Llamada 7 — Queja / transferencia
-
-1. "Quiero hablar con una persona, no contigo."
-2. (Si no te transfiere de inmediato) "Esto es inaceptable, llevo dos veces llamando por lo mismo."
-
-## Llamada 8 — Todo en inglés
-
-1. "Hi, my name is Nathasha Rodriguez, I'd like to schedule a standard cleaning."
-2. "My phone number is 347-220-9090."
-3. "For next Monday."
-4. Elige un horario.
-5. En algún punto di una sola palabra en español ("gracias" o "sí") y sigue en inglés.
-6. "Thanks, that's it."
-
-## Llamada 9 — Todo en español, con palabras sueltas en inglés mezcladas
+## Call 9 — Spanish with English words mixed in
 
 1. "Hola, soy Nathasha, mi número es 347-220-9090."
 2. "Quiero agendar para el lunes."
-3. En algún punto di "yes" o "ok" sueltos, y sigue hablando en español normalmente.
+3. At some point say "yes" or "ok" on their own, then keep speaking Spanish normally.
 4. "Gracias, eso es todo."
 
-## Llamada 10 — Día/horario fuera de servicio (lunes-viernes, 8am-5pm)
+## Call 10 — Day/time outside business hours (Mon-Fri, 8am-5pm)
 
-1. "Hola, soy Nathasha, mi número es 347-220-9090."
-2. "Quiero agendar para el sábado." (debe decir que no trabajan ese día)
-3. "Entonces para el lunes a las 7 de la noche." (debe decir que esa hora no está disponible)
-4. "Gracias, eso es todo."
+1. "Hi, my number is 347-220-9090."
+2. "I'd like to schedule for Saturday." (should say they don't work that day)
+3. "Then how about Monday at 7 in the evening?" (should say that time isn't available)
+4. "Thanks, that's it."
 
-## Llamada 11 — Dirección con abreviatura
+## Call 11 — Address with abbreviation
 
-1. "Hola, soy Nathasha, mi número es 347-220-9090."
-2. "Quiero agendar una limpieza, confírmame mi dirección."
-3. Escucha cómo lee "123 Test St" (debe decir "Street", no leerlo como abreviatura rara).
+1. "Hi, my number is 347-220-9090."
+2. "I'd like to schedule a cleaning, can you confirm my address?"
+3. Listen for how it reads "123 Test St" (should say "Street," not read it as a weird abbreviation).
+
+## Call 12 — Unrelated request (should be rejected, not transferred)
+
+1. "Hi, can you help me track a package I ordered online?"
+2. (or try another unrelated request, e.g. "can you book me a hotel room?")
+3. Should say there's been a mix-up and that this isn't something Joyful Cleaning handles — should NOT offer to transfer or take a message for this one (that's reserved for cleaning-related requests it just doesn't handle yet).
