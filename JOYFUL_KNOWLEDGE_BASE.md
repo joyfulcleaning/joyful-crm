@@ -1,150 +1,137 @@
-# Base de conocimiento de Joyful Cleaning Services
+# Joyful Cleaning Services — Knowledge Base
 
-Este documento es la "memoria" del agente sobre el negocio en sí — todo lo
-que un cliente podría preguntar que NO es agendar/reagendar/cancelar (eso
-ya lo maneja el sistema). Llénalo en español simple, no necesita formato
-especial — yo lo subo después como Knowledge Base a Vapi y Retell, así el
-agente lo consulta automáticamente durante la llamada sin que esté metido
-en el prompt principal.
+This is the AI phone assistant's "memory" about the business itself —
+anything a customer might ask that isn't scheduling/rescheduling/
+cancelling (the system already handles that). Written in English because
+the agent's primary operating language is English (Spanish only as a
+secondary fallback when the caller speaks Spanish) — everything fed to
+the assistant, including this document, follows that.
 
-No hace falta llenarlo todo de una sola vez ni completo — cualquier
-sección que dejes en blanco simplemente no se incluye todavía.
-
-Algunas partes ya vienen pre-llenadas con datos reales sacados del CRM
-(cobertura, métodos de pago) — están marcadas como *(pre-llenado)*. El
-resto (qué incluye cada servicio, políticas, FAQs, objeciones) no existe
-como texto en ningún lado de la base de datos — solo tú lo sabes, así
-que esas partes no se pueden inferir, hay que escribirlas. **Importante:
-nunca voy a meter precios, notas internas, ni datos de nómina/staff en
-este documento — eso nunca debe llegar a un cliente.**
+Sections can be partial — anything still unanswered just isn't included
+yet. **This document never contains prices, internal notes, or staff/
+payroll data — that must never reach a customer.**
 
 ---
 
-## 1. Catálogo de servicios
+## 1. Service catalog
 
-¿Qué incluye exactamente cada uno? (qué se limpia, qué NO incluye, cuánto
-dura aproximadamente, algo que la gente suele preguntar de cada uno)
+*(Pulled from joyfulcleaningservicesnc.com and from owner answers —
+confirm or correct anytime.)*
 
-*(Pre-llenado con lo que dice tu sitio web,
-joyfulcleaningservicesnc.com — confirma que sigue siendo así o
-corrígelo/amplíalo, esto es copy de marketing, puede estar incompleto.)*
+- **Standard Clean:** Dusting, vacuuming, mopping, bathroom and kitchen
+  cleaning, and trash removal.
+- **Deep Clean:** Top-to-bottom cleaning. Includes baseboards,
+  appliances, outside of cabinets, and more.
+- **Heavy Deep Clean:** Takes more time than a regular Deep Clean — for
+  extremely neglected properties. Uses special chemicals for deep
+  cleaning and includes removing large amounts of trash/buildup, etc.
+- **Office Clean** (site calls it "Commercial Cleaning"): Office, lobby,
+  and break room cleaning on a flexible schedule.
+- **Move In/Out:** Deep clean for every nook and cranny. Includes
+  cabinets, drawers, closets, and appliances.
+- **Touch Up:** A light, surface-level cleaning — not labor-intensive.
+  For properties that aren't very dirty/neglected, or that we already
+  cleaned before and the customer just wants dusting or a simple light
+  clean since it isn't very dirty.
+- **Construction Clean** (site calls it "Post-Construction Cleaning"):
+  Removes dust and debris from recent renovations. Includes polishing
+  and fine detailing.
+- **Airbnb Clean:** Quick-turnaround cleaning with bed making, towel
+  replacement, and disinfection.
+- **Window Cleaning:** Interior glass and frames only — does not include
+  exterior windows.
 
-- **Standard Clean:** "Incluye sacudir, aspirar, trapear, limpieza de
-  baños y cocina, y sacar la basura."
-- **Deep Clean:** "Limpieza de arriba a abajo. Incluye zócalos,
-  electrodomésticos, exterior de gabinetes, y más."
-- **Heavy Deep Clean:** *(no descrito en el sitio — falta)*
-- **Office Clean:** el sitio lo llama "Commercial Cleaning": "Limpieza de
-  oficina, lobby y sala de descanso, en horario flexible."
-- **Move In/Out:** "Limpieza profunda de cada rincón. Incluye gabinetes,
-  cajones, closets y electrodomésticos."
-- **Touch Up:** *(no descrito en el sitio — falta)*
-- **Construction Clean:** el sitio lo llama "Post-Construction Cleaning":
-  "Elimina polvo y escombro de renovaciones recientes. Incluye pulido y
-  detalle fino."
-- **Airbnb Clean:** "Limpieza de turno rápido con tendido de cama,
-  reemplazo de toallas y desinfección."
+*(CRM data note, no action needed: in real recorded services, Standard
+Clean is by far the most common (838), followed by Deep Clean (64) and
+Touch Up (17). Office Clean, Move In/Out, Construction Clean, Airbnb
+Clean, and Window Cleaning have no real service recorded yet in the CRM.)*
 
-¿Hay algún servicio que NO está en esta lista y deberíamos agregar?
+*(⚠️ Open item: Window Cleaning and Carpet Cleaning are advertised on the
+website and confirmed as real offerings, but neither exists yet as a
+bookable service type in the CRM's dropdown — `schedule_service` accepts
+any free-text type today, but pricing logic (`lib/pricing.ts`) doesn't
+know how to price them automatically. Want me to add them as proper
+service types with pricing, or leave them as call-and-quote-manually for
+now?)*
 
-*(Dato del CRM, no necesita acción: en servicios reales registrados,
-Standard Clean es por lejos el más común (838), seguido de Deep Clean
-(64) y Touch Up (17). Office Clean, Move In/Out, Construction Clean y
-Airbnb Clean existen como opción en el sistema pero no tienen ningún
-servicio real registrado todavía — si igual los ofrecen activamente,
-descríbelos igual.)*
+## 2. Service area
 
-*(⚠️ El sitio web también anuncia "Window Cleaning" y "Carpet Cleaning"
-como servicios — ninguno de los dos existe como tipo de servicio en el
-CRM hoy. ¿Los siguen ofreciendo? Si sí, dime y los agrego al sistema; si
-ya no, dímelo para no confundir al agente.)*
+*(Pre-filled from real active client addresses in the CRM — confirm or
+correct, this is just what's already in the database, not necessarily
+the full area covered):*
 
-## 2. Zonas de cobertura
-
-*(Pre-llenado a partir de las direcciones reales de clientes activos en el
-CRM — confírmalo o corrígelo, esto es solo lo que ya aparece en la base,
-no necesariamente el área completa que cubren):*
-
-- Fayetteville, NC (la gran mayoría de los clientes activos)
+- Fayetteville, NC (the vast majority of active clients)
 - Raeford, NC
 - Aberdeen, NC
 
-*(Nota: hay un cliente comercial — National Corporate Housing — con
-dirección de facturación en Greenwood Village, CO, pero es su oficina
-corporativa, no una zona donde realmente limpian. No lo incluí como
-cobertura real.)*
+*(Note: one commercial client — National Corporate Housing — has a
+billing address in Greenwood Village, CO, but that's their corporate
+office, not a real service area. Excluded from the list above.)*
 
-¿Falta alguna ciudad/área que cubran y que no tenga clientes activos
-todavía? ¿Hay zonas donde cobran algo extra por distancia, o que de plano
-no cubren?
+*(The website only says "proudly based in North Carolina," no specific
+cities — the list above, from the CRM, is more precise.)*
 
-*(El sitio web solo dice "con orgullo, en Carolina del Norte", sin listar
-ciudades — la lista de arriba, sacada del CRM, es más precisa.)*
+Any city/area you cover that has no active clients yet? Any areas with
+an extra travel fee, or areas you don't cover at all?
 
-## 3. Políticas
+## 3. Policies
 
-- **Cancelación/reagendado:** *(del sitio web)* "Con 24+ horas de aviso:
-  cargo del 25% del total. El mismo día o no-show: cargo del 50%." ¿Sigue
-  siendo así?
-- **Pago:** el sitio dice que aceptan "efectivo, cheques, Cash App,
-  Zelle, Venmo y tarjetas de crédito principales" — más amplio que lo que
-  de verdad se ha usado en el CRM hasta ahora (efectivo, Zelle, cheque).
-  ¿Cuál de las dos listas debe decir el agente — la que de verdad han
-  usado, o toda la que aceptan en teoría? ¿Cuándo se paga (antes/después
-  del servicio), hay depósitos?
-- **Garantía/re-limpieza:** *(del sitio web)* "Si no quedas completamente
-  satisfecho, notifícanos dentro de 24 horas y volvemos a limpiar el área
-  sin costo extra." ¿Sigue siendo así?
-- **Productos:** *(del sitio web)* "Proveemos todos los suministros y
-  equipo necesarios", productos "certificados verdes, seguros para
-  mascotas, niños y el planeta". El cliente puede pedir productos
-  específicos avisando con anticipación. ¿Sigue siendo así?
-- **Mascotas/niños en casa durante el servicio:** *(del sitio web)* "Por
-  favor asegura a tus mascotas durante el servicio, para su seguridad y
-  la de nuestro equipo."
-- **Llaves/acceso a la propiedad:** *(del sitio web)* "Servicio solo con
-  cita previa", el equipo llega dentro de una ventana de 1 hora, aplica
-  cargo por lockout si no hay acceso a la propiedad.
-- **Daños:** *(del sitio web)* "Estamos asegurados y evaluamos/manejamos
-  reclamos de forma justa y oportuna" si se notifica dentro de 24 horas.
-- **Lo que NO limpian:** *(del sitio web)* fluidos corporales, desechos
-  de mascotas, moho, ni materiales peligrosos.
+- **Cancellation/rescheduling:** *(from the website)* 24+ hours notice:
+  25% fee on total cost. Same-day or no-show: 50% fee. Still accurate?
+- **Payment:** the agent should say we accept cash, check, Cash App,
+  Zelle, Venmo, and major credit cards (the full website list, even
+  though not all of these have been used yet in real CRM records). When
+  is payment due (before/after service)? Any deposits?
+- **Satisfaction guarantee:** *(from the website)* If not fully
+  satisfied, notify within 24 hours and we'll re-clean the area at no
+  extra charge. Still accurate?
+- **Products:** *(from the website)* We provide all necessary supplies
+  and equipment; products are green-certified, safe for pets, kids, and
+  the planet. Customers can request specific products with advance
+  notice. Still accurate?
+- **Pets/kids during service:** *(from the website)* Please secure pets
+  during service, for their safety and the team's.
+- **Keys/property access:** *(from the website)* Appointment-only
+  service, team arrives within a 1-hour window, a lockout fee applies if
+  there's no access to the property.
+- **Damage:** *(from the website)* We're insured and assess/handle
+  claims fairly and promptly if notified within 24 hours.
+- **What we don't clean:** *(from the website)* bodily fluids, pet
+  waste, mold, or hazardous materials.
 
-## 4. Preguntas frecuentes reales
+## 4. Real FAQs
 
-*(Parcialmente respondido por el sitio web — confirma o corrige):*
+*(Partially answered from the website — confirm or correct):*
 
-- "¿Cuánto tiempo llevan en el negocio?" → el sitio dice más de 3 años.
-- "¿Están asegurados?" → el sitio dice que sí (ver Daños arriba).
-- "¿El equipo está verificado/es de confianza?" → el sitio dice que el
-  personal "está entrenado profesionalmente y pasa verificación de
-  antecedentes (background check)", y firma acuerdo de confidencialidad.
-- "¿El mismo equipo viene siempre?" → *(no contestado en el sitio, falta)*
+- "How long have you been in business?" → site says 3+ years.
+- "Are you insured?" → yes (see Damage above).
+- "Is your staff vetted/trustworthy?" → site says staff is professionally
+  trained, background-checked, and signs a confidentiality agreement.
+- "Does the same crew always come?" → No, it varies by availability —
+  the agent should not promise a fixed crew.
 
-Cualquier otra que te hagan seguido y no esté aquí:
+Anything else customers ask often that isn't listed here:
 
-## 5. Manejo de objeciones
+## 5. Objection handling
 
-Cosas que dice un cliente para no agendar o para presionar, y cómo
-preferirías que el agente responda:
+Things a customer says to avoid booking or to push back, and how you'd
+want the agent to respond:
 
-- Si pide un descuento:
-- Si dice que la competencia es más barata:
-- Si duda en agendar / dice que "lo va a pensar":
+- If they ask for a discount:
+- If they say a competitor is cheaper:
+- If they hesitate / say they'll "think about it":
 
-## 6. Cualquier otra cosa
+## 6. Anything else
 
-Cualquier dato suelto que el agente debería saber y no esté arriba.
+Any other loose fact the agent should know that isn't covered above.
 
 ---
 
-### Qué hago yo con esto
+### What I do with this
 
-Cuando esté listo (aunque sea parcial), lo subo como documento de
-Knowledge Base a Vapi y Retell — el agente lo va a consultar
-automáticamente durante la llamada según lo que el cliente pregunte, sin
-que tengamos que meter todo este contenido dentro del prompt principal
-(que se queda enfocado en las reglas y los pasos para agendar). Si más
-adelante cambia algo (precio de un servicio que se agrega, una política
-nueva), solo hay que actualizar este archivo y volver a subirlo — no hay
-que tocar el prompt.
+Once it's ready (even partial), I upload it as a Knowledge Base document
+to Vapi and Retell — the agent consults it automatically during the call
+based on what the customer asks, without stuffing this content into the
+main prompt (which stays focused on rules and booking steps). If
+something changes later (a new service gets added, a policy changes),
+just update this file and re-upload it — no need to touch the prompt.

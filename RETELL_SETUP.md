@@ -4,7 +4,7 @@ Segunda plataforma construida en paralelo a Vapi (ver `VAPI_SETUP.md`) para comp
 
 **IDs actuales:** Agent `agent_8f69be225380e1549d6da23d81`, LLM `llm_0292c9dd43187fb9d42e7fb8aa3f` ("Joyful Cleaning Assistant").
 
-**Modelo:** `gpt-5.1`. **Voz:** `11labs-Andrea` (misma voz ElevenLabs que Vapi, a propósito, para comparar plataforma sin variar la voz). **Idioma del agente:** `multi`.
+**Modelo:** `gpt-5.1`. **Voz:** `11labs-Andrea` (misma voz ElevenLabs que Vapi, a propósito, para comparar plataforma sin variar la voz). **Idioma del agente:** `multi` (campo de plataforma) — pero desde el 2026-06-24 el prompt fija inglés como idioma **principal**, con español como secundario solo si quien llama habla español en frases completas. El prompt y las descripciones de los 8 tools están en inglés por esto mismo.
 
 **Header de autenticación (todos los tools):** `Authorization: Bearer <AI_API_KEY>` — mismo valor que en Vapi, no lo pegues en ningún archivo del repo.
 

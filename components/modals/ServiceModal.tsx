@@ -16,6 +16,8 @@ const SERVICE_TYPES = [
   'Touch Up',
   'Construction Clean',
   'Airbnb Clean',
+  'Window Cleaning',
+  'Carpet Cleaning',
   'Cancellation Fee',
   'Inspection Fee',
   'Monthly Cleaning',
