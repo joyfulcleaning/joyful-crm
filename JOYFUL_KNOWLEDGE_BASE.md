@@ -25,14 +25,25 @@ este documento — eso nunca debe llegar a un cliente.**
 ¿Qué incluye exactamente cada uno? (qué se limpia, qué NO incluye, cuánto
 dura aproximadamente, algo que la gente suele preguntar de cada uno)
 
-- **Standard Clean:**
-- **Deep Clean:**
-- **Heavy Deep Clean:**
-- **Office Clean:**
-- **Move In/Out:**
-- **Touch Up:**
-- **Construction Clean:**
-- **Airbnb Clean:**
+*(Pre-llenado con lo que dice tu sitio web,
+joyfulcleaningservicesnc.com — confirma que sigue siendo así o
+corrígelo/amplíalo, esto es copy de marketing, puede estar incompleto.)*
+
+- **Standard Clean:** "Incluye sacudir, aspirar, trapear, limpieza de
+  baños y cocina, y sacar la basura."
+- **Deep Clean:** "Limpieza de arriba a abajo. Incluye zócalos,
+  electrodomésticos, exterior de gabinetes, y más."
+- **Heavy Deep Clean:** *(no descrito en el sitio — falta)*
+- **Office Clean:** el sitio lo llama "Commercial Cleaning": "Limpieza de
+  oficina, lobby y sala de descanso, en horario flexible."
+- **Move In/Out:** "Limpieza profunda de cada rincón. Incluye gabinetes,
+  cajones, closets y electrodomésticos."
+- **Touch Up:** *(no descrito en el sitio — falta)*
+- **Construction Clean:** el sitio lo llama "Post-Construction Cleaning":
+  "Elimina polvo y escombro de renovaciones recientes. Incluye pulido y
+  detalle fino."
+- **Airbnb Clean:** "Limpieza de turno rápido con tendido de cama,
+  reemplazo de toallas y desinfección."
 
 ¿Hay algún servicio que NO está en esta lista y deberíamos agregar?
 
@@ -42,6 +53,11 @@ Standard Clean es por lejos el más común (838), seguido de Deep Clean
 Airbnb Clean existen como opción en el sistema pero no tienen ningún
 servicio real registrado todavía — si igual los ofrecen activamente,
 descríbelos igual.)*
+
+*(⚠️ El sitio web también anuncia "Window Cleaning" y "Carpet Cleaning"
+como servicios — ninguno de los dos existe como tipo de servicio en el
+CRM hoy. ¿Los siguen ofreciendo? Si sí, dime y los agrego al sistema; si
+ya no, dímelo para no confundir al agente.)*
 
 ## 2. Zonas de cobertura
 
@@ -62,32 +78,50 @@ cobertura real.)*
 todavía? ¿Hay zonas donde cobran algo extra por distancia, o que de plano
 no cubren?
 
+*(El sitio web solo dice "con orgullo, en Carolina del Norte", sin listar
+ciudades — la lista de arriba, sacada del CRM, es más precisa.)*
+
 ## 3. Políticas
 
-- **Cancelación/reagendado:** ¿con cuánta anticipación, hay algún cargo
-  por cancelar tarde?
-- **Pago:** *(pre-llenado — métodos que de verdad se han usado en
-  servicios reales del CRM: efectivo, Zelle y cheque, en ese orden de
-  frecuencia. El sistema soporta también Venmo, PayPal, Cash App, ACH,
-  tarjeta y EFT, pero no hay registros de que se hayan usado todavía —
-  agrega o quita lo que corresponda)* ¿cuándo se paga (antes/después del
-  servicio), depósitos?
-- **Garantía/re-limpieza:** si el cliente no quedó satisfecho, ¿qué se le
-  ofrece?
-- **Productos:** ¿usan productos propios o el cliente los provee? ¿algo
-  eco-friendly / sin químicos fuertes que ofrezcan?
-- **Mascotas/niños en casa durante el servicio:** ¿alguna política?
-- **Llaves/acceso a la propiedad:** ¿cómo entra el equipo si el cliente no
-  está?
+- **Cancelación/reagendado:** *(del sitio web)* "Con 24+ horas de aviso:
+  cargo del 25% del total. El mismo día o no-show: cargo del 50%." ¿Sigue
+  siendo así?
+- **Pago:** el sitio dice que aceptan "efectivo, cheques, Cash App,
+  Zelle, Venmo y tarjetas de crédito principales" — más amplio que lo que
+  de verdad se ha usado en el CRM hasta ahora (efectivo, Zelle, cheque).
+  ¿Cuál de las dos listas debe decir el agente — la que de verdad han
+  usado, o toda la que aceptan en teoría? ¿Cuándo se paga (antes/después
+  del servicio), hay depósitos?
+- **Garantía/re-limpieza:** *(del sitio web)* "Si no quedas completamente
+  satisfecho, notifícanos dentro de 24 horas y volvemos a limpiar el área
+  sin costo extra." ¿Sigue siendo así?
+- **Productos:** *(del sitio web)* "Proveemos todos los suministros y
+  equipo necesarios", productos "certificados verdes, seguros para
+  mascotas, niños y el planeta". El cliente puede pedir productos
+  específicos avisando con anticipación. ¿Sigue siendo así?
+- **Mascotas/niños en casa durante el servicio:** *(del sitio web)* "Por
+  favor asegura a tus mascotas durante el servicio, para su seguridad y
+  la de nuestro equipo."
+- **Llaves/acceso a la propiedad:** *(del sitio web)* "Servicio solo con
+  cita previa", el equipo llega dentro de una ventana de 1 hora, aplica
+  cargo por lockout si no hay acceso a la propiedad.
+- **Daños:** *(del sitio web)* "Estamos asegurados y evaluamos/manejamos
+  reclamos de forma justa y oportuna" si se notifica dentro de 24 horas.
+- **Lo que NO limpian:** *(del sitio web)* fluidos corporales, desechos
+  de mascotas, moho, ni materiales peligrosos.
 
 ## 4. Preguntas frecuentes reales
 
-Las preguntas que de verdad te hacen los clientes seguido (aunque no
-encajen en ninguna categoría de arriba). Una por línea está bien, ej.:
+*(Parcialmente respondido por el sitio web — confirma o corrige):*
 
-- "¿Cuánto tiempo llevan en el negocio?"
-- "¿El mismo equipo viene siempre?"
-- "¿Están asegurados?"
+- "¿Cuánto tiempo llevan en el negocio?" → el sitio dice más de 3 años.
+- "¿Están asegurados?" → el sitio dice que sí (ver Daños arriba).
+- "¿El equipo está verificado/es de confianza?" → el sitio dice que el
+  personal "está entrenado profesionalmente y pasa verificación de
+  antecedentes (background check)", y firma acuerdo de confidencialidad.
+- "¿El mismo equipo viene siempre?" → *(no contestado en el sitio, falta)*
+
+Cualquier otra que te hagan seguido y no esté aquí:
 
 ## 5. Manejo de objeciones
 
