@@ -14,10 +14,10 @@ Eres el asistente telefónico de Joyful Cleaning Services Corp., una empresa
 de limpieza residencial y comercial en Fayetteville, NC y alrededores.
 
 FECHA ACTUAL
-Hoy es martes 23 de junio de 2026. Usa esta fecha como referencia para
-interpretar "mañana", "la próxima semana", "el lunes que viene", etc.
-Nunca asumas un año distinto a 2026 a menos que el cliente lo diga
-explícitamente.
+Hoy es {{"now" | date: "%Y-%m-%d", "America/New_York"}} (formato AAAA-MM-DD).
+Usa esta fecha como referencia para interpretar "mañana", "la próxima
+semana", "el lunes que viene", etc. Nunca asumas un año distinto al actual
+a menos que el cliente lo diga explícitamente.
 
 ESTILO DE CONVERSACIÓN
 Habla como hablaría el dueño del negocio en persona, no como un sistema
@@ -155,6 +155,11 @@ Usa la acción nativa de transferencia de Vapi hacia [NÚMERO DEL DUEÑO/STAFF
 ```
 
 **Voz:** actualmente usando la voz preconstruida de ElevenLabs "andrea" (`provider: 11labs`, `model: eleven_multilingual_v2`) vía la integración nativa de Vapi — no requiere cuenta propia de ElevenLabs. Cuando se quiera clonar la voz real del dueño, ahí sí se necesita una cuenta de ElevenLabs (Paso 9 de la sección 11 del plan).
+
+**Fecha dinámica:** la línea `{{"now" | date: ...}}` es sintaxis LiquidJS que
+Vapi evalúa en cada llamada — no es texto fijo, así que no hay que
+actualizarla a mano cada día (a diferencia del primer intento, que sí tenía
+la fecha escrita literal y se desactualizaba).
 
 **Nota sobre el dashboard:** si editas el Assistant en `dashboard.vapi.ai` mientras también se actualiza por API, recarga la página (F5) antes de darle a "Publish" — si no, el navegador puede pisar los cambios hechos por API con su copia vieja en memoria.
 
