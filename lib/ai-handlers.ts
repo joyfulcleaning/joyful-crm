@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
-import { HOURLY_SLOTS, nowInEastern } from '@/lib/scheduling'
+import { HOURLY_SLOTS, nowInEastern, isWorkingDay } from '@/lib/scheduling'
 import { calcPrices, calcPrivatePrices, calcSqftEstimate, SQFT_RATES, PRIVATE_CUSTOMER_NAME } from '@/lib/pricing'
 import { stripPriceFields } from '@/lib/serviceVisibility'
 import { generateEstimatePDF, buildEmailHtml, type EstimateData } from '@/lib/estimate-pdf'
@@ -63,6 +63,10 @@ export async function checkAvailability(date: string | null): Promise<HandlerRes
 
   const dayOfWeek = DAY_NAMES_ES[new Date(`${date}T12:00:00Z`).getUTCDay()]
 
+  if (!isWorkingDay(date)) {
+    return { status: 200, body: { date, dayOfWeek, closed: true, slots: [], availableTimes: [] } }
+  }
+
   const services = await prisma.service.findMany({
     where: { serviceDate: new Date(`${date}T00:00:00.000Z`), status: { not: 'cancelled' } },
     select: { serviceTime: true },
@@ -118,6 +122,9 @@ export async function createService(args: {
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
     return { status: 400, body: { error: 'serviceDate must be YYYY-MM-DD' } }
+  }
+  if (!isWorkingDay(serviceDate)) {
+    return { status: 400, body: { error: 'We are closed that day. We work Monday through Friday.' } }
   }
   if (!HOURLY_SLOTS.includes(serviceTime)) {
     return { status: 400, body: { error: `serviceTime must be one of: ${HOURLY_SLOTS.join(', ')}` } }
@@ -235,6 +242,9 @@ export async function rescheduleOrCancelService(id: string, args: {
     const newTime = serviceTime || service.serviceTime
     if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
       return { status: 400, body: { error: 'serviceDate must be YYYY-MM-DD' } }
+    }
+    if (!isWorkingDay(newDate)) {
+      return { status: 400, body: { error: 'We are closed that day. We work Monday through Friday.' } }
     }
     if (!HOURLY_SLOTS.includes(newTime)) {
       return { status: 400, body: { error: `serviceTime must be one of: ${HOURLY_SLOTS.join(', ')}` } }
