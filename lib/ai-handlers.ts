@@ -46,10 +46,14 @@ export async function findClientByPhone(phone: string | null): Promise<HandlerRe
   return { status: 200, body: { found: clients.length > 0, clients } }
 }
 
+const DAY_NAMES_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
 export async function checkAvailability(date: string | null): Promise<HandlerResult> {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { status: 400, body: { error: 'date query param is required (YYYY-MM-DD)' } }
   }
+
+  const dayOfWeek = DAY_NAMES_ES[new Date(`${date}T12:00:00Z`).getUTCDay()]
 
   const services = await prisma.service.findMany({
     where: { serviceDate: new Date(`${date}T00:00:00.000Z`), status: { not: 'cancelled' } },
@@ -66,7 +70,7 @@ export async function checkAvailability(date: string | null): Promise<HandlerRes
 
   return {
     status: 200,
-    body: { date, slots, availableTimes: slots.filter(s => s.available).map(s => s.time) },
+    body: { date, dayOfWeek, slots, availableTimes: slots.filter(s => s.available).map(s => s.time) },
   }
 }
 
@@ -182,7 +186,10 @@ export async function createService(args: {
 
   return {
     status: 201,
-    body: { success: true, ...stripPriceFields(service), clientId: client.id, isNewClient },
+    body: {
+      success: true, ...stripPriceFields(service), clientId: client.id, isNewClient,
+      dayOfWeek: DAY_NAMES_ES[new Date(`${serviceDate}T12:00:00Z`).getUTCDay()],
+    },
   }
 }
 
@@ -235,7 +242,13 @@ export async function rescheduleOrCancelService(id: string, args: {
 
   const updated = await prisma.service.update({ where: { id }, data })
 
-  return { status: 200, body: { success: true, ...stripPriceFields(updated) } }
+  return {
+    status: 200,
+    body: {
+      success: true, ...stripPriceFields(updated),
+      dayOfWeek: DAY_NAMES_ES[updated.serviceDate.getUTCDay()],
+    },
+  }
 }
 
 export async function createSqftEstimate(args: {
