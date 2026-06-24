@@ -48,6 +48,14 @@ export async function findClientByPhone(phone: string | null): Promise<HandlerRe
 
 const DAY_NAMES_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
+// Computed server-side rather than trusted from the model — LLMs are
+// unreliable at both "what's today's date" and weekday math from memory.
+export async function getCurrentDate(): Promise<HandlerResult> {
+  const now = nowInEastern()
+  const dayOfWeek = DAY_NAMES_ES[new Date(`${now.date}T12:00:00Z`).getUTCDay()]
+  return { status: 200, body: { date: now.date, dayOfWeek } }
+}
+
 export async function checkAvailability(date: string | null): Promise<HandlerResult> {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { status: 400, body: { error: 'date query param is required (YYYY-MM-DD)' } }

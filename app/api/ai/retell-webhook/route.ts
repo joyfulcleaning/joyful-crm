@@ -4,6 +4,7 @@ import { isAiAuthorized } from '@/lib/ai-auth'
 import {
   findClientByPhone, checkAvailability, listClientServices,
   createService, rescheduleOrCancelService, createSqftEstimate, scheduleEstimateVisit,
+  getCurrentDate,
 } from '@/lib/ai-handlers'
 
 // Retell calls a custom function's `url` via POST with { name, call, args }
@@ -11,6 +12,7 @@ import {
 // LLM. Unlike Vapi, it's one function call per request — no batching, no
 // toolCallId to match up. Reuses the same handlers as the Vapi webhook.
 const HANDLERS: Record<string, (args: any) => Promise<{ status: number; body: any }>> = {
+  get_current_date: () => getCurrentDate(),
   find_client_by_phone: (args) => findClientByPhone(args.phone),
   check_availability: (args) => checkAvailability(args.date),
   schedule_service: (args) => createService(args),
