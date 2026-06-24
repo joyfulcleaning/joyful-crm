@@ -10,6 +10,14 @@ en el prompt principal.
 No hace falta llenarlo todo de una sola vez ni completo — cualquier
 sección que dejes en blanco simplemente no se incluye todavía.
 
+Algunas partes ya vienen pre-llenadas con datos reales sacados del CRM
+(cobertura, métodos de pago) — están marcadas como *(pre-llenado)*. El
+resto (qué incluye cada servicio, políticas, FAQs, objeciones) no existe
+como texto en ningún lado de la base de datos — solo tú lo sabes, así
+que esas partes no se pueden inferir, hay que escribirlas. **Importante:
+nunca voy a meter precios, notas internas, ni datos de nómina/staff en
+este documento — eso nunca debe llegar a un cliente.**
+
 ---
 
 ## 1. Catálogo de servicios
@@ -28,16 +36,41 @@ dura aproximadamente, algo que la gente suele preguntar de cada uno)
 
 ¿Hay algún servicio que NO está en esta lista y deberíamos agregar?
 
+*(Dato del CRM, no necesita acción: en servicios reales registrados,
+Standard Clean es por lejos el más común (838), seguido de Deep Clean
+(64) y Touch Up (17). Office Clean, Move In/Out, Construction Clean y
+Airbnb Clean existen como opción en el sistema pero no tienen ningún
+servicio real registrado todavía — si igual los ofrecen activamente,
+descríbelos igual.)*
+
 ## 2. Zonas de cobertura
 
-¿Qué ciudades/áreas cubren? ¿Hay zonas donde cobran algo extra por
-distancia, o que de plano no cubren?
+*(Pre-llenado a partir de las direcciones reales de clientes activos en el
+CRM — confírmalo o corrígelo, esto es solo lo que ya aparece en la base,
+no necesariamente el área completa que cubren):*
+
+- Fayetteville, NC (la gran mayoría de los clientes activos)
+- Raeford, NC
+- Aberdeen, NC
+
+*(Nota: hay un cliente comercial — National Corporate Housing — con
+dirección de facturación en Greenwood Village, CO, pero es su oficina
+corporativa, no una zona donde realmente limpian. No lo incluí como
+cobertura real.)*
+
+¿Falta alguna ciudad/área que cubran y que no tenga clientes activos
+todavía? ¿Hay zonas donde cobran algo extra por distancia, o que de plano
+no cubren?
 
 ## 3. Políticas
 
 - **Cancelación/reagendado:** ¿con cuánta anticipación, hay algún cargo
   por cancelar tarde?
-- **Pago:** ¿qué métodos aceptan, cuándo se paga (antes/después del
+- **Pago:** *(pre-llenado — métodos que de verdad se han usado en
+  servicios reales del CRM: efectivo, Zelle y cheque, en ese orden de
+  frecuencia. El sistema soporta también Venmo, PayPal, Cash App, ACH,
+  tarjeta y EFT, pero no hay registros de que se hayan usado todavía —
+  agrega o quita lo que corresponda)* ¿cuándo se paga (antes/después del
   servicio), depósitos?
 - **Garantía/re-limpieza:** si el cliente no quedó satisfecho, ¿qué se le
   ofrece?
