@@ -56,6 +56,9 @@ function generateDates(
   endType: 'date' | 'count',
   endDate: string,
   count: number,
+  monthlyMode: 'dayOfMonth' | 'nthWeekday' = 'dayOfMonth',
+  nthOrdinal: number = 1,
+  nthWeekday: number = 0,
 ): string[] {
   const dates: string[] = []
   if (!startDate) return dates
@@ -82,9 +85,30 @@ function generateDates(
       }
     }
   } else if (frequency === 'monthly') {
-    if (recurMonthDays.length === 0) return dates
     const maxDate  = endType === 'date' && endDate ? new Date(endDate + 'T23:59:59Z') : null
     const maxCount = endType === 'count' ? count : 120
+
+    if (monthlyMode === 'nthWeekday') {
+      // e.g. "the 2nd Sunday of every month" — skip a month entirely if it
+      // doesn't have that many occurrences (e.g. a "5th Friday").
+      let y = start.getUTCFullYear(), m = start.getUTCMonth()
+      for (let iter = 0; iter < 120 && dates.length < maxCount; iter++) {
+        const firstWeekday = new Date(Date.UTC(y, m, 1)).getUTCDay()
+        const day = 1 + ((nthWeekday - firstWeekday + 7) % 7) + (nthOrdinal - 1) * 7
+        const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+        if (day <= dim) {
+          const d = new Date(Date.UTC(y, m, day))
+          if (d >= start) {
+            if (maxDate && d > maxDate) return dates
+            dates.push(d.toISOString().split('T')[0])
+          }
+        }
+        m++; if (m > 11) { m = 0; y++ }
+      }
+      return dates
+    }
+
+    if (recurMonthDays.length === 0) return dates
     let y = start.getUTCFullYear(), m = start.getUTCMonth()
     for (let iter = 0; iter < 60 && dates.length < maxCount; iter++) {
       const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
@@ -127,6 +151,9 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
   // Recurrence
   const [recurDays,      setRecurDays]      = useState<number[]>([])
   const [recurMonthDays, setRecurMonthDays] = useState<number[]>([])
+  const [recurMonthlyMode, setRecurMonthlyMode] = useState<'dayOfMonth' | 'nthWeekday'>('dayOfMonth')
+  const [recurNthOrdinal,  setRecurNthOrdinal]  = useState(1)
+  const [recurNthWeekday,  setRecurNthWeekday]  = useState(0)
   const [recurEndType,   setRecurEndType]   = useState<'count' | 'date'>('count')
   const [recurCount,     setRecurCount]     = useState('8')
   const [recurEndDate,   setRecurEndDate]   = useState('')
@@ -309,10 +336,13 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
   const generatedDates = useMemo(() => {
     if (!isRecurring || !form.serviceDate) return form.serviceDate ? [form.serviceDate] : []
     if ((form.frequency === 'weekly' || form.frequency === 'biweekly') && recurDays.length === 0) return []
-    if (form.frequency === 'monthly' && recurMonthDays.length === 0) return []
+    if (form.frequency === 'monthly' && recurMonthlyMode === 'dayOfMonth' && recurMonthDays.length === 0) return []
     if (recurEndType === 'date' && !recurEndDate) return []
-    return generateDates(form.serviceDate, form.frequency, recurDays, recurMonthDays, recurEndType, recurEndDate, parseInt(recurCount) || 8)
-  }, [isRecurring, form.serviceDate, form.frequency, recurDays, recurMonthDays, recurEndType, recurEndDate, recurCount])
+    return generateDates(
+      form.serviceDate, form.frequency, recurDays, recurMonthDays, recurEndType, recurEndDate, parseInt(recurCount) || 8,
+      recurMonthlyMode, recurNthOrdinal, recurNthWeekday,
+    )
+  }, [isRecurring, form.serviceDate, form.frequency, recurDays, recurMonthDays, recurEndType, recurEndDate, recurCount, recurMonthlyMode, recurNthOrdinal, recurNthWeekday])
 
   function set(field: string, value: any) {
     setForm(f => ({ ...f, [field]: value }))
@@ -338,6 +368,9 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     setPricedFromMgmt(false)
     setRecurDays([])
     setRecurMonthDays([])
+    setRecurMonthlyMode('dayOfMonth')
+    setRecurNthOrdinal(1)
+    setRecurNthWeekday(0)
     setRecurEndType('count')
     setRecurCount('8')
     setRecurEndDate('')
@@ -727,26 +760,66 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                 </div>
               )}
 
-              {/* Monthly — day-of-month grid */}
+              {/* Monthly — day-of-month grid, or Nth weekday (e.g. "2nd Sunday") */}
               {form.frequency === 'monthly' && (
                 <div>
-                  <div className="text-[10px] text-[var(--muted)] mb-2">Day(s) of month</div>
-                  <div className="flex flex-wrap gap-1">
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <div className="flex gap-2 mb-2">
+                    {[{ value: 'dayOfMonth', label: 'Day of month' }, { value: 'nthWeekday', label: 'Day of week' }].map(opt => (
                       <button
-                        key={day}
+                        key={opt.value}
                         type="button"
-                        onClick={() => setRecurMonthDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
-                        className={`w-8 h-8 rounded-lg text-[10px] font-bold border transition-all ${
-                          recurMonthDays.includes(day)
-                            ? 'bg-[rgba(74,63,176,0.15)] border-[var(--accent)] text-[var(--accent)]'
-                            : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                        onClick={() => setRecurMonthlyMode(opt.value as 'dayOfMonth' | 'nthWeekday')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                          recurMonthlyMode === opt.value
+                            ? 'bg-[rgba(74,63,176,0.12)] border-[var(--accent)] text-[var(--accent)]'
+                            : 'border-[var(--border)] text-[var(--muted)]'
                         }`}
                       >
-                        {day}
+                        {opt.label}
                       </button>
                     ))}
                   </div>
+
+                  {recurMonthlyMode === 'dayOfMonth' ? (
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => setRecurMonthDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                          className={`w-8 h-8 rounded-lg text-[10px] font-bold border transition-all ${
+                            recurMonthDays.includes(day)
+                              ? 'bg-[rgba(74,63,176,0.15)] border-[var(--accent)] text-[var(--accent)]'
+                              : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={recurNthOrdinal}
+                        onChange={e => setRecurNthOrdinal(Number(e.target.value))}
+                        className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                      >
+                        {['First', 'Second', 'Third', 'Fourth', 'Fifth'].map((label, i) => (
+                          <option key={i} value={i + 1}>{label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={recurNthWeekday}
+                        onChange={e => setRecurNthWeekday(Number(e.target.value))}
+                        className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                      >
+                        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((label, i) => (
+                          <option key={i} value={i}>{label}</option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-[var(--muted)]">of the month</span>
+                    </div>
+                  )}
                 </div>
               )}
 
