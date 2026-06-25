@@ -47,6 +47,15 @@ const DEFAULTS: Record<string, string> = {
   'notif.lowStock':  'true',
   'notif.weekly':    'true',
   'notif.aiRequest': 'true',
+  // Push notifications (per event) — off by default, admin-only when enabled
+  'notif.newSvc.push':    'false', 'notif.newSvc.roles':    'admin',
+  'notif.completed.push': 'false', 'notif.completed.roles': 'admin',
+  'notif.paid.push':      'false', 'notif.paid.roles':      'admin',
+  'notif.overdue.push':   'false', 'notif.overdue.roles':   'admin',
+  'notif.newClient.push': 'false', 'notif.newClient.roles': 'admin',
+  'notif.lowStock.push':  'false', 'notif.lowStock.roles':  'admin',
+  'notif.weekly.push':    'false', 'notif.weekly.roles':    'admin',
+  'notif.aiRequest.push': 'true',  'notif.aiRequest.roles': 'admin',
   // Integrations
   'smtp.from':       'noreply@joyfulservices.com',
   // Appearance
@@ -153,6 +162,13 @@ export default function SettingsPage() {
     setPwMsg('✓ Password updated successfully.')
     setPwForm({ current: '', next: '', confirm: '' })
     setTimeout(() => setPwMsg(''), 3000)
+  }
+
+  const rolesFor   = (k: string) => val(`${k}.roles`, 'admin').split(',').map(r => r.trim()).filter(Boolean)
+  const toggleRole = (k: string, role: string) => {
+    const current = rolesFor(k)
+    const next = current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+    set(`${k}.roles`, next.join(','))
   }
 
   // Shared Toggle switch
@@ -422,7 +438,11 @@ export default function SettingsPage() {
             </div>
 
             <div className={cardCls}>
-              <div className={sectionTitle}>Email Alerts</div>
+              <div className={sectionTitle}>Alerts by Event</div>
+              <p className="text-[10px] text-[#6b7280] -mt-2 mb-3">
+                Email and push can be turned on independently per event. Push only reaches roles checked below, and only people who enabled push on their phone — see the app's menu.
+                Today only "AI phone assistant request" actually fires; the rest are ready for when that event's logic is built.
+              </p>
               {[
                 { k: 'notif.newSvc',    label: 'New service scheduled',      sub: 'When a service is created on the calendar' },
                 { k: 'notif.completed', label: 'Service completed',           sub: 'When staff marks a service as completed' },
@@ -433,12 +453,39 @@ export default function SettingsPage() {
                 { k: 'notif.lowStock',  label: 'Low inventory alert',         sub: 'When a product falls below minimum stock' },
                 { k: 'notif.weekly',    label: 'Weekly summary (every Monday)', sub: 'Performance report for the previous week' },
               ].map(item => (
-                <div key={item.k} className="flex items-center justify-between py-3.5 border-b border-[#2a2f3d]/50 last:border-0">
-                  <div>
-                    <div className="text-xs font-semibold text-[#e8eaf0]">{item.label}</div>
-                    <div className="text-[10px] text-[#6b7280] mt-0.5">{item.sub}</div>
+                <div key={item.k} className="py-3.5 border-b border-[#2a2f3d]/50 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-[#e8eaf0]">{item.label}</div>
+                      <div className="text-[10px] text-[#6b7280] mt-0.5">{item.sub}</div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[8px] text-[#6b7280] uppercase font-bold tracking-wider">Email</span>
+                        <Toggle k={item.k} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[8px] text-[#6b7280] uppercase font-bold tracking-wider">Push</span>
+                        <Toggle k={`${item.k}.push`} />
+                      </div>
+                    </div>
                   </div>
-                  <Toggle k={item.k} />
+                  {bool(`${item.k}.push`) && (
+                    <div className="flex items-center gap-3 mt-2.5 pl-0.5">
+                      <span className="text-[9px] text-[#6b7280] uppercase font-bold tracking-wider">Notify</span>
+                      {[{ role: 'admin', label: 'Admin' }, { role: 'user', label: 'Staff' }].map(r => (
+                        <label key={r.role} className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rolesFor(item.k).includes(r.role)}
+                            onChange={() => toggleRole(item.k, r.role)}
+                            className="accent-[#4f8ef7] w-3 h-3"
+                          />
+                          <span className="text-[10px] text-[#9ca3af]">{r.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

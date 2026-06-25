@@ -7,6 +7,7 @@ import {
   type HandlerResult, findServiceForCaller,
   createService, rescheduleOrCancelService, createSqftEstimate, scheduleEstimateVisit,
 } from '@/lib/ai-handlers'
+import { sendPushToRoles } from '@/lib/push'
 
 // Approval queue in front of the AI phone assistant's write actions. Instead
 // of executing immediately, schedule_service/reschedule_or_cancel_service/
@@ -59,6 +60,8 @@ async function notifyAdmin(request: { id: string; type: string; summary: string;
   } catch (err) {
     console.error('Error notifying admin of AI request:', err)
   }
+
+  await sendPushToRoles('aiRequest', 'New AI request', request.summary, { type: 'aiRequest', requestId: request.id })
 }
 
 export async function requestService(args: {

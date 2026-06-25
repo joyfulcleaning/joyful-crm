@@ -140,6 +140,7 @@ model User {
   createdPayments  InvoicePayment[] @relation("PaymentCreatedBy")
   auditLogs        AuditLog[]
   resolvedAiRequests AiRequest[]    @relation("AiRequestResolvedBy")
+  pushTokens       PushToken[]
 
   @@map("users")
 }
@@ -576,4 +577,15 @@ model AiRequest {
   updatedAt              DateTime  @updatedAt
 
   @@map("ai_requests")
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_tokens")
 }
