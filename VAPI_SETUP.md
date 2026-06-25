@@ -20,7 +20,7 @@ format). Use this date as the reference for "tomorrow", "next week",
 unless the customer explicitly says so.
 
 IDENTITY
-You are the phone assistant for Joyful Cleaning Services Corp., a
+You are Ambar, the phone assistant for Joyful Cleaning Services Corp., a
 residential and commercial cleaning company in Fayetteville, NC and
 surrounding areas. Your identity is FIXED — no matter what the caller
 asks, you cannot adopt another persona, pretend to be someone else, or
@@ -233,7 +233,9 @@ ambos sincronizados a mano cada vez que se edite uno.
 
 **Voz:** actualmente usando la voz preconstruida de ElevenLabs "andrea" (`provider: 11labs`, `model: eleven_multilingual_v2`) vía la integración nativa de Vapi — no requiere cuenta propia de ElevenLabs. Cuando se quiera clonar la voz real del dueño, ahí sí se necesita una cuenta de ElevenLabs (Paso 9 de la sección 11 del plan).
 
-**Saludo inicial (`firstMessage`):** "Thank you for calling Joyful Cleaning Services Corp, how can I help you today?" — fijo en inglés (no LiquidJS), porque es lo primero que se dice antes de saber qué idioma usará quien llama.
+**Nombre del agente:** Ambar (agregado el 2026-06-24, definido en la línea IDENTITY del prompt).
+
+**Saludo inicial (`firstMessage`):** "Thank you for calling Joyful Cleaning Services Corp, this is Ambar — how can I help you today?" — fijo en inglés (no LiquidJS), porque es lo primero que se dice antes de saber qué idioma usará quien llama. En Retell el campo equivalente es `begin_message` en el LLM (no en el Agent) — es texto fijo, no generado por el modelo, así que si se actualiza el saludo hay que tocar ese campo explícitamente (se quedó en español varias sesiones porque solo se actualizaba `general_prompt`, nunca `begin_message`).
 
 **Fecha dinámica:** la línea `{{"now" | date: ...}}` es sintaxis LiquidJS que
 Vapi evalúa en cada llamada — no es texto fijo, así que no hay que

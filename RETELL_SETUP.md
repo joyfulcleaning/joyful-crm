@@ -4,7 +4,7 @@ Segunda plataforma construida en paralelo a Vapi (ver `VAPI_SETUP.md`) para comp
 
 **IDs actuales:** Agent `agent_8f69be225380e1549d6da23d81`, LLM `llm_0292c9dd43187fb9d42e7fb8aa3f` ("Joyful Cleaning Assistant").
 
-**Modelo:** `gpt-5.1`. **Voz:** `11labs-Andrea` (misma voz ElevenLabs que Vapi, a propósito, para comparar plataforma sin variar la voz). **Idioma del agente:** `multi` (campo de plataforma) — pero desde el 2026-06-24 el prompt fija inglés como idioma **principal**, con español como secundario solo si quien llama habla español en frases completas. El prompt y las descripciones de los 8 tools están en inglés por esto mismo.
+**Nombre del agente:** Ambar. **Modelo:** `gpt-5.1`. **Voz:** `11labs-Andrea` (misma voz ElevenLabs que Vapi, a propósito, para comparar plataforma sin variar la voz). **Idioma del agente:** `multi` (campo de plataforma) — pero desde el 2026-06-24 el prompt fija inglés como idioma **principal**, con español como secundario solo si quien llama habla español en frases completas. El prompt y las descripciones de los 8 tools están en inglés por esto mismo.
 
 **Header de autenticación (todos los tools):** `Authorization: Bearer <AI_API_KEY>` — mismo valor que en Vapi, no lo pegues en ningún archivo del repo.
 
@@ -12,7 +12,9 @@ Segunda plataforma construida en paralelo a Vapi (ver `VAPI_SETUP.md`) para comp
 
 ## System Prompt (`general_prompt`)
 
-Es el mismo texto que el de Vapi en `VAPI_SETUP.md`, **sin** el bloque `FECHA ACTUAL` (Retell no tiene un equivalente confirmado a las variables LiquidJS de Vapi) — en su lugar, el flujo 1 instruye usar el tool `get_current_date` al inicio de la llamada. Mantener ambos prompts sincronizados a mano cada vez que se edite uno de los dos.
+Es el mismo texto que el de Vapi en `VAPI_SETUP.md`, **sin** el bloque `FECHA ACTUAL` (Retell no tiene un equivalente confirmado a las variables LiquidJS de Vapi) — en su lugar, el flujo 1 instruye usar el tool `get_current_date` al inicio de la llamada. Mantener ambos prompts sincronizados a mano cada vez que se edite uno de los dos. El agente se llama **Ambar** (línea IDENTITY del prompt).
+
+**Gotcha de `begin_message`:** el saludo inicial vive en un campo separado del LLM, `begin_message` — es texto FIJO, no lo genera el modelo a partir de `general_prompt`. Si se actualiza el idioma/contenido del prompt pero no se reenvía `begin_message` en el mismo PATCH, el saludo se queda con el valor viejo (pasó: quedó en español varias sesiones después de cambiar el idioma principal a inglés, porque solo se actualizaba `general_prompt`). Valor actual: "Thank you for calling Joyful Cleaning Services Corp, this is Ambar — how can I help you today?"
 
 ---
 
