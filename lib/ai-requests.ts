@@ -14,6 +14,19 @@ import {
 // AiRequest; resolveAiRequest() calls into the real, unmodified functions in
 // lib/ai-handlers.ts once staff approves.
 
+function prettyDate(iso?: string): string {
+  if (!iso) return ''
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+}
+
+function prettyTime(hhmm?: string): string {
+  if (!hhmm) return ''
+  const [h, m] = hhmm.split(':').map(Number)
+  const period = h < 12 ? 'AM' : 'PM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+
 async function sendPlainEmail(to: string, subject: string, html: string) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -96,7 +109,15 @@ export async function requestService(args: {
     if (priced) estimatedPrice = priced.base + priced.fee
   }
 
-  const summary = `${type} on ${serviceDate} at ${serviceTime} — ${address}`
+  const summary = `We received a call from ${client?.name || clientName}. ` +
+    (client
+      ? `They're an existing customer in our system. `
+      : `They are not an existing customer in our system — we took down their information. `) +
+    `They're interested in a ${type} on ${prettyDate(serviceDate)} at ${prettyTime(serviceTime)}` +
+    (address ? ` at ${address}` : '') +
+    (frequency && frequency !== 'one_time' ? ` (${frequency})` : '') +
+    `. All their details are recorded in this request.`
+
   const request = await prisma.aiRequest.create({
     data: {
       platform: platform || null,
@@ -106,7 +127,7 @@ export async function requestService(args: {
       callerEmail: client?.email || clientEmail || null,
       clientId: client?.id || null,
       summary,
-      payload: { ...args, isNewClient: !client, estimatedPrice } as any,
+      payload: { ...args, notes: notes || summary, isNewClient: !client, estimatedPrice } as any,
     },
   })
   await notifyAdmin(request)
@@ -149,9 +170,13 @@ export async function requestRescheduleOrCancel(id: string, args: {
       select: { id: true },
     })
     if (conflict) return { status: 409, body: { error: 'Time slot already booked' } }
-    summary = `Reschedule ${service.type} to ${newDate} at ${newTime} — ${service.address}`
+    summary = `We received a call from ${service.client.name}, an existing customer. They'd like to ` +
+      `reschedule their ${service.type} (currently ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}) ` +
+      `to ${prettyDate(newDate)} at ${prettyTime(newTime)}. All details are recorded in this request.`
   } else {
-    summary = `Cancel ${service.type} on ${service.serviceDate.toISOString().slice(0, 10)} at ${service.serviceTime} — ${service.address}`
+    summary = `We received a call from ${service.client.name}, an existing customer. They'd like to ` +
+      `cancel their ${service.type} currently scheduled for ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}. ` +
+      `All details are recorded in this request.`
   }
 
   const request = await prisma.aiRequest.create({
@@ -183,7 +208,10 @@ export async function requestSqftEstimate(args: {
     return { status: 400, body: { error: `type must be one of: ${Object.keys(SQFT_RATES).join(', ')}` } }
   }
 
-  const summary = `${type} estimate, ${sqft} sqft (~$${total}) — ${address}`
+  const summary = `We received a call from ${name}. They'd like an estimate for a ${type} cleaning, ` +
+    `approximately ${sqft} sqft, at ${address}. Estimated price: $${total} (for your reference, never quoted to the caller). ` +
+    `All details are recorded in this request.`
+
   const request = await prisma.aiRequest.create({
     data: {
       platform: platform || null,
@@ -193,6 +221,9 @@ export async function requestSqftEstimate(args: {
       callerEmail: email,
       clientId: clientId || null,
       summary,
+      // NOTE: do not default `notes` to the narrative summary here — Estimate.notes
+      // is client-facing (rendered on the PDF emailed to the customer), unlike
+      // Service.internalNotes/EstimateVisit.notes which are staff-only.
       payload: { ...args, estimatedPrice: total } as any,
     },
   })
@@ -213,7 +244,10 @@ export async function requestEstimateVisit(args: {
     return { status: 400, body: { error: 'visitDate must be YYYY-MM-DD' } }
   }
 
-  const summary = `Estimate visit on ${visitDate} at ${visitTime} — ${address || 'no address given'}`
+  const summary = `We received a call from ${name}. They'd like someone to visit ` +
+    `${address || 'their property'} in person to provide a quote, on ${prettyDate(visitDate)} at ${prettyTime(visitTime)}. ` +
+    `All details are recorded in this request.`
+
   const request = await prisma.aiRequest.create({
     data: {
       platform: platform || null,
@@ -223,7 +257,7 @@ export async function requestEstimateVisit(args: {
       callerEmail: email || null,
       clientId: clientId || null,
       summary,
-      payload: args as any,
+      payload: { ...args, notes: notes || summary } as any,
     },
   })
   await notifyAdmin(request)

@@ -43,6 +43,39 @@ function rejectMessage(): string {
   return `Hi! Unfortunately we're unable to accommodate that request right now. Please give us a call back so we can find another option.`
 }
 
+function isoToDDMMYYYY(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : iso
+}
+
+function ddmmyyyyToIso(s: string): string | null {
+  const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null
+}
+
+// Native <input type="date"> can't be forced to display DD-MM-YYYY across
+// browsers, so this is a plain text field with its own draft state — only
+// commits to the (YYYY-MM-DD) payload value once a full, valid date is typed.
+function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+  const [draft, setDraft] = useState(isoToDDMMYYYY(value || ''))
+  useEffect(() => { setDraft(isoToDDMMYYYY(value || '')) }, [value])
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={e => {
+        const v = e.target.value
+        setDraft(v)
+        const iso = ddmmyyyyToIso(v)
+        if (iso) onChange(iso)
+      }}
+      placeholder="DD-MM-YYYY"
+      className="w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+    />
+  )
+}
+
 type Field = { key: string; label: string; kind: 'text' | 'date' | 'select' | 'number'; options?: string[] }
 
 function editableFieldsFor(type: string, payload: any): Field[] {
@@ -114,9 +147,11 @@ function EditableFields({ type, payload, onChange }: { type: string; payload: an
             >
               {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
+          ) : f.kind === 'date' ? (
+            <DateField value={payload[f.key] ?? ''} onChange={v => onChange(f.key, v)} />
           ) : (
             <input
-              type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'}
+              type={f.kind === 'number' ? 'number' : 'text'}
               value={payload[f.key] ?? ''}
               onChange={e => onChange(f.key, f.kind === 'number' ? Number(e.target.value) : e.target.value)}
               className="w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
@@ -210,7 +245,9 @@ export default function AiRequestModal({
               {Object.entries(request.payload || {}).map(([label, value]) => (
                 <div key={label}>
                   <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{label}</div>
-                  <div className="text-xs text-[#e8eaf0] mt-0.5">{String(value ?? '—')}</div>
+                  <div className="text-xs text-[#e8eaf0] mt-0.5">
+                    {/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? isoToDDMMYYYY(String(value)) : String(value ?? '—')}
+                  </div>
                 </div>
               ))}
             </div>

@@ -18,6 +18,15 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: '#f87171',
 }
 
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${dd}-${mm}-${yyyy} ${time}`
+}
+
 export default function AiRequestsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,7 +102,7 @@ export default function AiRequestsPage() {
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-3 py-2.5 text-xs text-[#9ca3af] whitespace-nowrap">
-                    {new Date(r.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {formatDateTime(r.createdAt)}
                   </td>
                   <td className="px-3 py-2.5 text-xs text-[#e8eaf0] whitespace-nowrap">{TYPE_LABELS[r.type] || r.type}</td>
                   <td className="px-3 py-2.5 text-xs text-[#9ca3af] whitespace-nowrap">
