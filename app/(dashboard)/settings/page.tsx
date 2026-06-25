@@ -46,6 +46,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.newClient': 'false',
   'notif.lowStock':  'true',
   'notif.weekly':    'true',
+  'notif.aiRequest': 'true',
   // Integrations
   'smtp.from':       'noreply@joyfulservices.com',
   // Appearance
@@ -428,6 +429,7 @@ export default function SettingsPage() {
                 { k: 'notif.paid',      label: 'Invoice paid',                sub: 'When a full invoice payment is recorded' },
                 { k: 'notif.overdue',   label: 'Invoice overdue',             sub: 'When an invoice passes its due date' },
                 { k: 'notif.newClient', label: 'New client registered',       sub: 'When a client is added to the system' },
+                { k: 'notif.aiRequest', label: 'AI phone assistant request',  sub: "When a caller's request needs your approval" },
                 { k: 'notif.lowStock',  label: 'Low inventory alert',         sub: 'When a product falls below minimum stock' },
                 { k: 'notif.weekly',    label: 'Weekly summary (every Monday)', sub: 'Performance report for the previous week' },
               ].map(item => (

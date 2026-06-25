@@ -209,6 +209,25 @@ export async function createService(args: {
   }
 }
 
+// Shared by rescheduleOrCancelService (live execution) and
+// requestRescheduleOrCancel (lib/ai-requests.ts, submits for approval) so the
+// ownership check (and the client data needed for the approval summary)
+// only lives in one place.
+export async function findServiceForCaller(id: string, callerPhone: string): Promise<
+  { service: any } | { status: number; error: string }
+> {
+  const service = await prisma.service.findUnique({ where: { id }, include: { client: true } })
+  if (!service) return { status: 404, error: 'Not found' }
+
+  const target = normalizePhone(callerPhone)
+  const ownsService =
+    (service.client.phone && normalizePhone(service.client.phone) === target) ||
+    (service.client.contactPhone && normalizePhone(service.client.contactPhone) === target)
+  if (!ownsService) return { status: 403, error: 'This service does not belong to the caller' }
+
+  return { service }
+}
+
 export async function rescheduleOrCancelService(id: string, args: {
   callerPhone?: string; serviceDate?: string; serviceTime?: string; status?: string
 }): Promise<HandlerResult> {
@@ -222,17 +241,9 @@ export async function rescheduleOrCancelService(id: string, args: {
     return { status: 400, body: { error: 'status can only be set to cancelled' } }
   }
 
-  const service = await prisma.service.findUnique({
-    where: { id },
-    include: { client: { select: { phone: true, contactPhone: true } } },
-  })
-  if (!service) return { status: 404, body: { error: 'Not found' } }
-
-  const target = normalizePhone(callerPhone)
-  const ownsService =
-    (service.client.phone && normalizePhone(service.client.phone) === target) ||
-    (service.client.contactPhone && normalizePhone(service.client.contactPhone) === target)
-  if (!ownsService) return { status: 403, body: { error: 'This service does not belong to the caller' } }
+  const found = await findServiceForCaller(id, callerPhone)
+  if ('error' in found) return { status: found.status, body: { error: found.error } }
+  const { service } = found
 
   const data: Record<string, unknown> = {}
   const actionNotes: string[] = []

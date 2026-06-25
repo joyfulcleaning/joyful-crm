@@ -139,6 +139,7 @@ model User {
   createdPayroll   PayrollRecord[]  @relation("PayrollCreatedBy")
   createdPayments  InvoicePayment[] @relation("PaymentCreatedBy")
   auditLogs        AuditLog[]
+  resolvedAiRequests AiRequest[]    @relation("AiRequestResolvedBy")
 
   @@map("users")
 }
@@ -237,6 +238,7 @@ model Client {
   invoices       Invoice[]
   estimates      Estimate[]
   estimateVisits EstimateVisit[]
+  aiRequests     AiRequest[]
 
   @@map("clients")
 }
@@ -546,4 +548,32 @@ model EstimateVisit {
   updatedAt  DateTime  @updatedAt
 
   @@map("estimate_visits")
+}
+
+// AI phone assistant write actions land here for staff approval before the
+// real Service/Estimate/EstimateVisit gets created.
+model AiRequest {
+  id                     String    @id @default(uuid())
+  platform               String?   // "vapi" | "retell"
+  type                   String    // schedule_service | reschedule_or_cancel_service | create_sqft_estimate | schedule_estimate_visit
+  status                 String    @default("pending") // pending | approved | rejected
+  callerName             String?
+  callerPhone            String?
+  callerEmail            String?
+  clientId               String?
+  client                 Client?   @relation(fields: [clientId], references: [id])
+  summary                String
+  payload                Json
+  adminNotes             String?
+  customerMessage        String?
+  resolvedAt             DateTime?
+  resolvedById           String?
+  resolvedBy             User?     @relation("AiRequestResolvedBy", fields: [resolvedById], references: [id])
+  resultServiceId        String?
+  resultEstimateId       String?
+  resultEstimateVisitId  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@map("ai_requests")
 }

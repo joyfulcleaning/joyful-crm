@@ -15,30 +15,48 @@ import {
   BarChart3,
   Download,
   Settings,
+  Bot,
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/calendar',  icon: Calendar,        label: 'Calendar'  },
-  { href: '/map',       icon: Map,             label: 'Map'       },
-  { href: '/services',  icon: Briefcase,       label: 'Services'  },
-  { href: '/clients',   icon: Users,           label: 'Clients'   },
-  { href: '/staff',     icon: UserCheck,       label: 'Staff'     },
-  { href: '/finances',  icon: DollarSign,      label: 'Finances'  },
-  { href: '/analytics', icon: BarChart3,       label: 'Analytics' },
-  { href: '/export',    icon: Download,        label: 'Export'    },
-  { href: '/settings',  icon: Settings,        label: 'Settings'  },
+  { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard'   },
+  { href: '/ai-requests',  icon: Bot,             label: 'AI Requests' },
+  { href: '/calendar',     icon: Calendar,        label: 'Calendar'    },
+  { href: '/map',          icon: Map,             label: 'Map'         },
+  { href: '/services',    icon: Briefcase,       label: 'Services'   },
+  { href: '/clients',     icon: Users,           label: 'Clients'    },
+  { href: '/staff',       icon: UserCheck,       label: 'Staff'      },
+  { href: '/finances',    icon: DollarSign,      label: 'Finances'   },
+  { href: '/analytics',   icon: BarChart3,       label: 'Analytics'  },
+  { href: '/export',      icon: Download,        label: 'Export'     },
+  { href: '/settings',    icon: Settings,        label: 'Settings'   },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const [light, setLight] = useState(false)
+  const [aiPending, setAiPending] = useState(0)
 
   useEffect(() => {
     const update = () => setLight(document.body.classList.contains('light'))
     update()
     window.addEventListener('theme-change', update)
     return () => window.removeEventListener('theme-change', update)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await fetch('/api/sync-status')
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setAiPending(data.aiRequestsPending || 0)
+      } catch {}
+    }
+    check()
+    const id = setInterval(check, 8000)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
   return (
@@ -81,7 +99,12 @@ export default function Sidebar() {
               )}
             >
               <item.icon size={16} />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === '/ai-requests' && aiPending > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#f59e0b] text-white leading-none">
+                  {aiPending}
+                </span>
+              )}
             </Link>
           )
         })}
