@@ -31,20 +31,23 @@ Investigado a partir del agente de ejemplo de Retell y aplicado el 2026-06-24:
 
 ## Tools (`general_tools`, embebidos en el LLM)
 
-Mismo formato en los 8: `type: "custom"`, `url: "https://joyful-crm.vercel.app/api/ai/retell-webhook"`, mismo header `Authorization`, `speak_during_execution: true`, `speak_after_execution: true`.
+Mismo formato en los 9: `type: "custom"`, `url: "https://joyful-crm.vercel.app/api/ai/retell-webhook"`, mismo header `Authorization`, `speak_during_execution: true`, `speak_after_execution: true`.
 
 | name | parameters (resumen) |
 |---|---|
 | `get_current_date` | sin parámetros |
 | `find_client_by_phone` | `phone` (requerido) |
 | `check_availability` | `date` YYYY-MM-DD (requerido) |
-| `schedule_service` ⏳ | `address`, `type`, `serviceDate`, `serviceTime` (requeridos); `clientId`/`clientName`/`clientPhone`/`clientEmail`/`city`/`state`/`zip`/`roomSize`/`frequency`/`notes` (opcionales) |
+| `schedule_service` ⏳ | `address`, `type`, `serviceDate`, `serviceTime` (requeridos); `clientId`/`clientName`/`clientPhone`/`clientEmail`/`city`/`state`/`zip`/`unit`/`roomSize`/`frequency`/`notes` (opcionales) |
 | `list_client_services` | `clientId`, `phone` (al menos uno) |
 | `reschedule_or_cancel_service` ⏳ | `serviceId`, `callerPhone` (requeridos); `serviceDate`/`serviceTime`/`status` (opcionales) |
 | `create_sqft_estimate` ⏳ | `name`, `email`, `address`, `sqft`, `type` (requeridos, `type` enum Rough/Final/Touch Up clean); `phone`/`notes` (opcionales) |
-| `schedule_estimate_visit` ⏳ | `name`, `visitDate`, `visitTime` (requeridos); `clientId`/`phone`/`email`/`address`/`notes` (opcionales) |
+| `schedule_estimate_visit` ⏳ | `name`, `visitDate`, `visitTime` (requeridos); `clientId`/`phone`/`email`/`address`/`city`/`state`/`zip`/`notes` (opcionales) |
+| `check_request_status` | `phone` (requerido) — busca el `AiRequest` más reciente de ese teléfono, sin importar el tipo |
 
 ⏳ = envía una solicitud a revisión (`lib/ai-requests.ts`) en vez de ejecutar de inmediato.
+
+**`check_request_status` (agregado 2026-06-25):** soluciona que el agente no tenía forma de responder "¿mi solicitud ya se procesó?" — antes solo podía buscar `Client`s reales con `find_client_by_phone`, que no existen todavía para una solicitud pendiente/rechazada. El prompt también ganó una regla explícita anti-loop: si no encuentra el teléfono después de confirmarlo una vez, debe transferir/tomar mensaje en vez de seguir pidiendo que se repita.
 
 Esquema completo de cada uno (JSON Schema de `parameters`) disponible vía `GET https://api.retellai.com/get-retell-llm/llm_0292c9dd43187fb9d42e7fb8aa3f` si se necesita reconstruir desde cero.
 
