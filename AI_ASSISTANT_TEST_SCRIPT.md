@@ -110,3 +110,19 @@ Make each call separately. Once you're done with all of them, let me know so I c
 1. "Hi, can you help me track a package I ordered online?"
 2. (or try another unrelated request, e.g. "can you book me a hotel room?")
 3. Should say there's been a mix-up and that this isn't something Joyful Cleaning handles — should NOT offer to transfer or take a message for this one (that's reserved for cleaning-related requests it just doesn't handle yet).
+
+## Call 13 — Apartment address (should ask for Unit + Room Size)
+
+1. "Hi, I'd like to schedule a standard cleaning."
+2. "My phone number is 347-220-9090."
+3. "The address is 456 Oak Apartments, unit 12B." (or just say "apartment" somewhere — should trigger asking for unit + bedrooms)
+4. Answer with a unit number and how many bedrooms if asked.
+5. Pick a date/time.
+6. "Thanks, that's it."
+
+## Call 14 — Check status of a previous request (make this call AFTER Call 1)
+
+1. "Hi, I want to know the status of a request I made earlier."
+2. (If asked for your phone) "347-220-9090."
+3. Should tell you whether it's still pending, approved, or rejected — NOT ask you to repeat/spell your number over and over (that was a real bug — should be fixed now).
+4. "Thanks, that's it."
