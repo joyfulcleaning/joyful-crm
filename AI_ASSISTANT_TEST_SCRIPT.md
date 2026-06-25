@@ -6,6 +6,8 @@ For Call 2 (new customer) use phone **910-555-9999** — that one creates a real
 
 The agent's primary language is now English — that's why most calls below are in English. A few near the end specifically test Spanish as the secondary language.
 
+**New behavior (2026-06-25):** the agent no longer books/reschedules/cancels/sends anything live — every one of those now ends with something like "our team will confirm and follow up by email." To actually complete a call's request, go to `/ai-requests` in the CRM (or "More → AI Requests" in the mobile app) afterward and approve it — that's when the real Service/Estimate/Visit gets created and (if you check the box) the customer email goes out.
+
 Make each call separately. Once you're done with all of them, let me know so I can review the transcripts.
 
 ---

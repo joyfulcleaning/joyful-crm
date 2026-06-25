@@ -8,6 +8,8 @@ Segunda plataforma construida en paralelo a Vapi (ver `VAPI_SETUP.md`) para comp
 
 **Header de autenticación (todos los tools):** `Authorization: Bearer <AI_API_KEY>` — mismo valor que en Vapi, no lo pegues en ningún archivo del repo.
 
+**Cola de aprobación (2026-06-25):** igual que en Vapi — `schedule_service`, `reschedule_or_cancel_service`, `create_sqft_estimate` y `schedule_estimate_visit` solo envían una solicitud a revisión (`lib/ai-requests.ts`), nunca ejecutan en vivo. Ver la nota equivalente en `VAPI_SETUP.md`.
+
 ---
 
 ## System Prompt (`general_prompt`)
@@ -36,11 +38,13 @@ Mismo formato en los 8: `type: "custom"`, `url: "https://joyful-crm.vercel.app/a
 | `get_current_date` | sin parámetros |
 | `find_client_by_phone` | `phone` (requerido) |
 | `check_availability` | `date` YYYY-MM-DD (requerido) |
-| `schedule_service` | `address`, `type`, `serviceDate`, `serviceTime` (requeridos); `clientId`/`clientName`/`clientPhone`/`clientEmail`/`city`/`state`/`zip`/`roomSize`/`frequency`/`notes` (opcionales) |
+| `schedule_service` ⏳ | `address`, `type`, `serviceDate`, `serviceTime` (requeridos); `clientId`/`clientName`/`clientPhone`/`clientEmail`/`city`/`state`/`zip`/`roomSize`/`frequency`/`notes` (opcionales) |
 | `list_client_services` | `clientId`, `phone` (al menos uno) |
-| `reschedule_or_cancel_service` | `serviceId`, `callerPhone` (requeridos); `serviceDate`/`serviceTime`/`status` (opcionales) |
-| `create_sqft_estimate` | `name`, `email`, `address`, `sqft`, `type` (requeridos, `type` enum Rough/Final/Touch Up clean); `phone`/`notes` (opcionales) |
-| `schedule_estimate_visit` | `name`, `visitDate`, `visitTime` (requeridos); `clientId`/`phone`/`email`/`address`/`notes` (opcionales) |
+| `reschedule_or_cancel_service` ⏳ | `serviceId`, `callerPhone` (requeridos); `serviceDate`/`serviceTime`/`status` (opcionales) |
+| `create_sqft_estimate` ⏳ | `name`, `email`, `address`, `sqft`, `type` (requeridos, `type` enum Rough/Final/Touch Up clean); `phone`/`notes` (opcionales) |
+| `schedule_estimate_visit` ⏳ | `name`, `visitDate`, `visitTime` (requeridos); `clientId`/`phone`/`email`/`address`/`notes` (opcionales) |
+
+⏳ = envía una solicitud a revisión (`lib/ai-requests.ts`) en vez de ejecutar de inmediato.
 
 Esquema completo de cada uno (JSON Schema de `parameters`) disponible vía `GET https://api.retellai.com/get-retell-llm/llm_0292c9dd43187fb9d42e7fb8aa3f` si se necesita reconstruir desde cero.
 
