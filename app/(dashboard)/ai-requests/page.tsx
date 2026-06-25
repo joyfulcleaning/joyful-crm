@@ -31,6 +31,7 @@ export default function AiRequestsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<any>(null)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
 
   async function load() {
     try {
@@ -61,19 +62,39 @@ export default function AiRequestsPage() {
   }
 
   const pendingCount = requests.filter(r => r.status === 'pending').length
+  const approvedCount = requests.filter(r => r.status === 'approved').length
+  const rejectedCount = requests.filter(r => r.status === 'rejected').length
+  const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-[#e8eaf0]">AI Requests</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Requests from the AI phone assistant awaiting review</p>
+          <p className="text-xs text-[#6b7280] mt-0.5">Full history of requests from the AI phone assistant, newest first</p>
         </div>
-        {pendingCount > 0 && (
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
-            {pendingCount} pending
-          </span>
-        )}
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { key: 'all' as const, label: 'Total', value: requests.length, color: '#6b7280' },
+          { key: 'pending' as const, label: 'Pending', value: pendingCount, color: '#f59e0b' },
+          { key: 'approved' as const, label: 'Approved', value: approvedCount, color: '#26BD97' },
+          { key: 'rejected' as const, label: 'Rejected', value: rejectedCount, color: '#f87171' },
+        ].map(card => (
+          <button
+            key={card.key}
+            onClick={() => setFilter(card.key)}
+            className="bg-[#161922] border rounded-xl px-4 py-3 flex items-center gap-3 text-left transition-all"
+            style={{ borderColor: filter === card.key ? card.color : '#2a2f3d' }}
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
+              style={{ background: `${card.color}1a`, color: card.color }}>
+              {card.value}
+            </div>
+            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
+          </button>
+        ))}
       </div>
 
       <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-x-auto">
@@ -91,9 +112,9 @@ export default function AiRequestsPage() {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">Loading...</td></tr>
-            ) : requests.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">No requests yet.</td></tr>
-            ) : requests.map(r => {
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">No requests {filter === 'all' ? 'yet' : `with status "${filter}"`}.</td></tr>
+            ) : filtered.map(r => {
               const color = STATUS_COLORS[r.status] || '#6b7280'
               return (
                 <tr
