@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bot, Check, X } from 'lucide-react'
+import { Bot, Check, X, Calendar as CalendarIcon } from 'lucide-react'
 import { HOURLY_SLOTS } from '@/lib/scheduling'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -23,24 +23,42 @@ const SERVICE_TYPE_OPTIONS = [
   'Window Cleaning', 'Carpet Cleaning',
 ]
 const ESTIMATE_TYPE_OPTIONS = ['Rough Clean', 'Final Clean', 'Touch Up']
+const ROOM_SIZE_OPTIONS = ['1BR', '2BR', '3BR', 'Office/Amenities', 'Other']
 
-function approveMessage(type: string, payload: any): string {
+// Types whose location is a real property (used for booking/visiting), so
+// they get the structured Street/City/State/Zip + computed full-address
+// fields. create_sqft_estimate keeps a single address field — its Estimate
+// record has no separate columns and never shows up on the Services map.
+const ADDRESS_TYPES = new Set(['schedule_service', 'schedule_estimate_visit'])
+
+function firstNameOf(fullName?: string | null): string {
+  return (fullName || '').trim().split(/\s+/)[0] || 'there'
+}
+
+function composeAddress(street?: string, city?: string, state?: string, zip?: string): string {
+  const cityStateZip = [city, [state, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')
+  return [street, cityStateZip].filter(Boolean).join(', ')
+}
+
+function approveMessage(type: string, payload: any, callerName?: string | null): string {
+  const name = firstNameOf(callerName)
   switch (type) {
     case 'schedule_service':
-      return `Hi! We've confirmed your ${payload?.type || 'cleaning'} for ${payload?.serviceDate} at ${payload?.serviceTime}. See you then!`
+      return `Hi ${name}! We've confirmed your ${payload?.type || 'cleaning'} for ${payload?.serviceDate} at ${payload?.serviceTime}. See you then!`
     case 'reschedule_or_cancel_service':
       return payload?.status === 'cancelled'
-        ? `Hi! We've cancelled your cleaning as requested.`
-        : `Hi! We've rescheduled your cleaning to ${payload?.serviceDate} at ${payload?.serviceTime}.`
+        ? `Hi ${name}! We've cancelled your cleaning as requested.`
+        : `Hi ${name}! We've rescheduled your cleaning to ${payload?.serviceDate} at ${payload?.serviceTime}.`
     case 'schedule_estimate_visit':
-      return `Hi! We've confirmed your estimate visit for ${payload?.visitDate} at ${payload?.visitTime}. See you then!`
+      return `Hi ${name}! We've confirmed your estimate visit for ${payload?.visitDate} at ${payload?.visitTime}. See you then!`
     default:
       return ''
   }
 }
 
-function rejectMessage(): string {
-  return `Hi! Unfortunately we're unable to accommodate that request right now. Please give us a call back so we can find another option.`
+function rejectMessage(callerName?: string | null): string {
+  const name = firstNameOf(callerName)
+  return `Hi ${name}! Unfortunately we're unable to accommodate that request right now. Please give us a call back so we can find another option.`
 }
 
 function isoToDDMMYYYY(iso: string): string {
@@ -53,26 +71,84 @@ function ddmmyyyyToIso(s: string): string | null {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null
 }
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+function MiniCalendar({ value, onSelect, onClose }: { value: string; onSelect: (date: string) => void; onClose: () => void }) {
+  const initDate = value ? new Date(`${value}T12:00:00Z`) : new Date()
+  const [year, setYear] = useState(initDate.getUTCFullYear())
+  const [month, setMonth] = useState(initDate.getUTCMonth())
+
+  const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay()
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const selectedDay = value?.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`) ? Number(value.slice(8, 10)) : null
+
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }
+  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }
+  const pick = (d: number) => {
+    onSelect(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+    onClose()
+  }
+
+  return (
+    <div className="absolute z-10 mt-1 bg-[#161922] border border-[#2a2f3d] rounded-xl p-3 shadow-xl w-60">
+      <div className="flex items-center justify-between mb-2">
+        <button type="button" onClick={prevMonth} className="text-[#9ca3af] hover:text-[#e8eaf0] px-1">‹</button>
+        <div className="text-xs font-bold text-[#e8eaf0]">{MONTHS[month]} {year}</div>
+        <button type="button" onClick={nextMonth} className="text-[#9ca3af] hover:text-[#e8eaf0] px-1">›</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i} className="text-[9px] text-[#6b7280] font-bold">{d}</div>)}
+        {cells.map((d, i) => (
+          <button
+            type="button"
+            key={i}
+            disabled={d == null}
+            onClick={() => d && pick(d)}
+            className={`text-[10px] rounded-md py-1 ${d == null ? '' : d === selectedDay ? 'bg-[#4f8ef7] text-white' : 'text-[#9ca3af] hover:bg-[#252b3b]'}`}
+          >
+            {d ?? ''}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Native <input type="date"> can't be forced to display DD-MM-YYYY across
-// browsers, so this is a plain text field with its own draft state — only
-// commits to the (YYYY-MM-DD) payload value once a full, valid date is typed.
+// browsers, so this is a plain text field with its own draft state (only
+// commits a value once a full, valid date is typed) plus a calendar popup
+// as a click-to-pick shortcut for the same field.
 function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
   const [draft, setDraft] = useState(isoToDDMMYYYY(value || ''))
+  const [showCal, setShowCal] = useState(false)
   useEffect(() => { setDraft(isoToDDMMYYYY(value || '')) }, [value])
 
   return (
-    <input
-      type="text"
-      value={draft}
-      onChange={e => {
-        const v = e.target.value
-        setDraft(v)
-        const iso = ddmmyyyyToIso(v)
-        if (iso) onChange(iso)
-      }}
-      placeholder="DD-MM-YYYY"
-      className="w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
-    />
+    <div className="relative">
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={draft}
+          onChange={e => {
+            const v = e.target.value
+            setDraft(v)
+            const iso = ddmmyyyyToIso(v)
+            if (iso) onChange(iso)
+          }}
+          placeholder="DD-MM-YYYY"
+          className="flex-1 w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+        />
+        <button
+          type="button"
+          onClick={() => setShowCal(v => !v)}
+          className="px-2 rounded-lg border border-[#2a2f3d] text-[#9ca3af] hover:text-[#4f8ef7] hover:border-[#4f8ef7]"
+        >
+          <CalendarIcon size={14} />
+        </button>
+      </div>
+      {showCal && <MiniCalendar value={value} onSelect={d => onChange(d)} onClose={() => setShowCal(false)} />}
+    </div>
   )
 }
 
@@ -85,7 +161,12 @@ function editableFieldsFor(type: string, payload: any): Field[] {
         { key: 'type', label: 'Service type', kind: 'select', options: SERVICE_TYPE_OPTIONS },
         { key: 'serviceDate', label: 'Date', kind: 'date' },
         { key: 'serviceTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
-        { key: 'address', label: 'Address', kind: 'text' },
+        { key: 'street', label: 'Street', kind: 'text' },
+        { key: 'city', label: 'City', kind: 'text' },
+        { key: 'state', label: 'State', kind: 'text' },
+        { key: 'zip', label: 'Zip', kind: 'text' },
+        { key: 'unit', label: 'Unit (if apartment)', kind: 'text' },
+        { key: 'roomSize', label: 'Room size', kind: 'select', options: ROOM_SIZE_OPTIONS },
       ]
     case 'reschedule_or_cancel_service':
       return payload.status === 'cancelled' ? [] : [
@@ -102,7 +183,10 @@ function editableFieldsFor(type: string, payload: any): Field[] {
       return [
         { key: 'visitDate', label: 'Date', kind: 'date' },
         { key: 'visitTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
-        { key: 'address', label: 'Address', kind: 'text' },
+        { key: 'street', label: 'Street', kind: 'text' },
+        { key: 'city', label: 'City', kind: 'text' },
+        { key: 'state', label: 'State', kind: 'text' },
+        { key: 'zip', label: 'Zip', kind: 'text' },
       ]
     default:
       return []
@@ -114,6 +198,7 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
   switch (type) {
     case 'schedule_service':
       return [
+        ['Full address', payload.address || '—'],
         ['Frequency', payload.frequency || 'one_time'],
         ['New customer?', payload.isNewClient ? 'Yes' : 'No'],
         ['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'],
@@ -124,7 +209,7 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
     case 'create_sqft_estimate':
       return [['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'], ['Notes', payload.notes || '—']]
     case 'schedule_estimate_visit':
-      return [['Notes', payload.notes || '—']]
+      return [['Full address', payload.address || '—'], ['Notes', payload.notes || '—']]
     default:
       return []
   }
@@ -184,9 +269,14 @@ export default function AiRequestModal({
 
   useEffect(() => {
     if (!request) return
-    setEditedPayload({ ...request.payload })
+    const p = { ...request.payload }
+    if (ADDRESS_TYPES.has(request.type)) {
+      p.street = p.street ?? p.address ?? ''
+      p.address = composeAddress(p.street, p.city, p.state, p.zip)
+    }
+    setEditedPayload(p)
     setAdminNotes('')
-    setCustomerMessage(approveMessage(request.type, request.payload))
+    setCustomerMessage(approveMessage(request.type, request.payload, request.callerName))
     setNotifyCustomer(!!request.callerEmail && request.type !== 'create_sqft_estimate')
   }, [request])
 
@@ -196,7 +286,13 @@ export default function AiRequestModal({
   const isPending = request.status === 'pending'
 
   function updateField(key: string, value: any) {
-    setEditedPayload((prev: any) => ({ ...prev, [key]: value }))
+    setEditedPayload((prev: any) => {
+      const next = { ...prev, [key]: value }
+      if (ADDRESS_TYPES.has(request.type) && ['street', 'city', 'state', 'zip'].includes(key)) {
+        next.address = composeAddress(next.street, next.city, next.state, next.zip)
+      }
+      return next
+    })
   }
 
   async function handle(action: 'approve' | 'reject') {
@@ -222,9 +318,14 @@ export default function AiRequestModal({
               <div className="text-[10px] text-[#6b7280]">{request.platform === 'vapi' ? 'Vapi' : request.platform === 'retell' ? 'Retell' : ''}</div>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>
-            {request.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>
+              {request.status}
+            </span>
+            <button onClick={onClose} className="p-1 rounded text-[#6b7280] hover:text-[#e8eaf0] hover:bg-white/5 transition-all">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-1 mb-4">
@@ -272,13 +373,13 @@ export default function AiRequestModal({
                   <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Message to customer</label>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setCustomerMessage(approveMessage(request.type, editedPayload))}
+                      onClick={() => setCustomerMessage(approveMessage(request.type, editedPayload, request.callerName))}
                       className="text-[10px] text-[#6b7280] hover:text-[#26BD97] underline"
                     >
                       Regenerate
                     </button>
                     <button
-                      onClick={() => setCustomerMessage(rejectMessage())}
+                      onClick={() => setCustomerMessage(rejectMessage(request.callerName))}
                       className="text-[10px] text-[#6b7280] hover:text-[#f87171] underline"
                     >
                       Use rejection message

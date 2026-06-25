@@ -63,7 +63,7 @@ async function notifyAdmin(request: { id: string; type: string; summary: string;
 
 export async function requestService(args: {
   clientId?: string; clientName?: string; clientPhone?: string; clientEmail?: string
-  address?: string; city?: string; state?: string; zip?: string
+  address?: string; city?: string; state?: string; zip?: string; unit?: string
   type?: string; roomSize?: string; frequency?: string
   serviceDate?: string; serviceTime?: string; notes?: string
 }, platform?: string): Promise<HandlerResult> {
@@ -111,12 +111,12 @@ export async function requestService(args: {
 
   const summary = `We received a call from ${client?.name || clientName}. ` +
     (client
-      ? `They're an existing customer in our system. `
-      : `They are not an existing customer in our system — we took down their information. `) +
-    `They're interested in a ${type} on ${prettyDate(serviceDate)} at ${prettyTime(serviceTime)}` +
+      ? `An existing customer in our system. `
+      : `Not an existing customer in our system — we took down the information. `) +
+    `Interested in a ${type} on ${prettyDate(serviceDate)} at ${prettyTime(serviceTime)}` +
     (address ? ` at ${address}` : '') +
     (frequency && frequency !== 'one_time' ? ` (${frequency})` : '') +
-    `. All their details are recorded in this request.`
+    `. All the details are recorded in this request.`
 
   const request = await prisma.aiRequest.create({
     data: {
@@ -170,12 +170,12 @@ export async function requestRescheduleOrCancel(id: string, args: {
       select: { id: true },
     })
     if (conflict) return { status: 409, body: { error: 'Time slot already booked' } }
-    summary = `We received a call from ${service.client.name}, an existing customer. They'd like to ` +
-      `reschedule their ${service.type} (currently ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}) ` +
+    summary = `We received a call from ${service.client.name}, an existing customer. Requesting to ` +
+      `reschedule the ${service.type} (currently ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}) ` +
       `to ${prettyDate(newDate)} at ${prettyTime(newTime)}. All details are recorded in this request.`
   } else {
-    summary = `We received a call from ${service.client.name}, an existing customer. They'd like to ` +
-      `cancel their ${service.type} currently scheduled for ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}. ` +
+    summary = `We received a call from ${service.client.name}, an existing customer. Requesting to ` +
+      `cancel the ${service.type} currently scheduled for ${prettyDate(service.serviceDate.toISOString().slice(0, 10))} at ${prettyTime(service.serviceTime)}. ` +
       `All details are recorded in this request.`
   }
 
@@ -208,7 +208,7 @@ export async function requestSqftEstimate(args: {
     return { status: 400, body: { error: `type must be one of: ${Object.keys(SQFT_RATES).join(', ')}` } }
   }
 
-  const summary = `We received a call from ${name}. They'd like an estimate for a ${type} cleaning, ` +
+  const summary = `We received a call from ${name}. Requesting an estimate for a ${type} cleaning, ` +
     `approximately ${sqft} sqft, at ${address}. Estimated price: $${total} (for your reference, never quoted to the caller). ` +
     `All details are recorded in this request.`
 
@@ -234,6 +234,7 @@ export async function requestSqftEstimate(args: {
 
 export async function requestEstimateVisit(args: {
   clientId?: string; name?: string; phone?: string; email?: string; address?: string
+  city?: string; state?: string; zip?: string
   visitDate?: string; visitTime?: string; notes?: string
 }, platform?: string): Promise<HandlerResult> {
   const { clientId, name, phone, email, address, visitDate, visitTime, notes } = args
@@ -244,8 +245,8 @@ export async function requestEstimateVisit(args: {
     return { status: 400, body: { error: 'visitDate must be YYYY-MM-DD' } }
   }
 
-  const summary = `We received a call from ${name}. They'd like someone to visit ` +
-    `${address || 'their property'} in person to provide a quote, on ${prettyDate(visitDate)} at ${prettyTime(visitTime)}. ` +
+  const summary = `We received a call from ${name}. Requesting an in-person visit to ` +
+    `${address || 'the property'} to provide a quote, on ${prettyDate(visitDate)} at ${prettyTime(visitTime)}. ` +
     `All details are recorded in this request.`
 
   const request = await prisma.aiRequest.create({

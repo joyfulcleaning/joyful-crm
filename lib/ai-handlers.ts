@@ -111,11 +111,11 @@ export async function listClientServices(clientId: string | null, phone: string 
 
 export async function createService(args: {
   clientId?: string; clientName?: string; clientPhone?: string; clientEmail?: string
-  address?: string; city?: string; state?: string; zip?: string
+  address?: string; city?: string; state?: string; zip?: string; unit?: string
   type?: string; roomSize?: string; frequency?: string
   serviceDate?: string; serviceTime?: string; notes?: string
 }): Promise<HandlerResult> {
-  const { clientId, clientName, clientPhone, clientEmail, address, city, state, zip, type, roomSize, frequency, serviceDate, serviceTime, notes } = args
+  const { clientId, clientName, clientPhone, clientEmail, address, city, state, zip, unit, type, roomSize, frequency, serviceDate, serviceTime, notes } = args
 
   if (!address || !type || !serviceDate || !serviceTime) {
     return { status: 400, body: { error: 'address, type, serviceDate and serviceTime are required' } }
@@ -192,6 +192,7 @@ export async function createService(args: {
       type,
       address,
       roomSize: roomSize || null,
+      unit: unit || null,
       frequency: freq as any,
       basePrice,
       additionalFee,
