@@ -110,7 +110,7 @@ function EditableFields({ type, payload, onChange }: { type: string; payload: an
             <select
               value={payload[f.key] ?? ''}
               onChange={e => onChange(f.key, e.target.value)}
-              className="w-full bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+              className="w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
             >
               {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -119,7 +119,7 @@ function EditableFields({ type, payload, onChange }: { type: string; payload: an
               type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'}
               value={payload[f.key] ?? ''}
               onChange={e => onChange(f.key, f.kind === 'number' ? Number(e.target.value) : e.target.value)}
-              className="w-full bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+              className="w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
             />
           )}
         </div>
@@ -199,7 +199,7 @@ export default function AiRequestModal({
           </div>
         </div>
 
-        <div className="bg-[#0f1117] border border-[#2a2f3d] rounded-xl p-3 mb-4">
+        <div className="bg-[#1e2330] border border-[#2a2f3d] rounded-xl p-3 mb-4">
           {isPending ? (
             <>
               <p className="text-[10px] text-[#6b7280] mb-2">Adjust anything below before approving — what gets booked is exactly what's shown here.</p>
@@ -225,7 +225,7 @@ export default function AiRequestModal({
                 value={adminNotes}
                 onChange={e => setAdminNotes(e.target.value)}
                 rows={2}
-                className="w-full mt-1 bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-3 py-2 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+                className="w-full mt-1 bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-3 py-2 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
               />
             </div>
 
@@ -252,7 +252,7 @@ export default function AiRequestModal({
                   value={customerMessage}
                   onChange={e => setCustomerMessage(e.target.value)}
                   rows={3}
-                  className="w-full mt-1 bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-3 py-2 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+                  className="w-full mt-1 bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-3 py-2 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
                 />
                 <label className="flex items-center gap-2 mt-2 cursor-pointer">
                   <input
