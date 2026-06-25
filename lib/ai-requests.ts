@@ -232,9 +232,9 @@ export async function requestEstimateVisit(args: {
 }
 
 export async function resolveAiRequest(id: string, args: {
-  action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean
+  action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean; editedPayload?: Record<string, any>
 }, resolvedById: string): Promise<HandlerResult> {
-  const { action, adminNotes, customerMessage, notifyCustomer } = args
+  const { action, adminNotes, customerMessage, notifyCustomer, editedPayload } = args
   if (action !== 'approve' && action !== 'reject') {
     return { status: 400, body: { error: 'action must be approve or reject' } }
   }
@@ -247,8 +247,13 @@ export async function resolveAiRequest(id: string, args: {
   let resultEstimateId: string | null = null
   let resultEstimateVisitId: string | null = null
 
+  // Staff can tweak fields (date, time, address, type...) in the approval
+  // modal before approving — whatever they end up with is what actually
+  // gets booked, and it's what we persist back onto the request for the
+  // record.
+  const payload = { ...(request.payload as any), ...(editedPayload || {}) }
+
   if (action === 'approve') {
-    const payload = request.payload as any
     let result: HandlerResult
     switch (request.type) {
       case 'schedule_service':
@@ -282,6 +287,7 @@ export async function resolveAiRequest(id: string, args: {
       status: action === 'approve' ? 'approved' : 'rejected',
       adminNotes: adminNotes || null,
       customerMessage: customerMessage || null,
+      payload,
       resolvedAt: new Date(),
       resolvedById,
       resultServiceId, resultEstimateId, resultEstimateVisitId,

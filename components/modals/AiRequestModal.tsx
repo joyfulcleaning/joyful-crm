@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Bot, Check, X } from 'lucide-react'
+import { HOURLY_SLOTS } from '@/lib/scheduling'
 
 const TYPE_LABELS: Record<string, string> = {
   schedule_service: 'Schedule Service',
@@ -15,6 +16,13 @@ const STATUS_COLORS: Record<string, string> = {
   approved: '#26BD97',
   rejected: '#f87171',
 }
+
+const SERVICE_TYPE_OPTIONS = [
+  'Standard Clean', 'Deep Clean', 'Heavy Deep Clean', 'Office Clean',
+  'Move In/Out', 'Touch Up', 'Construction Clean', 'Airbnb Clean',
+  'Window Cleaning', 'Carpet Cleaning',
+]
+const ESTIMATE_TYPE_OPTIONS = ['Rough Clean', 'Final Clean', 'Touch Up']
 
 function approveMessage(type: string, payload: any): string {
   switch (type) {
@@ -35,40 +43,91 @@ function rejectMessage(): string {
   return `Hi! Unfortunately we're unable to accommodate that request right now. Please give us a call back so we can find another option.`
 }
 
-function PayloadFields({ type, payload }: { type: string; payload: any }) {
-  const rows: [string, any][] = (() => {
-    switch (type) {
-      case 'schedule_service':
-        return [
-          ['Service type', payload.type], ['Date', payload.serviceDate], ['Time', payload.serviceTime],
-          ['Address', payload.address], ['Frequency', payload.frequency || 'one_time'],
-          ['New customer?', payload.isNewClient ? 'Yes' : 'No'],
-          ['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'],
-          ['Notes', payload.notes || '—'],
-        ]
-      case 'reschedule_or_cancel_service':
-        return payload.status === 'cancelled'
-          ? [['Action', 'Cancel'], ['Service ID', payload.serviceId]]
-          : [['Action', 'Reschedule'], ['Service ID', payload.serviceId], ['New date', payload.serviceDate], ['New time', payload.serviceTime]]
-      case 'create_sqft_estimate':
-        return [
-          ['Estimate type', payload.type], ['Sqft', payload.sqft], ['Address', payload.address],
-          ['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'],
-          ['Notes', payload.notes || '—'],
-        ]
-      case 'schedule_estimate_visit':
-        return [['Date', payload.visitDate], ['Time', payload.visitTime], ['Address', payload.address || '—'], ['Notes', payload.notes || '—']]
-      default:
-        return Object.entries(payload || {})
-    }
-  })()
+type Field = { key: string; label: string; kind: 'text' | 'date' | 'select' | 'number'; options?: string[] }
+
+function editableFieldsFor(type: string, payload: any): Field[] {
+  switch (type) {
+    case 'schedule_service':
+      return [
+        { key: 'type', label: 'Service type', kind: 'select', options: SERVICE_TYPE_OPTIONS },
+        { key: 'serviceDate', label: 'Date', kind: 'date' },
+        { key: 'serviceTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
+        { key: 'address', label: 'Address', kind: 'text' },
+      ]
+    case 'reschedule_or_cancel_service':
+      return payload.status === 'cancelled' ? [] : [
+        { key: 'serviceDate', label: 'New date', kind: 'date' },
+        { key: 'serviceTime', label: 'New time', kind: 'select', options: HOURLY_SLOTS },
+      ]
+    case 'create_sqft_estimate':
+      return [
+        { key: 'type', label: 'Estimate type', kind: 'select', options: ESTIMATE_TYPE_OPTIONS },
+        { key: 'sqft', label: 'Square feet', kind: 'number' },
+        { key: 'address', label: 'Address', kind: 'text' },
+      ]
+    case 'schedule_estimate_visit':
+      return [
+        { key: 'visitDate', label: 'Date', kind: 'date' },
+        { key: 'visitTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
+        { key: 'address', label: 'Address', kind: 'text' },
+      ]
+    default:
+      return []
+  }
+}
+
+// Read-only context shown alongside the editable fields (not sent back on approve).
+function readOnlyRowsFor(type: string, payload: any): [string, any][] {
+  switch (type) {
+    case 'schedule_service':
+      return [
+        ['Frequency', payload.frequency || 'one_time'],
+        ['New customer?', payload.isNewClient ? 'Yes' : 'No'],
+        ['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'],
+        ['Notes', payload.notes || '—'],
+      ]
+    case 'reschedule_or_cancel_service':
+      return payload.status === 'cancelled' ? [['Action', 'Cancel'], ['Service ID', payload.serviceId]] : [['Action', 'Reschedule'], ['Service ID', payload.serviceId]]
+    case 'create_sqft_estimate':
+      return [['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'], ['Notes', payload.notes || '—']]
+    case 'schedule_estimate_visit':
+      return [['Notes', payload.notes || '—']]
+    default:
+      return []
+  }
+}
+
+function EditableFields({ type, payload, onChange }: { type: string; payload: any; onChange: (key: string, value: any) => void }) {
+  const fields = editableFieldsFor(type, payload)
+  const readOnly = readOnlyRowsFor(type, payload)
 
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-      {rows.map(([label, value]) => (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+      {fields.map(f => (
+        <div key={f.key}>
+          <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">{f.label}</div>
+          {f.kind === 'select' ? (
+            <select
+              value={payload[f.key] ?? ''}
+              onChange={e => onChange(f.key, e.target.value)}
+              className="w-full bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+            >
+              {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          ) : (
+            <input
+              type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'}
+              value={payload[f.key] ?? ''}
+              onChange={e => onChange(f.key, f.kind === 'number' ? Number(e.target.value) : e.target.value)}
+              className="w-full bg-[#0f1117] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
+            />
+          )}
+        </div>
+      ))}
+      {readOnly.map(([label, value]) => (
         <div key={label}>
           <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{label}</div>
-          <div className="text-xs text-[#e8eaf0] mt-0.5">{String(value ?? '—')}</div>
+          <div className="text-xs text-[#9ca3af] mt-0.5">{String(value ?? '—')}</div>
         </div>
       ))}
     </div>
@@ -80,8 +139,9 @@ export default function AiRequestModal({
 }: {
   request: any | null
   onClose: () => void
-  onResolve: (id: string, body: { action: 'approve' | 'reject'; adminNotes: string; customerMessage: string; notifyCustomer: boolean }) => Promise<void>
+  onResolve: (id: string, body: { action: 'approve' | 'reject'; adminNotes: string; customerMessage: string; notifyCustomer: boolean; editedPayload: any }) => Promise<void>
 }) {
+  const [editedPayload, setEditedPayload] = useState<any>({})
   const [adminNotes, setAdminNotes] = useState('')
   const [customerMessage, setCustomerMessage] = useState('')
   const [notifyCustomer, setNotifyCustomer] = useState(true)
@@ -89,6 +149,7 @@ export default function AiRequestModal({
 
   useEffect(() => {
     if (!request) return
+    setEditedPayload({ ...request.payload })
     setAdminNotes('')
     setCustomerMessage(approveMessage(request.type, request.payload))
     setNotifyCustomer(!!request.callerEmail && request.type !== 'create_sqft_estimate')
@@ -99,10 +160,14 @@ export default function AiRequestModal({
   const color = STATUS_COLORS[request.status] || '#6b7280'
   const isPending = request.status === 'pending'
 
+  function updateField(key: string, value: any) {
+    setEditedPayload((prev: any) => ({ ...prev, [key]: value }))
+  }
+
   async function handle(action: 'approve' | 'reject') {
     setSaving(true)
     try {
-      await onResolve(request.id, { action, adminNotes, customerMessage, notifyCustomer })
+      await onResolve(request.id, { action, adminNotes, customerMessage, notifyCustomer, editedPayload })
     } finally {
       setSaving(false)
     }
@@ -135,7 +200,21 @@ export default function AiRequestModal({
         </div>
 
         <div className="bg-[#0f1117] border border-[#2a2f3d] rounded-xl p-3 mb-4">
-          <PayloadFields type={request.type} payload={request.payload || {}} />
+          {isPending ? (
+            <>
+              <p className="text-[10px] text-[#6b7280] mb-2">Adjust anything below before approving — what gets booked is exactly what's shown here.</p>
+              <EditableFields type={request.type} payload={editedPayload} onChange={updateField} />
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {Object.entries(request.payload || {}).map(([label, value]) => (
+                <div key={label}>
+                  <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{label}</div>
+                  <div className="text-xs text-[#e8eaf0] mt-0.5">{String(value ?? '—')}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {isPending ? (
@@ -154,12 +233,20 @@ export default function AiRequestModal({
               <div className="mb-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Message to customer</label>
-                  <button
-                    onClick={() => setCustomerMessage(rejectMessage())}
-                    className="text-[10px] text-[#6b7280] hover:text-[#f87171] underline"
-                  >
-                    Use rejection message
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCustomerMessage(approveMessage(request.type, editedPayload))}
+                      className="text-[10px] text-[#6b7280] hover:text-[#26BD97] underline"
+                    >
+                      Regenerate
+                    </button>
+                    <button
+                      onClick={() => setCustomerMessage(rejectMessage())}
+                      className="text-[10px] text-[#6b7280] hover:text-[#f87171] underline"
+                    >
+                      Use rejection message
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   value={customerMessage}
