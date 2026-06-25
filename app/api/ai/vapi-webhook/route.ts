@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { isAiAuthorized } from '@/lib/ai-auth'
 import { findClientByPhone, checkAvailability, listClientServices } from '@/lib/ai-handlers'
 import {
-  requestService, requestRescheduleOrCancel, requestSqftEstimate, requestEstimateVisit,
+  requestService, requestRescheduleOrCancel, requestSqftEstimate, requestEstimateVisit, checkRequestStatus,
 } from '@/lib/ai-requests'
 
 // Vapi calls every tool via POST to this single webhook, wrapping the call
@@ -23,6 +23,7 @@ const HANDLERS: Record<string, (args: any) => Promise<{ status: number; body: an
   reschedule_or_cancel_service: (args) => requestRescheduleOrCancel(args.serviceId, args, 'vapi'),
   create_sqft_estimate: (args) => requestSqftEstimate(args, 'vapi'),
   schedule_estimate_visit: (args) => requestEstimateVisit(args, 'vapi'),
+  check_request_status: (args) => checkRequestStatus(args.phone),
 }
 
 export async function POST(request: Request) {

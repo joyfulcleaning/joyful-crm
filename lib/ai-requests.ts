@@ -345,3 +345,30 @@ export async function resolveAiRequest(id: string, args: {
 
   return { status: 200, body: updated }
 }
+
+// Lets the agent answer "did my request go through" on a later call — looks
+// up the caller's most recent AiRequest by phone (not a Client lookup, since
+// a pending/rejected request never created a real Client/Service at all).
+export async function checkRequestStatus(phone: string | null): Promise<HandlerResult> {
+  if (!phone) return { status: 400, body: { error: 'phone is required' } }
+  const target = normalizePhone(phone)
+  if (target.length < 7) return { status: 200, body: { found: false } }
+
+  const candidates = await prisma.aiRequest.findMany({
+    where: { callerPhone: { not: null } },
+    orderBy: { createdAt: 'desc' },
+  })
+  const latest = candidates.find(r => r.callerPhone && normalizePhone(r.callerPhone) === target)
+  if (!latest) return { status: 200, body: { found: false } }
+
+  return {
+    status: 200,
+    body: {
+      found: true,
+      status: latest.status,
+      type: latest.type,
+      summary: latest.summary,
+      submittedOn: latest.createdAt.toISOString().slice(0, 10),
+    },
+  }
+}
