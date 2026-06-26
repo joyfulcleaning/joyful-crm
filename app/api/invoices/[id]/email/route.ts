@@ -69,8 +69,9 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
-    body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff; }
-    .page { padding: 36px 40px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
+    body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #e8eaef; }
+    .page { padding: 36px 40px; max-width: 720px; margin: 22px auto; display: flex; flex-direction: column; min-height: 257mm; position: relative;
+            background: #fff; border-radius: 14px; box-shadow: 0 8px 28px rgba(15,23,42,0.14); }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 28px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.65; }
