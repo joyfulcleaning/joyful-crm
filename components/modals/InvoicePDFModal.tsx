@@ -481,7 +481,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
               <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300 }}>
                 {invoice.notes
                   ? <><strong>Notes:</strong><br />{invoice.notes}</>
-                  : <>Thank you for choosing Joyful Cleaning Services Corp..</>
+                  : <>Thank you for choosing Joyful Cleaning Services Corp.</>
                 }
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.7 }}>

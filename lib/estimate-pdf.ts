@@ -55,18 +55,19 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
-    body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff; }
-    .page { padding: 32px 40px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #e8eaef; }
+    .page { padding: 32px 40px; max-width: 720px; margin: 22px auto; position: relative;
+            background: #fff; border-radius: 14px; box-shadow: 0 8px 28px rgba(15,23,42,0.14); }
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
-    .estimate-word { font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.4; letter-spacing: 3px; }
+    .estimate-word { position: absolute; top: 88px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
     .bill-section { display: flex; justify-content: space-between; margin-bottom: 22px; }
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
     .client-name { font-size: 15px; font-weight: 700; color: #111827; }
     .client-info { font-size: 11px; color: #4b5563; line-height: 1.7; margin-top: 2px; }
-    .est-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: monospace; }
+    .est-number { font-size: 18px; font-weight: 700; color: #4f8ef7; font-family: Joyful, cursive; }
     .est-meta { font-size: 11px; color: #6b7280; line-height: 1.8; margin-top: 4px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
     thead tr { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
@@ -75,11 +76,11 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     th:nth-child(2) { text-align: center; }
     td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
     td:nth-child(2) { text-align: center; }
-    .totals { margin-left: auto; width: 240px; background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+    .totals { margin-left: auto; width: 250px; background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-family: monospace; }
-    .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-top: auto; margin-bottom: 16px; }
+    .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-bottom: 16px; }
     .payment-row { font-size: 11px; color: #4b5563; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
     .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 14px; border-top: 1px solid #e5e7eb; }
     .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 300px; }
@@ -88,15 +89,13 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
 </head>
 <body>
 <div class="page">
+  <div class="estimate-word">ESTIMATE</div>
   <div class="header">
-    <div style="display:flex;align-items:center;gap:14px">
-      <img src="${logoDataUrl}" style="width:56px;height:56px;object-fit:contain"/>
-      <div>
-        <div class="brand-name">Joyful Cleaning Services Corp.</div>
-        <div class="brand-info">320 Laketree Blvd, Spring Lake NC 28390<br/>(919) 322-9092 · joyfulcleaningservicesnc@gmail.com</div>
-      </div>
+    <img src="${logoDataUrl}" style="width:56px;height:56px;object-fit:contain"/>
+    <div>
+      <div class="brand-name">Joyful Cleaning Services Corp.</div>
+      <div class="brand-info">320 Laketree Blvd, Spring Lake NC 28390<br/>(919) 322-9092 · joyfulcleaningservicesnc@gmail.com</div>
     </div>
-    <div class="estimate-word">ESTIMATE</div>
   </div>
   <div class="divider"></div>
   <div class="bill-section">
@@ -111,7 +110,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     </div>
     <div style="text-align:right">
       <div class="label">Estimate Details</div>
-      <div class="est-number">${estimate.estimateNumber}</div>
+      <div class="est-number">Number: ${estimate.estimateNumber}</div>
       <div class="est-meta">
         Issue Date: ${formatDate(estimate.issueDate)}<br/>
         Valid Until: ${formatDate(estimate.validUntil)}
@@ -149,7 +148,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   <div class="footer">
     <div class="footer-note">
       This estimate is valid until ${formatDate(estimate.validUntil)}.<br/>
-      Thank you for choosing Joyful Cleaning Services Corp..
+      Thank you for choosing Joyful Cleaning Services Corp.
     </div>
     <div style="display:flex;align-items:center;gap:8px;opacity:0.7">
       <img src="${logoDataUrl}" style="height:36px;width:auto;object-fit:contain"/>

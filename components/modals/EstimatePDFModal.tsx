@@ -145,25 +145,22 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
             background: '#ffffff', borderRadius: 9, padding: '36px 40px',
             color: '#1a1a2e', fontFamily: 'Joyful, cursive', fontSize: 12, lineHeight: 1.5,
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)', maxWidth: 680, margin: '0 auto',
+            position: 'relative',
           }}>
 
             {/* HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services Corp."
-                  style={{ height: 90, width: 'auto', objectFit: 'contain' }} />
-                <div>
-                  <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4 })}>Joyful Cleaning Services Corp.</div>
-                  <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
-                    320 Laketree Blvd, Spring Lake NC 28390<br />
-                    (919) 322-9092 · joyfulcleaningservicescorp@gmail.com<br />
-                    joyfulcleaningservicesnc.com
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.4)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
-                  ESTIMATE
+            <div style={{ position: 'absolute', top: 136, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
+              ESTIMATE
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+              <img src="/Joyful_logo_transparent.png" alt="Joyful Cleaning Services Corp."
+                style={{ height: 115, width: 'auto', objectFit: 'contain' }} />
+              <div>
+                <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4, whiteSpace: 'nowrap' })}>Joyful Cleaning Services Corp.</div>
+                <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
+                  320 Laketree Blvd, Spring Lake NC 28390<br />
+                  (919) 322-9092 · joyfulcleaningservicescorp@gmail.com<br />
+                  joyfulcleaningservicesnc.com
                 </div>
               </div>
             </div>
@@ -182,8 +179,8 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 19, fontWeight: 500, color: '#4f8ef7', marginBottom: 3 }}>
-                  {estimate.estimateNumber}
+                <div style={{ fontFamily: 'Joyful, cursive', fontSize: 19, fontWeight: 700, color: '#4f8ef7', marginBottom: 3 }}>
+                  Number: {estimate.estimateNumber}
                 </div>
                 <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
                   Issued: <span style={{ color: '#374151', fontWeight: 600 }}>{formatDate(estimate.issueDate)}</span><br />
@@ -225,28 +222,20 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
             </table>
 
             {/* TOTALS */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-              <div style={{ width: 220 }}>
-                {estimate.taxRate > 0 && (
-                  <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, color: '#6b7280' }}>
-                      <span>Subtotal</span>
-                      <span>${estimate.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, color: '#6b7280' }}>
-                      <span>Tax ({estimate.taxRate}%)</span>
-                      <span>${estimate.tax.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  borderTop: `${estimate.taxRate > 0 ? '2px' : '1px'} solid #e5e7eb`,
-                  paddingTop: 8, marginTop: 4, fontSize: 16, fontWeight: 800, color: '#111827',
-                }}>
-                  <span>TOTAL</span>
-                  <span style={{ color: '#4b3fa0' }}>${estimate.total.toFixed(2)}</span>
-                </div>
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 14px', width: 240, marginLeft: 'auto', marginBottom: 18 }}>
+              {estimate.taxRate > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#4b5563', padding: '3px 0' }}>
+                    <span>Subtotal</span><span>${estimate.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#4b5563', padding: '3px 0' }}>
+                    <span>Tax ({estimate.taxRate}%)</span><span>${estimate.tax.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: estimate.taxRate > 0 ? '2px solid #e5e7eb' : 'none', marginTop: estimate.taxRate > 0 ? 5 : 0, paddingTop: estimate.taxRate > 0 ? 8 : 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>
+                <span>TOTAL</span>
+                <span style={{ color: '#059669', fontSize: 16 }}>${estimate.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -259,13 +248,13 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
             )}
 
             {/* PAYMENT METHODS */}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 10 }}>
-                Payment Methods Accepted
+            <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 7, padding: '8px 12px', marginBottom: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                Payment Instructions
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {paymentMethods.map((m, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#4b5563' }}>
                     {m.logo}
                     <span>{m.label}</span>
                   </div>
@@ -274,10 +263,10 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
             </div>
 
             {/* FOOTER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 14, marginTop: 20, borderTop: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
               <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300 }}>
                 This estimate is valid until {estimate.validUntil ? formatDate(estimate.validUntil) : '—'}.<br />
-                Thank you for choosing Joyful Cleaning Services Corp..
+                Thank you for choosing Joyful Cleaning Services Corp.
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.7 }}>
                 <img src="/Joyful_logo_transparent.png" alt="Joyful"
