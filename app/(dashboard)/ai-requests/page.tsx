@@ -18,13 +18,13 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: '#f87171',
 }
 
-function formatDateTime(iso: string) {
+export function formatDateTime(iso: string) {
   const d = new Date(iso)
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  return `${dd}-${mm}-${yyyy} ${time}`
+  return `${mm}-${dd}-${yyyy} ${time}`
 }
 
 export default function AiRequestsPage() {

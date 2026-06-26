@@ -17,7 +17,7 @@ const INVOICE_STATUSES = [
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '—'
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 interface Props {

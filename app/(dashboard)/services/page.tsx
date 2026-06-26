@@ -128,7 +128,7 @@ export default function ServicesPage() {
   function exportToExcel() {
     const rows = filtered.map(s => ({
       'ID':             `#${s.serviceNumber}`,
-      'Date':           s.serviceDate ? (([y,m,d]) => `${m}/${d}/${y}`)(s.serviceDate.split('T')[0].split('-')) : '',
+      'Date':           s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '',
       'Time':           s.serviceTime || '',
       'Client':         s.client?.name || '',
       'Address':        s.address || '',
@@ -558,7 +558,7 @@ export default function ServicesPage() {
                       )}
                     </td>}
                     {col('date') && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
-                      {s.serviceDate ? (([y,m,d]) => `${m}/${d}/${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'}
+                      {s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'}
                     </td>}
                     {col('time')      && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{s.serviceTime}</td>}
                     {col('client')    && <td className="px-3 py-2.5 text-xs text-[#e8eaf0] font-medium">{s.client?.name}</td>}

@@ -31,7 +31,7 @@ const labelCls = "text-[10px] font-bold text-[#6b7280] uppercase tracking-wider 
 function formatDate(d: string) {
   if (!d) return '—'
   const [y, m, day] = d.split('T')[0].split('-')
-  return `${m}/${day}/${y}`
+  return `${m}-${day}-${y}`
 }
 
 function fmt(n: number) {

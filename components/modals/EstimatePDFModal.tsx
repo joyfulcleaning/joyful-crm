@@ -11,7 +11,7 @@ const LOGO_PAYPAL  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYA
 function formatDate(dateStr: string) {
   if (!dateStr) return '—'
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 export interface EstimateData {

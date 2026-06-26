@@ -218,7 +218,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
   function getCellContent(colId: string, s: any) {
     switch (colId) {
       case 'id':      return `#${s.serviceNumber}`
-      case 'date':    return s.serviceDate ? (([y,m,d]) => `${m}/${d}/${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'
+      case 'date':    return s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'
       case 'type':    return s.type
       case 'unit':    return s.unit || '—'
       case 'room':    return s.roomSize || '—'

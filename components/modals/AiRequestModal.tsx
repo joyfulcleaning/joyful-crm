@@ -61,14 +61,23 @@ function rejectMessage(callerName?: string | null): string {
   return `Hi ${name}! Unfortunately we're unable to accommodate that request right now. Please give us a call back so we can find another option.`
 }
 
-function isoToDDMMYYYY(iso: string): string {
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : iso
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${mm}-${dd}-${yyyy} ${time}`
 }
 
-function ddmmyyyyToIso(s: string): string | null {
+function isoToMMDDYYYY(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[2]}-${m[3]}-${m[1]}` : iso
+}
+
+function mmddyyyyToIso(s: string): string | null {
   const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/)
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : null
+  return m ? `${m[3]}-${m[1]}-${m[2]}` : null
 }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -115,14 +124,14 @@ function MiniCalendar({ value, onSelect, onClose }: { value: string; onSelect: (
   )
 }
 
-// Native <input type="date"> can't be forced to display DD-MM-YYYY across
+// Native <input type="date"> can't be forced to display MM-DD-YYYY across
 // browsers, so this is a plain text field with its own draft state (only
 // commits a value once a full, valid date is typed) plus a calendar popup
 // as a click-to-pick shortcut for the same field.
 function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
-  const [draft, setDraft] = useState(isoToDDMMYYYY(value || ''))
+  const [draft, setDraft] = useState(isoToMMDDYYYY(value || ''))
   const [showCal, setShowCal] = useState(false)
-  useEffect(() => { setDraft(isoToDDMMYYYY(value || '')) }, [value])
+  useEffect(() => { setDraft(isoToMMDDYYYY(value || '')) }, [value])
 
   return (
     <div className="relative">
@@ -133,10 +142,10 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
           onChange={e => {
             const v = e.target.value
             setDraft(v)
-            const iso = ddmmyyyyToIso(v)
+            const iso = mmddyyyyToIso(v)
             if (iso) onChange(iso)
           }}
-          placeholder="DD-MM-YYYY"
+          placeholder="MM-DD-YYYY"
           className="flex-1 w-full bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-2 py-1.5 text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]"
         />
         <button
@@ -347,7 +356,7 @@ export default function AiRequestModal({
                 <div key={label}>
                   <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{label}</div>
                   <div className="text-xs text-[#e8eaf0] mt-0.5">
-                    {/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? isoToDDMMYYYY(String(value)) : String(value ?? '—')}
+                    {/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? isoToMMDDYYYY(String(value)) : String(value ?? '—')}
                   </div>
                 </div>
               ))}
@@ -430,7 +439,7 @@ export default function AiRequestModal({
         ) : (
           <div className="space-y-2">
             <div className="text-[10px] text-[#6b7280]">
-              Resolved {request.resolvedAt ? new Date(request.resolvedAt).toLocaleString() : ''} by {request.resolvedBy?.name || 'staff'}
+              Resolved {request.resolvedAt ? formatDateTime(request.resolvedAt) : ''} by {request.resolvedBy?.name || 'staff'}
             </div>
             {request.adminNotes && <p className="text-xs text-[#9ca3af]"><b>Admin notes:</b> {request.adminNotes}</p>}
             {request.customerMessage && <p className="text-xs text-[#9ca3af]"><b>Customer message:</b> {request.customerMessage}</p>}

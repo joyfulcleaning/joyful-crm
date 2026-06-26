@@ -18,7 +18,7 @@ const LABEL = 'text-[10px] font-bold text-[#6b7280] uppercase tracking-wider blo
 function fmtDate(val: string | null | undefined) {
   if (!val) return '—'
   const [y, m, d] = (val.split('T')[0]).split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 function toDateInput(val: string | null | undefined) {

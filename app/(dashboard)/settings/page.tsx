@@ -61,7 +61,7 @@ const DEFAULTS: Record<string, string> = {
   // Appearance
   'app.language':    'en',
   'app.timezone':    'America/New_York',
-  'app.dateFormat':  'MM/DD/YYYY',
+  'app.dateFormat':  'MM-DD-YYYY',
   'app.currency':    'USD',
   'app.theme':       'dark',
   'app.compact':     'false',
@@ -670,10 +670,8 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className={labelCls}>Date Format</label>
-                  <select value={val('app.dateFormat', 'MM/DD/YYYY')} onChange={e => set('app.dateFormat', e.target.value)} className={inputCls}>
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                  <select value={val('app.dateFormat', 'MM-DD-YYYY')} onChange={e => set('app.dateFormat', e.target.value)} className={inputCls}>
+                    <option value="MM-DD-YYYY">MM-DD-YYYY</option>
                   </select>
                 </div>
                 <div>

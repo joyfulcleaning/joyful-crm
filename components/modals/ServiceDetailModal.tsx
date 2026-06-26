@@ -61,7 +61,7 @@ interface Props {
 function fmtDate(raw: string | undefined) {
   if (!raw) return '—'
   const [y, m, d] = raw.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 export default function ServiceDetailModal({ service, open, onClose, onSuccess }: Props) {

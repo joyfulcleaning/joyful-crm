@@ -51,7 +51,7 @@ const PAYMENT_TERMS = [
 function formatDate(dateStr: string) {
   if (!dateStr) return '—'
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 function fmt(n: number) {
@@ -3272,10 +3272,10 @@ export default function FinancesPage() {
                             {est.clientEmail && <div className="text-[#6b7280] text-[10px]">{est.clientEmail}</div>}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-[#9ca3af]">
-                            {est.issueDate ? new Date(est.issueDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                            {est.issueDate ? new Date(est.issueDate.slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-[#9ca3af]">
-                            {est.validUntil ? new Date(est.validUntil + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                            {est.validUntil ? new Date(est.validUntil.slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-semibold text-[#e8eaf0]">
                             ${Number(est.total).toFixed(2)}

@@ -129,7 +129,7 @@ function fmtDate(v: unknown) {
   try {
     const s = typeof v === 'string' ? v.split('T')[0] : new Date(v as string).toISOString().split('T')[0]
     const [y, m, d] = s.split('-')
-    return `${m}/${d}/${y}`
+    return `${m}-${d}-${y}`
   } catch { return String(v) }
 }
 function fmtAmt(v: unknown) {

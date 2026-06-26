@@ -25,15 +25,15 @@ const PAY_METHODS = [
 
 function fmt(dateStr: string) {
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 function fmtFull(dateStr: string) {
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 function fmtDay(dateStr: string) {
   const [y, m, d] = dateStr.split('T')[0].split('-')
-  return `${m}/${d}/${y}`
+  return `${m}-${d}-${y}`
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────

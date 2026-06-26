@@ -125,7 +125,7 @@ export default function MapPage() {
         <div>
           <h1 className="text-lg font-bold text-[#e8eaf0]">Map View</h1>
           <p className="text-xs text-[#6b7280] mt-0.5">
-            {isToday ? 'Today' : (([y,m,d]) => `${m}/${d}/${y}`)(selectedDate.split('-'))} · {todayServices.length} services
+            {isToday ? 'Today' : (([y,m,d]) => `${m}-${d}-${y}`)(selectedDate.split('-'))} · {todayServices.length} services
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
