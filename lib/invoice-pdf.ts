@@ -77,6 +77,9 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
                  font-size: 90px; font-weight: 900; letter-spacing: 10px; pointer-events: none;
                  color: ${invoice.status === 'paid' ? 'rgba(5,150,105,0.10)' : 'transparent'}; white-space: nowrap; }
     .page { padding: 32px 40px; max-width: 680px; margin: 0 auto; position: relative; }
+    .page::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+                     background-image: url('${logoDataUrl}'); background-repeat: no-repeat;
+                     background-position: center; background-size: 380px auto; opacity: 0.1; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }

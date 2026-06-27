@@ -322,6 +322,13 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             position: 'relative',
           }}>
 
+            {/* ══ WATERMARK ══ */}
+            <div style={{
+              position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: -1, pointerEvents: 'none',
+              backgroundImage: "url('/Joyful_logo_transparent.png')", backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center', backgroundSize: '380px auto', opacity: 0.5,
+            }} />
+
             {/* ══ HEADER ══ */}
             <div style={{ position: 'absolute', top: 136, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
               INVOICE
