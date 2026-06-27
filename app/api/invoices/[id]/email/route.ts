@@ -70,8 +70,8 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff;
-           border: 1.5px solid rgba(15,23,42,0.22); border-radius: 12px; }
-    .page { padding: 36px 40px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
+           border: 2px solid rgba(15,23,42,0.3); border-radius: 12px; }
+    .page { padding: 36px 40px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 28px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.65; }

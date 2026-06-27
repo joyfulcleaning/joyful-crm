@@ -72,11 +72,11 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff; position: relative;
-           border: 1.5px solid rgba(15,23,42,0.22); border-radius: 12px; }
+           border: 2px solid rgba(15,23,42,0.3); border-radius: 12px; }
     .watermark { position: fixed; top: 42%; left: 50%; transform: translate(-50%,-50%) rotate(-28deg);
                  font-size: 90px; font-weight: 900; letter-spacing: 10px; pointer-events: none;
                  color: ${invoice.status === 'paid' ? 'rgba(5,150,105,0.10)' : 'transparent'}; white-space: nowrap; }
-    .page { padding: 32px 40px; max-width: 720px; margin: 0 auto; position: relative; }
+    .page { padding: 32px 40px; max-width: 680px; margin: 0 auto; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }

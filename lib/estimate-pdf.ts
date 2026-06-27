@@ -56,8 +56,8 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff;
-           border: 1.5px solid rgba(15,23,42,0.22); border-radius: 12px; }
-    .page { padding: 32px 40px; max-width: 720px; margin: 0 auto; position: relative; }
+           border: 2px solid rgba(15,23,42,0.3); border-radius: 12px; }
+    .page { padding: 32px 40px; max-width: 680px; margin: 0 auto; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
