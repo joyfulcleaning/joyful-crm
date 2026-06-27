@@ -71,7 +71,7 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff;
            border: 2px solid rgba(15,23,42,0.3); border-radius: 12px; }
-    .page { padding: 36px 40px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; min-height: 257mm; position: relative; }
+    .page { padding: 36px 40px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; min-height: 277mm; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 28px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.65; }
@@ -203,7 +203,7 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   await page.setContent(html, { waitUntil: 'load' })
   const pdf = await page.pdf({
     format: 'A4',
-    margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
+    margin: { top: '10mm', bottom: '6mm', left: '10mm', right: '10mm' },
     printBackground: true,
   })
   await browser.close()
