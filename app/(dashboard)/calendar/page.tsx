@@ -544,6 +544,7 @@ export default function CalendarPage() {
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
             events={calendarEvents}
             height="auto"
+            fixedWeekCount={false}
             stickyHeaderDates={false}
             eventDisplay="block"
             dayMaxEvents={3}
