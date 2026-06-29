@@ -9,6 +9,7 @@ const TYPE_LABELS: Record<string, string> = {
   reschedule_or_cancel_service: 'Reschedule / Cancel Service',
   create_sqft_estimate: 'SQFT Estimate',
   schedule_estimate_visit: 'Estimate Visit',
+  needs_followup: 'Needs Follow-up',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -31,6 +32,12 @@ const ROOM_SIZE_OPTIONS = ['1BR', '2BR', '3BR', 'Office/Amenities', 'Other']
 // record has no separate columns and never shows up on the Services map.
 const ADDRESS_TYPES = new Set(['schedule_service', 'schedule_estimate_visit'])
 
+// Types with no automated customer-facing action on approve/reject — either
+// because they send their own PDF (create_sqft_estimate) or because nothing
+// was ever confirmed enough to tell the customer anything (needs_followup,
+// where staff are expected to call them back instead).
+const NO_CUSTOMER_MESSAGE_TYPES = new Set(['create_sqft_estimate', 'needs_followup'])
+
 function firstNameOf(fullName?: string | null): string {
   return (fullName || '').trim().split(/\s+/)[0] || 'there'
 }
@@ -51,6 +58,15 @@ function approveMessage(type: string, payload: any, callerName?: string | null):
         : `Hi ${name}! We've rescheduled your cleaning to ${payload?.serviceDate} at ${payload?.serviceTime}.`
     case 'schedule_estimate_visit':
       return `Hi ${name}! We've confirmed your estimate visit for ${payload?.visitDate} at ${payload?.visitTime}. See you then!`
+    case 'needs_followup':
+      switch (payload?.requestType) {
+        case 'schedule_service':
+          return `Hi ${name}! We've confirmed your ${payload?.serviceType || 'cleaning'} for ${payload?.serviceDate} at ${payload?.serviceTime}. See you then!`
+        case 'schedule_estimate_visit':
+          return `Hi ${name}! We've confirmed your estimate visit for ${payload?.visitDate} at ${payload?.visitTime}. See you then!`
+        default:
+          return ''
+      }
     default:
       return ''
   }
@@ -197,9 +213,61 @@ function editableFieldsFor(type: string, payload: any): Field[] {
         { key: 'state', label: 'State', kind: 'text' },
         { key: 'zip', label: 'Zip', kind: 'text' },
       ]
+    case 'needs_followup':
+      // Uses the canonical extraction field names directly (serviceType,
+      // address, callerName...) instead of each request*()'s own renamed
+      // args — that mapping only happens server-side, in mapFollowUpPayload,
+      // right before "complete" actually calls createService()/etc.
+      switch (payload.requestType) {
+        case 'schedule_service':
+          return [
+            { key: 'serviceType', label: 'Service type', kind: 'select', options: SERVICE_TYPE_OPTIONS },
+            { key: 'serviceDate', label: 'Date', kind: 'date' },
+            { key: 'serviceTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
+            { key: 'address', label: 'Street', kind: 'text' },
+            { key: 'city', label: 'City', kind: 'text' },
+            { key: 'state', label: 'State', kind: 'text' },
+            { key: 'zip', label: 'Zip', kind: 'text' },
+            { key: 'unit', label: 'Unit (if apartment)', kind: 'text' },
+            { key: 'roomSize', label: 'Room size', kind: 'select', options: ROOM_SIZE_OPTIONS },
+            { key: 'callerName', label: 'Caller name', kind: 'text' },
+            { key: 'callerPhone', label: 'Caller phone', kind: 'text' },
+          ]
+        case 'create_sqft_estimate':
+          return [
+            { key: 'serviceType', label: 'Estimate type', kind: 'select', options: ESTIMATE_TYPE_OPTIONS },
+            { key: 'sqft', label: 'Square feet', kind: 'number' },
+            { key: 'address', label: 'Address', kind: 'text' },
+            { key: 'callerName', label: 'Caller name', kind: 'text' },
+            { key: 'callerEmail', label: 'Caller email', kind: 'text' },
+          ]
+        case 'schedule_estimate_visit':
+          return [
+            { key: 'visitDate', label: 'Date', kind: 'date' },
+            { key: 'visitTime', label: 'Time', kind: 'select', options: HOURLY_SLOTS },
+            { key: 'address', label: 'Street', kind: 'text' },
+            { key: 'city', label: 'City', kind: 'text' },
+            { key: 'state', label: 'State', kind: 'text' },
+            { key: 'zip', label: 'Zip', kind: 'text' },
+            { key: 'callerName', label: 'Caller name', kind: 'text' },
+            { key: 'callerPhone', label: 'Caller phone', kind: 'text' },
+          ]
+        default:
+          return []
+      }
     default:
       return []
   }
+}
+
+// requestTypes a needs_followup can be turned into a real record for, via
+// the "complete" action — reschedule/cancel is excluded because it needs a
+// real serviceId from list_client_services, which a needs_followup almost
+// never has (that's usually exactly why it fell through to needs_followup).
+const COMPLETABLE_FOLLOWUP_TYPES: Record<string, string> = {
+  schedule_service: 'Create Service',
+  create_sqft_estimate: 'Create Estimate',
+  schedule_estimate_visit: 'Create Estimate Visit',
 }
 
 // Read-only context shown alongside the editable fields (not sent back on approve).
@@ -219,6 +287,33 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
       return [['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'], ['Notes', payload.notes || '—']]
     case 'schedule_estimate_visit':
       return [['Full address', payload.address || '—'], ['Notes', payload.notes || '—']]
+    case 'needs_followup': {
+      const p = payload || {}
+      const fmtDate = (v: any) => /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? isoToMMDDYYYY(String(v)) : v
+      const rows: [string, any][] = []
+      if (p.requestType && p.requestType !== 'none') rows.push(['Looked like', TYPE_LABELS[p.requestType] || p.requestType])
+      // The fields covered by editableFieldsFor for this requestType are
+      // edited above instead of repeated here — only show the rest of what
+      // was captured (and, if there's no edit path at all, everything).
+      if (!COMPLETABLE_FOLLOWUP_TYPES[p.requestType]) {
+        if (p.serviceType) rows.push(['Service type', p.serviceType])
+        if (p.address) rows.push(['Address', p.address])
+        if (p.unit) rows.push(['Unit', p.unit])
+        if (p.city || p.state || p.zip) rows.push(['City / State / Zip', [p.city, [p.state, p.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')])
+        if (p.roomSize) rows.push(['Room size', p.roomSize])
+        if (p.serviceDate) rows.push(['Date', fmtDate(p.serviceDate)])
+        if (p.serviceTime) rows.push(['Time', p.serviceTime])
+        if (p.visitDate) rows.push(['Visit date', fmtDate(p.visitDate)])
+        if (p.visitTime) rows.push(['Visit time', p.visitTime])
+        if (p.sqft) rows.push(['Square feet', p.sqft])
+      }
+      if (p.frequency) rows.push(['Frequency', p.frequency])
+      if (p.serviceId) rows.push(['Service ID (reschedule/cancel)', p.serviceId])
+      if (typeof p.cancel === 'boolean') rows.push(['Wanted to cancel?', p.cancel ? 'Yes' : 'No'])
+      if (p.notes) rows.push(['Notes', p.notes])
+      if (p.reason) rows.push(['Why it needs follow-up', p.reason])
+      return rows
+    }
     default:
       return []
   }
@@ -268,7 +363,7 @@ export default function AiRequestModal({
 }: {
   request: any | null
   onClose: () => void
-  onResolve: (id: string, body: { action: 'approve' | 'reject'; adminNotes: string; customerMessage: string; notifyCustomer: boolean; editedPayload: any }) => Promise<void>
+  onResolve: (id: string, body: { action: 'approve' | 'reject' | 'complete'; adminNotes: string; customerMessage: string; notifyCustomer: boolean; editedPayload: any }) => Promise<void>
 }) {
   const [editedPayload, setEditedPayload] = useState<any>({})
   const [adminNotes, setAdminNotes] = useState('')
@@ -286,13 +381,17 @@ export default function AiRequestModal({
     setEditedPayload(p)
     setAdminNotes('')
     setCustomerMessage(approveMessage(request.type, request.payload, request.callerName))
-    setNotifyCustomer(!!request.callerEmail && request.type !== 'create_sqft_estimate')
+    const isNotifiableFollowup = request.type === 'needs_followup' && (p.requestType === 'schedule_service' || p.requestType === 'schedule_estimate_visit')
+    setNotifyCustomer(!!request.callerEmail && (!NO_CUSTOMER_MESSAGE_TYPES.has(request.type) || isNotifiableFollowup))
   }, [request])
 
   if (!request) return null
 
   const color = STATUS_COLORS[request.status] || '#6b7280'
   const isPending = request.status === 'pending'
+  const showCustomerMessageSection = request.type === 'needs_followup'
+    ? (editedPayload.requestType === 'schedule_service' || editedPayload.requestType === 'schedule_estimate_visit')
+    : !NO_CUSTOMER_MESSAGE_TYPES.has(request.type)
 
   function updateField(key: string, value: any) {
     setEditedPayload((prev: any) => {
@@ -304,7 +403,7 @@ export default function AiRequestModal({
     })
   }
 
-  async function handle(action: 'approve' | 'reject') {
+  async function handle(action: 'approve' | 'reject' | 'complete') {
     setSaving(true)
     try {
       await onResolve(request.id, { action, adminNotes, customerMessage, notifyCustomer, editedPayload })
@@ -347,7 +446,13 @@ export default function AiRequestModal({
         <div className="bg-[#1e2330] border border-[#2a2f3d] rounded-xl p-3 mb-4">
           {isPending ? (
             <>
-              <p className="text-[10px] text-[#6b7280] mb-2">Adjust anything below before approving — what gets booked is exactly what's shown here.</p>
+              <p className="text-[10px] text-[#6b7280] mb-2">
+                {request.type === 'needs_followup'
+                  ? (COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]
+                      ? `Confirm/adjust below, then "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" once it's all there — or Approve to just mark it handled without creating anything.`
+                      : "Whatever the caller confirmed during the call — call them back to take it from here.")
+                  : "Adjust anything below before approving — what gets booked is exactly what's shown here."}
+              </p>
               <EditableFields type={request.type} payload={editedPayload} onChange={updateField} />
             </>
           ) : (
@@ -376,7 +481,7 @@ export default function AiRequestModal({
               />
             </div>
 
-            {request.type !== 'create_sqft_estimate' && (
+            {showCustomerMessageSection && (
               <div className="mb-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Message to customer</label>
@@ -415,8 +520,15 @@ export default function AiRequestModal({
                 </label>
               </div>
             )}
-            {request.type === 'create_sqft_estimate' && (
-              <p className="text-[10px] text-[#6b7280] mb-3">Approving this sends the estimate PDF directly to the customer's email — no separate message needed.</p>
+            {(request.type === 'create_sqft_estimate' || (request.type === 'needs_followup' && editedPayload.requestType === 'create_sqft_estimate')) && (
+              <p className="text-[10px] text-[#6b7280] mb-3">{request.type === 'needs_followup' ? 'Using "Create Estimate" below sends' : 'Approving this sends'} the estimate PDF directly to the customer's email — no separate message needed.</p>
+            )}
+            {request.type === 'needs_followup' && (
+              <p className="text-[10px] text-[#6b7280] mb-3">
+                {COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]
+                  ? `Approve only marks this handled — it won't create anything by itself. Use "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" below for that.`
+                  : 'Nothing to execute here — call the customer back to confirm details, then mark this Approved (handled) or Rejected (turned out to be nothing).'}
+              </p>
             )}
 
             <div className="flex gap-3">
@@ -435,6 +547,15 @@ export default function AiRequestModal({
                 <Check size={13} />Approve
               </button>
             </div>
+            {request.type === 'needs_followup' && COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType] && (
+              <button
+                onClick={() => handle('complete')}
+                disabled={saving}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-white bg-[#4f8ef7] hover:bg-[#3a7ee0] transition-all disabled:opacity-50"
+              >
+                <Check size={13} />{COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}
+              </button>
+            )}
           </>
         ) : (
           <div className="space-y-2">

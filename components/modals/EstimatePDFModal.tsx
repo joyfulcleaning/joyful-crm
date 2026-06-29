@@ -57,7 +57,7 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
           @font-face { font-family: Joyful; src: url('/Joyful.ttf') format('truetype'); }
           *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
           body{font-family:Joyful,cursive;background:#fff;}
-          @page{size:A4;margin:16mm 14mm;}
+          @page{size:letter;margin:16mm 14mm;}
         </style>
       </head>
       <body>${content.outerHTML}</body></html>`)
@@ -156,7 +156,7 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
             }} />
 
             {/* HEADER */}
-            <div style={{ position: 'absolute', top: 136, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
+            <div style={{ position: 'absolute', top: 148, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
               ESTIMATE
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>

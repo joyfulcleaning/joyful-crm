@@ -1,5 +1,15 @@
 export const dynamic = 'force-dynamic'
+import { timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
+
+function isValidToken(token: string | null): boolean {
+  const expected = process.env.CALENDAR_FEED_TOKEN
+  if (!expected || !token) return false
+  const a = Buffer.from(token)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
 
 const TYPE_ABBR: Record<string, string> = {
   'Standard Clean':      'SC',
@@ -42,7 +52,12 @@ function escape(s: string) {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const token = new URL(request.url).searchParams.get('token')
+  if (!isValidToken(token)) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
   const services = await prisma.service.findMany({
     where:   { status: { not: 'cancelled' } },
     include: {

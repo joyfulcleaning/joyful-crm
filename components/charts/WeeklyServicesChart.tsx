@@ -90,7 +90,7 @@ export default function WeeklyServicesChart() {
       borderWidth: 2.5,
       fill: true,
       tension: 0.4,
-      pointRadius: data.length > 26 ? 0 : 3,
+      pointRadius: 3,
       pointHoverRadius: 5,
       pointBackgroundColor: blue,
       pointBorderColor: chartBg,

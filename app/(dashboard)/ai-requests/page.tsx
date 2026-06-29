@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Eye } from 'lucide-react'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import AiRequestModal from '@/components/modals/AiRequestModal'
 
@@ -10,6 +10,7 @@ const TYPE_LABELS: Record<string, string> = {
   reschedule_or_cancel_service: 'Reschedule/Cancel',
   create_sqft_estimate: 'SQFT Estimate',
   schedule_estimate_visit: 'Estimate Visit',
+  needs_followup: 'Needs Follow-up',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,6 +59,18 @@ export default function AiRequestsPage() {
       setSelected(null)
     } else {
       alert(updated.error || 'Failed to update request')
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this AI request? This cannot be undone.')) return
+    const res = await fetch(`/api/ai-requests/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setRequests(prev => prev.filter(r => r.id !== id))
+      setSelected((sel: any) => sel?.id === id ? null : sel)
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || 'Failed to delete request')
     }
   }
 
@@ -116,6 +129,7 @@ export default function AiRequestsPage() {
               <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">No requests {filter === 'all' ? 'yet' : `with status "${filter}"`}.</td></tr>
             ) : filtered.map(r => {
               const color = STATUS_COLORS[r.status] || '#6b7280'
+              const isPending = r.status === 'pending'
               return (
                 <tr
                   key={r.id}
@@ -136,8 +150,31 @@ export default function AiRequestsPage() {
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <Eye size={13} className="text-[#6b7280]" />
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        title="View"
+                        onClick={e => { e.stopPropagation(); setSelected(r) }}
+                        className="text-[#6b7280] hover:text-[#4f8ef7] transition-colors"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        title={isPending ? 'Edit' : 'Only pending requests can be edited'}
+                        disabled={!isPending}
+                        onClick={e => { e.stopPropagation(); if (isPending) setSelected(r) }}
+                        className={isPending ? 'text-[#6b7280] hover:text-[#26BD97] transition-colors' : 'text-[#3a3f4d] cursor-not-allowed'}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        title="Delete"
+                        onClick={e => { e.stopPropagation(); handleDelete(r.id) }}
+                        className="text-[#6b7280] hover:text-[#f87171] transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )

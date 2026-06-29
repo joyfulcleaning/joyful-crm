@@ -77,13 +77,10 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
                  font-size: 90px; font-weight: 900; letter-spacing: 10px; pointer-events: none;
                  color: ${invoice.status === 'paid' ? 'rgba(5,150,105,0.10)' : 'transparent'}; white-space: nowrap; }
     .page { padding: 32px 40px; max-width: 680px; margin: 0 auto; position: relative; }
-    .page::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-                     background-image: url('${logoDataUrl}'); background-repeat: no-repeat;
-                     background-position: center; background-size: 380px auto; opacity: 0.1; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
-    .invoice-word { position: absolute; top: 88px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
+    .invoice-word { position: absolute; top: 100px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
     .bill-section { display: flex; justify-content: space-between; margin-bottom: 22px; }
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
@@ -98,14 +95,14 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     th:nth-child(3) { text-align: center; }
     td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
     td:nth-child(3) { text-align: center; }
-    .totals { margin-left: auto; width: 250px; background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+    .totals { margin-left: auto; width: 250px; background: transparent; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-family: monospace; }
     .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-bottom: 16px; }
     .payment-row { font-size: 11px; color: #4b5563; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
-    .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 14px; border-top: 1px solid #e5e7eb; margin-top: 8px; }
-    .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 320px; }
+    .footer { display: flex; justify-content: center; padding-top: 14px; border-top: 1px solid #e5e7eb; margin-top: 8px; }
+    .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 320px; text-align: center; }
   </style>
 </head>
 <body>
@@ -176,10 +173,6 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       ${invoice.dueDate ? `Payment due by ${formatDate(invoice.dueDate)}.` : ''}
       Thank you for choosing Joyful Cleaning Services Corp.
     </div>
-    <div style="display:flex;align-items:center;gap:8px;opacity:0.7">
-      <img src="${logoDataUrl}" style="height:36px;width:auto;object-fit:contain"/>
-      <div style="font-size:14px;font-weight:700;color:#4b3fa0;">Joyful Cleaning Services Corp.</div>
-    </div>
   </div>
 </div>
 </body>
@@ -195,7 +188,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'load' })
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '8px', right: '8px', bottom: '8px', left: '8px' } })
+    const pdf = await page.pdf({ format: 'Letter', printBackground: true, margin: { top: '8px', right: '8px', bottom: '8px', left: '8px' } })
     return Buffer.from(pdf)
   } finally {
     await browser.close()

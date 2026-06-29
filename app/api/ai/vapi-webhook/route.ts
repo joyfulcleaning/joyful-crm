@@ -2,9 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { isAiAuthorized } from '@/lib/ai-auth'
 import { findClientByPhone, checkAvailability, listClientServices } from '@/lib/ai-handlers'
-import {
-  requestService, requestRescheduleOrCancel, requestSqftEstimate, requestEstimateVisit, checkRequestStatus,
-} from '@/lib/ai-requests'
+import { checkRequestStatus, notifyFollowUpNeeded } from '@/lib/ai-requests'
+import { submitExtractedRequest, type ExtractedRequest } from '@/lib/ai-post-call'
 
 // Vapi calls every tool via POST to this single webhook, wrapping the call
 // in `message.toolCallList` regardless of the tool's own semantics. This
@@ -12,17 +11,15 @@ import {
 // REST routes use directly — no internal HTTP self-call, which added a slow
 // extra network hop in a live voice call.
 //
-// The 4 write actions go through the approval queue (lib/ai-requests.ts)
-// instead of executing immediately — they submit an AiRequest for staff
-// review and only run for real once approved.
+// The 4 write actions (schedule/reschedule/cancel/estimate) are no longer
+// live tools at all — the agent only gathers and confirms the info out
+// loud. The actual AiRequest only gets created after the call ends, from
+// the end-of-call-report branch below, so a mid-call change of mind never
+// leaves a stale request behind.
 const HANDLERS: Record<string, (args: any) => Promise<{ status: number; body: any }>> = {
   find_client_by_phone: (args) => findClientByPhone(args.phone),
   check_availability: (args) => checkAvailability(args.date),
-  schedule_service: (args) => requestService(args, 'vapi'),
   list_client_services: (args) => listClientServices(args.clientId, args.phone),
-  reschedule_or_cancel_service: (args) => requestRescheduleOrCancel(args.serviceId, args, 'vapi'),
-  create_sqft_estimate: (args) => requestSqftEstimate(args, 'vapi'),
-  schedule_estimate_visit: (args) => requestEstimateVisit(args, 'vapi'),
   check_request_status: (args) => checkRequestStatus(args.phone),
 }
 
@@ -33,6 +30,29 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
+
+    // End-of-call analysis (Assistant `analysisPlan`) — fires once, after
+    // the call has fully ended, to the same server URL as tool calls. No
+    // result is read back into a conversation (there isn't one anymore), so
+    // this always resolves with a plain 200 regardless of outcome.
+    if (body?.message?.type === 'end-of-call-report') {
+      const callId: string | undefined = body.message.call?.id
+      const transcript: string | undefined = body.message.transcript || body.message.artifact?.transcript
+      const summary: string | undefined = body.message.summary || body.message.analysis?.summary
+      const structuredData: ExtractedRequest | undefined = body.message.analysis?.structuredData
+
+      try {
+        if (structuredData) {
+          await submitExtractedRequest(structuredData, 'vapi', { callId, transcript, summary })
+        } else {
+          await notifyFollowUpNeeded('vapi', { callId, transcript, summary }, {}, 'Vapi end-of-call analysis did not return structured data.')
+        }
+      } catch (err) {
+        console.error('Error processing Vapi end-of-call-report:', err)
+      }
+      return NextResponse.json({})
+    }
+
     const toolCallList = body?.message?.toolCallList ?? []
 
     const results = await Promise.all(toolCallList.map(async (call: any) => {

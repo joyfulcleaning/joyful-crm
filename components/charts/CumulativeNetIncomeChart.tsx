@@ -80,7 +80,7 @@ export default function CumulativeNetIncomeChart() {
       pointBackgroundColor: color,
       pointBorderColor: chartBg,
       pointBorderWidth: 2,
-      pointRadius: raw.length > 26 ? 0 : 4,
+      pointRadius: 4,
       pointHoverRadius: 6,
       borderWidth: 2.5,
       tension: 0.4,

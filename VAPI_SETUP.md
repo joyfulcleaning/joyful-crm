@@ -10,6 +10,10 @@ Referencia para los Pasos 2-6 de `AI_PHONE_ASSISTANT_PLAN.md` (sección 11), una
 
 **Cola de aprobación (2026-06-25):** el agente ya NO ejecuta nada en vivo — `schedule_service`, `reschedule_or_cancel_service`, `create_sqft_estimate` y `schedule_estimate_visit` solo *envían una solicitud a revisión* (`lib/ai-requests.ts`). El agente siempre dice que la solicitud quedó recibida/enviada y que el equipo confirmará por email — nunca dice que algo quedó agendado/confirmado/cancelado. Un admin aprueba/rechaza (y puede editar los datos) desde `/ai-requests` en el CRM o desde "More → AI Requests" en la app móvil; solo ahí se ejecuta la acción real.
 
+**Campos requeridos reforzados (2026-06-28):** tras una llamada de prueba real que quedó como `needs_followup` por no haberse confirmado el tipo de limpieza, se reforzó el prompt y el schema de extracción — ahora pide explícitamente nombre y apellido (no solo el nombre), y bedrooms/bathrooms para CUALQUIER propiedad al agendar un servicio nuevo (antes solo se pedía para apartamentos). `roomSize` en el schema pasó de `string` libre a `enum` (`1BR`/`2BR`/`3BR`/`Office/Amenities`/`Other`, mismas opciones que el dropdown de `/ai-requests` en el CRM) — el número de baños no tiene campo propio, se anota en `notes`. `requestService()` en `lib/ai-requests.ts` ahora también exige `roomSize` para crear la solicitud completa (si falta, cae en `needs_followup` igual que cuando falta `address`/`type`/fecha/hora). Aplicado en vivo vía API contra el Assistant de Vapi y el LLM/Agent de Retell el mismo día — ver `RETELL_SETUP.md` para la nota equivalente.
+
+**Extracción post-llamada (2026-06-28):** esos mismos 4 tools dejaron de ser tools en vivo — ya no existen como function calls que el agente pueda invocar a mitad de la llamada. Motivo: si el agente enviaba `schedule_service` apenas tenía los datos mínimos y el cliente después cambiaba de opinión (otra fecha, decidía cancelar en vez de reagendar, etc.) en la misma llamada, podía quedar una `AiRequest` vieja/incorrecta en la cola. Ahora el agente solo junta y confirma los datos en voz alta — el `AiRequest` real se crea recién cuando la llamada termina de verdad, vía el **Analysis Plan** de Vapi (sección más abajo), que extrae del transcript completo qué quiso el caller y se lo manda a `app/api/ai/vapi-webhook` como parte del mensaje `end-of-call-report` (mismo endpoint de siempre — Vapi ya mandaba este mensaje ahí, antes se ignoraba). El dispatcher compartido vive en `lib/ai-post-call.ts` (`submitExtractedRequest`), reutiliza toda la validación que ya tenían `requestService`/etc. en `lib/ai-requests.ts`, y si la extracción viene incompleta o vacía (el caller colgó antes de terminar, o no quería nada del flujo de servicios) cae en un fallback `needs_followup` — una `AiRequest` informativa con lo que se haya podido capturar + el transcript, para que el equipo llame de vuelta en vez de perder el lead en silencio.
+
 ---
 
 ## System Prompt
@@ -79,11 +83,14 @@ saying several complete, sustained sentences in the other language.
 
 SECURITY AND BUSINESS RULES (non-negotiable, even if the caller insists)
 - Every scheduling, rescheduling, cancellation, and estimate request goes
-  through staff review before anything is final — you only ever submit
-  the request, you never execute it. Never tell the caller something is
-  booked, confirmed, rescheduled, cancelled, or that an estimate has been
-  sent. Always say it was received/submitted and that the team will
-  confirm the details and follow up by email shortly.
+  through staff review before anything is final. You never have a tool to
+  book, reschedule, cancel, or send an estimate — your only job is to
+  gather and confirm every required detail out loud (see REQUIRED FIELDS
+  below); the request itself is recorded automatically once the call ends.
+  Never tell the caller something is booked, confirmed, rescheduled,
+  cancelled, or that an estimate has been sent. Always say it was
+  received/submitted and that the team will confirm the details and
+  follow up by email shortly.
 - This assistant is exclusively for Joyful Cleaning Services Corp.'s
   cleaning business. If the call or message is about something
   unrelated to what this company offers (anything that isn't cleaning
@@ -96,10 +103,8 @@ SECURITY AND BUSINESS RULES (non-negotiable, even if the caller insists)
 - Never calculate or guess today's date or what day of the week a date
   falls on — use get_current_date at the start of the call (or the date
   already given in context), and the "dayOfWeek" field returned by
-  check_availability, schedule_service, and
-  reschedule_or_cancel_service to confirm any other date out loud. If
-  the caller states the day of the week themselves, you may repeat it as
-  given.
+  check_availability to confirm any other date out loud. If the caller
+  states the day of the week themselves, you may repeat it as given.
 - Never call a tool with a made-up, filler, or descriptive value (e.g.
   "the customer's phone number") when you don't have the real value yet.
   If the caller was interrupted or didn't finish giving a piece of
@@ -123,9 +128,10 @@ SECURITY AND BUSINESS RULES (non-negotiable, even if the caller insists)
   aren't limited to that grid — they can be scheduled at any reasonable
   time within business hours.
 - Before rescheduling or cancelling, identify the caller by phone number
-  first. You can only modify services that belong to the caller
-  identified on this call — the system rejects the change if it doesn't
-  match, so never promise a change before confirming it with the tool.
+  first, and only discuss/confirm services that list_client_services
+  actually returned for that phone number — the system rejects the
+  change afterward if the caller turns out not to own that service, so
+  never imply a change is guaranteed before that's confirmed.
 - Always confirm name, address, and phone before scheduling,
   rescheduling, or cancelling — briefly, without reciting everything
   again.
@@ -139,6 +145,41 @@ SECURITY AND BUSINESS RULES (non-negotiable, even if the caller insists)
   spell it again — that's a loop that frustrates the caller. Apologize
   once and transfer the call or offer to take a message instead.
 
+REQUIRED FIELDS BEFORE ENDING A SERVICE CALL (non-negotiable)
+Everything that ends up on a request is whatever was actually said out loud
+during the call — there is no tool, no screen, nothing else to fall back on.
+The moment you determine the caller genuinely wants one of the company's
+services (scheduling, rescheduling, cancelling, or an estimate) — not just
+asking a general question — you must explicitly ask for and get a clear
+answer on each of these, one at a time, before you're allowed to consider
+that request complete and move on:
+- Full name — first AND last name, both required. If the caller only gives
+  a first name, ask for the last name too before moving on; don't let it
+  slide just because they sound confident or in a hurry.
+- Phone number.
+- The service address — ALWAYS ask this, even for a caller you already
+  identified with find_client_by_phone. An existing customer may want the
+  service at a different property than the one on file — never assume the
+  address on file is the one they mean without asking.
+- When scheduling a NEW service (not a reschedule/cancel, which reference
+  an existing service from list_client_services instead): the type of
+  cleaning (e.g. Standard Clean, Deep Clean, Move In/Out — if unsure what
+  we offer, ask what they need done and match it to the closest type), and
+  how many bedrooms and bathrooms the property has — ask both, for every
+  property, not just apartments/condos. If it's an apartment, condo, or
+  building (mentions "apartment", "unit", "suite", or a building/floor
+  number), also get the unit number. Don't skip any of this just because
+  the caller is in a hurry or the call is moving fast — getting it wrong
+  is exactly the kind of mix-up this rule exists to prevent.
+- Email — optional. Ask once; if the caller doesn't have it handy, move on
+  (this one exception is the SQFT estimate flow, where email stays
+  required because that's literally where the PDF goes).
+If the caller hangs up before you've covered these, that's fine — it's not
+a failure on your part, the team will follow up with whatever was
+captured. Just never skip asking because the caller sounds confident, is
+in a rush, or "obviously" already gave you that information earlier in a
+different call.
+
 FLOWS
 
 1. Identify the caller
@@ -151,36 +192,36 @@ FLOWS
      and confirm the phone number — one piece at a time.
 
 2. Schedule a new service
-   - Ask for the service type, address (if new customer), and preferred
-     date.
-   - If the address sounds like an apartment, condo, or building (e.g.
-     mentions "apartment", "unit", "suite", or a building/floor number),
-     ask for the unit number and how many bedrooms (room size) before
-     moving on. Skip this for an obvious single-family house.
+   - Ask for the service type and preferred date.
+   - Cover the REQUIRED FIELDS above: full name (first and last), phone,
+     address (always — even for an identified existing customer), number
+     of bedrooms and bathrooms, and the unit number if it's an
+     apartment/condo/building.
    - Use check_availability for that date before offering times.
    - Offer at most 2-3 times and confirm date, time, and address with
      the caller.
-   - Use schedule_service to submit the request — this does not book it
-     immediately, our team reviews it first. Tell the caller: "Got it, I
-     have everything I need — our team will confirm the details and
-     follow up by email shortly." Never say the appointment is booked.
-     Never read out a price — if asked, offer to confirm it by email.
+   - Once everything above is confirmed, tell the caller: "Got it, I have
+     everything I need — our team will confirm the details and follow up
+     by email shortly." There's no tool to call here — the request is
+     recorded automatically once the call ends. Never say the appointment
+     is booked. Never read out a price — if asked, offer to confirm it by
+     email.
 
 3. Reschedule a service
    - Identify the caller with find_client_by_phone.
    - Use list_client_services and confirm with the caller which one they
      mean ("the one on Tuesday the 10th at 9am?").
    - Ask for the new preferred date/time, check check_availability.
-   - Use reschedule_or_cancel_service to submit the change request,
-     passing the caller's phone number as callerPhone. Tell the caller
+   - Confirm the new date/time clearly out loud, then tell the caller
      it's been submitted for review and they'll hear back by email —
-     never say it's already been moved.
+     never say it's already been moved. No tool to call; just make sure
+     the new date/time and which service you mean were both said clearly,
+     since that's all that's available afterward to act on it.
 
 4. Cancel a service
    - Same as rescheduling: identify, confirm which one with
-     list_client_services, then use reschedule_or_cancel_service
-     (status=cancelled) to submit the cancellation request, passing
-     callerPhone.
+     list_client_services, and confirm out loud that they want to cancel
+     it (not reschedule).
    - Tell the caller it's been submitted for review — never say it's
      already been cancelled.
 
@@ -192,18 +233,16 @@ FLOWS
    - Ask for the property's approximate size in square feet (SQFT).
    - Get the email where they want the estimate sent (required) and
      confirm name, phone, and address.
-   - Use create_sqft_estimate to submit the request. Tell the caller
-     it's been received and the team will review it and email them the
-     estimate shortly. Never state the amount.
+   - Tell the caller it's been received and the team will review it and
+     email them the estimate shortly. Never state the amount.
 
 6. In-person estimate visit
    - If the caller prefers someone visit the property in person instead
-     of giving the SQFT, use schedule_estimate_visit to submit the
-     request — it doesn't compete with service time slots, so you can
-     offer any reasonable time. Capture city/state/zip if you can,
-     along with the street address. Tell the caller it's been received
-     and the team will confirm the date/time by email — never say it's
-     already confirmed.
+     of giving the SQFT, this doesn't compete with service time slots, so
+     you can offer any reasonable time. Capture city/state/zip if you
+     can, along with the street address. Tell the caller it's been
+     received and the team will confirm the date/time by email — never
+     say it's already confirmed.
 
 7. Check past or upcoming services
    - If asked about a past or future appointment, identify the caller
@@ -335,35 +374,7 @@ Cada bloque es la información que el formulario "Create Tool" de Vapi te va a p
 }
 ```
 
-### 3. schedule_service
-- **Descripción:** Schedules a new cleaning service. If the customer does not exist, create them. Never read out the resulting price. Submits the request for staff review — does not execute it immediately.
-- **Método/URL:** `POST https://joyful-crm.vercel.app/api/ai/services`
-- **Parámetros:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "clientId":    { "type": "string", "description": "If the client was already identified with find_client_by_phone" },
-    "clientName":  { "type": "string", "description": "Required if this is a new customer" },
-    "clientPhone": { "type": "string", "description": "Required if this is a new customer" },
-    "clientEmail": { "type": "string" },
-    "address":     { "type": "string", "description": "Service address" },
-    "city":        { "type": "string" },
-    "state":       { "type": "string" },
-    "zip":         { "type": "string" },
-    "type":        { "type": "string", "description": "Standard Clean, Deep Clean, Heavy Deep Clean, Office Clean, Move In/Out, Touch Up, Construction Clean, Airbnb Clean, Window Cleaning, Carpet Cleaning, etc." },
-    "roomSize":    { "type": "string", "description": "1BR, 2BR, 3BR, Office/Amenities, Other" },
-    "frequency":   { "type": "string", "enum": ["one_time", "weekly", "biweekly", "monthly"] },
-    "serviceDate": { "type": "string", "description": "YYYY-MM-DD" },
-    "serviceTime": { "type": "string", "description": "Must be one of the times returned by check_availability (08:00-17:00 on the hour)" },
-    "unit":        { "type": "string", "description": "Apartment/unit number, if the address is an apartment or building" },
-    "notes":       { "type": "string" }
-  },
-  "required": ["address", "type", "serviceDate", "serviceTime"]
-}
-```
-
-### 4. list_client_services
+### 3. list_client_services
 - **Descripción:** Lists a known customer's past and upcoming services. Use before rescheduling/cancelling to confirm which service is meant, or to answer questions about a past service. Never read prices from this list.
 - **Método/URL:** `GET https://joyful-crm.vercel.app/api/ai/services?clientId={{clientId}}&phone={{phone}}`
 - **Parámetros:**
@@ -377,69 +388,7 @@ Cada bloque es la información que el formulario "Create Tool" de Vapi te va a p
 }
 ```
 
-### 5. reschedule_or_cancel_service
-- **Descripción:** Reschedules (if you send serviceDate/serviceTime) or cancels (if you send status=cancelled) an existing service. callerPhone is required and must be the phone number of whoever is calling — the system rejects the change if it does not match the service owner. Submits the request for staff review — does not execute it immediately.
-- **Método/URL:** `PATCH https://joyful-crm.vercel.app/api/ai/services/{{serviceId}}`
-- **Parámetros:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "serviceId":   { "type": "string", "description": "Service ID obtained from list_client_services" },
-    "callerPhone": { "type": "string", "description": "Caller's phone number, to verify the service belongs to them" },
-    "serviceDate": { "type": "string", "description": "New date YYYY-MM-DD, only if rescheduling" },
-    "serviceTime": { "type": "string", "description": "New time, only if rescheduling (08:00-17:00 on the hour)" },
-    "status":      { "type": "string", "enum": ["cancelled"], "description": "Only send this if cancelling" }
-  },
-  "required": ["serviceId", "callerPhone"]
-}
-```
-
-### 6. create_sqft_estimate
-- **Descripción:** Calculates a post-construction cleaning estimate by square footage and emails a PDF to the customer. NEVER read out the price — just confirm it was emailed. Submits the request for staff review — the PDF is only generated/sent once approved.
-- **Método/URL:** `POST https://joyful-crm.vercel.app/api/ai/estimates`
-- **Parámetros:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "name":    { "type": "string" },
-    "phone":   { "type": "string" },
-    "email":   { "type": "string", "description": "Required, this is where the estimate is sent" },
-    "address": { "type": "string" },
-    "sqft":    { "type": "number", "description": "Property size in square feet" },
-    "type":    { "type": "string", "enum": ["Rough Clean", "Final Clean", "Touch Up"] },
-    "notes":   { "type": "string" }
-  },
-  "required": ["name", "email", "address", "sqft", "type"]
-}
-```
-
-### 7. schedule_estimate_visit
-- **Descripción:** Schedules an in-person visit to evaluate a property before quoting (instead of calculating by SQFT). Does not compete with service time slots. Submits the request for staff review — does not execute it immediately.
-- **Método/URL:** `POST https://joyful-crm.vercel.app/api/ai/estimate-visits`
-- **Parámetros:**
-```json
-{
-  "type": "object",
-  "properties": {
-    "clientId": { "type": "string" },
-    "name":     { "type": "string" },
-    "phone":    { "type": "string" },
-    "email":    { "type": "string" },
-    "address":  { "type": "string" },
-    "city":     { "type": "string" },
-    "state":    { "type": "string" },
-    "zip":      { "type": "string" },
-    "visitDate":{ "type": "string", "description": "YYYY-MM-DD" },
-    "visitTime":{ "type": "string", "description": "HH:mm" },
-    "notes":    { "type": "string" }
-  },
-  "required": ["name", "visitDate", "visitTime"]
-}
-```
-
-### 8. check_request_status
+### 4. check_request_status
 - **Descripción:** Looks up the status of a caller's most recent request (schedule, reschedule, cancel, or estimate) by phone number. Use this when the caller asks if a previous request went through or what its status is.
 - **Método/URL:** `POST https://joyful-crm.vercel.app/api/ai/vapi-webhook` (vía el webhook genérico — no tiene ruta REST propia, a diferencia de los demás tools)
 - **Parámetros:**
@@ -454,8 +403,68 @@ Cada bloque es la información que el formulario "Create Tool" de Vapi te va a p
 ```
 - **Respuesta:** `{ found: false }` o `{ found: true, status: "pending"|"approved"|"rejected", type, summary, submittedOn }`.
 
+**`schedule_service`, `reschedule_or_cancel_service`, `create_sqft_estimate`, `schedule_estimate_visit` ya NO son tools** (2026-06-28) — el agente nunca los llama en vivo. Sus mismos campos ahora viven como el schema de extracción post-llamada, ver la sección siguiente.
+
+---
+
+## Analysis Plan — extracción post-llamada (structured data)
+
+**Ya aplicado en vivo (2026-06-28)**, vía API directo contra `PATCH /assistant/{id}` — campo confirmado leyendo el OpenAPI spec real de Vapi (`api.vapi.ai/api-json`), no solo documentación: es `analysisPlan.structuredDataPlan` (no `structuredDataSchema`/`structuredDataPrompt` sueltos como se especuló originalmente). Nota: el OpenAPI spec marca **todo** `analysisPlan` (incluido `structuredDataPlan`) como `deprecated: true` — sigue funcionando (confirmado, el PATCH fue aceptado y quedó seteado), pero Vapi empuja hacia un mecanismo nuevo ("Structured Outputs", `artifactPlan` + objetos `StructuredOutput` separados vía `POST /structured-output`) que requiere *polling* a `GET /call/{callId}` en vez de venir embebido en el webhook — no se usó ese mecanismo nuevo a propósito, para no agregar infraestructura de polling sin necesidad real (ver nota de fallback más abajo). Si Vapi llega a remover el campo deprecado en el futuro, hay que migrar a Structured Outputs.
+
+Shape real (`analysisPlan.structuredDataPlan`):
+```json
+{
+  "enabled": true,
+  "schema": { /* JSON Schema, ver abajo */ },
+  "messages": [
+    { "role": "system", "content": "...instrucciones de extracción + {{schema}}..." },
+    { "role": "user", "content": "Here is the transcript:\n\n{{transcript}}\n\nHere is the ended reason of the call:\n\n{{endedReason}}\n\n" }
+  ]
+}
+```
+El resultado queda en `call.analysis.structuredData`, que es lo que llega embebido en el mensaje `end-of-call-report` al `server.url` (ver nota de 2026-06-28 arriba) — `app/api/ai/vapi-webhook` ya sabe leerlo de `message.analysis.structuredData`.
+
+**`server` tampoco existía en el Assistant antes de este cambio** — se agregó `server.url` + `server.headers.Authorization` (mismo valor que los tools) como parte del mismo PATCH; sin esto, `end-of-call-report` no tenía a dónde llegar.
+
+**El schema es UNA sola forma plana, compartida con Retell** — la fuente de verdad real es el tipo `ExtractedRequest` en `lib/ai-post-call.ts`; lo de abajo es ese mismo tipo expresado como JSON Schema para pegarlo en el dashboard:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "requestType": { "type": "string", "enum": ["schedule_service", "reschedule_or_cancel_service", "create_sqft_estimate", "schedule_estimate_visit", "none"], "description": "What the caller actually wanted by the end of the call. \"none\" if it was just a question/FAQ/check-status call with no service request." },
+    "clientId":    { "type": "string", "description": "Only if find_client_by_phone matched earlier in the call" },
+    "callerName":  { "type": "string", "description": "Caller's full name — first AND last, both confirmed out loud during the call" },
+    "callerPhone": { "type": "string" },
+    "callerEmail": { "type": "string" },
+    "address":     { "type": "string" },
+    "city":        { "type": "string" },
+    "state":       { "type": "string" },
+    "zip":         { "type": "string" },
+    "unit":        { "type": "string" },
+    "serviceType": { "type": "string", "description": "Cleaning type for schedule_service, or Rough Clean/Final Clean/Touch Up for create_sqft_estimate" },
+    "roomSize":    { "type": "string", "enum": ["1BR", "2BR", "3BR", "Office/Amenities", "Other"], "description": "schedule_service only — number of bedrooms, mapped to the closest option (4+ bedrooms → \"Other\", a non-residential/office space → \"Office/Amenities\"). Bathroom count isn't a separate field — put it in notes instead, e.g. \"2 bathrooms\"." },
+    "frequency":   { "type": "string", "enum": ["one_time", "weekly", "biweekly", "monthly"] },
+    "serviceDate": { "type": "string", "description": "YYYY-MM-DD — new service date for schedule_service, or the new date for a reschedule" },
+    "serviceTime": { "type": "string" },
+    "serviceId":   { "type": "string", "description": "reschedule_or_cancel_service only — the internal ID from the list_client_services tool result earlier in the call, NOT something the caller said out loud" },
+    "cancel":      { "type": "boolean", "description": "reschedule_or_cancel_service only — true if the caller wanted to cancel, false/omitted if reschedule" },
+    "sqft":        { "type": "number", "description": "create_sqft_estimate only" },
+    "visitDate":   { "type": "string", "description": "schedule_estimate_visit only" },
+    "visitTime":   { "type": "string" },
+    "notes":       { "type": "string", "description": "Anything else worth flagging for the team — for schedule_service, always include the number of bathrooms here (e.g. \"2 bathrooms\")" }
+  },
+  "required": ["requestType"]
+}
+```
+
+`structuredDataPrompt` (extraction instructions for the model): "Given the full call transcript, including any tool calls and their results, determine what the caller ultimately wanted by the end of the call — not what they mentioned in passing if they changed their mind later. Only fill in fields relevant to the final requestType; leave everything else out. For reschedule_or_cancel_service, serviceId must come from a list_client_services tool result earlier in the transcript, never invented. If the call was just a question, a status check, or didn't result in any of the 4 request types, set requestType to \"none\"."
+
+**Importante:** si `end-of-call-report` llega sin `analysis.structuredData` (Vapi tiene reportes de la comunidad de que esto pasa ocasionalmente — ver su foro), el webhook no descarta la llamada en silencio: cae en un `AiRequest` de tipo `needs_followup` con lo que se tenga (transcript incluido) para que el equipo llame de vuelta. Si esto pasa seguido en uso real, la opción de mejora es hacer polling a `GET /call/{callId}` de la API de Vapi en vez de confiar solo en el webhook — no implementado todavía, agregar solo si hace falta.
+
 ---
 
 ## Pendiente de definir antes de activar
 - Número de teléfono real al que transferir (sección ESCALATION del prompt y Paso 6 de la guía).
 - `AI_API_KEY` agregada a las variables de entorno de Vercel (ver nota en la conversación anterior — hoy solo está en tu `.env` local).
+- Confirmar con una llamada de prueba real (`AI_ASSISTANT_TEST_SCRIPT.md`) que `end-of-call-report` llega con `analysis.structuredData` poblado y que `isAiAuthorized()` lo acepta — el PATCH que seteó `server.headers.Authorization` ya quedó aplicado y confirmado por API, pero falta la prueba end-to-end con una llamada real para confirmar que Vapi efectivamente lo envía en ese mensaje (no solo en los tool calls).

@@ -64,6 +64,40 @@ async function notifyAdmin(request: { id: string; type: string; summary: string;
   await sendPushToRoles('aiRequest', 'New AI request', request.summary, { type: 'aiRequest', requestId: request.id })
 }
 
+// Fallback for the post-call extraction path (lib/ai-post-call.ts): used when
+// a call clearly ended without enough confirmed data to submit one of the 4
+// request types above (caller hung up early, or the platform's analysis came
+// back empty/incomplete). Keeps the lead from being silently dropped — staff
+// see it in /ai-requests with whatever partial data + transcript we have and
+// call the customer back, same recovery pattern as a rejected request.
+export async function notifyFollowUpNeeded(
+  platform: string,
+  meta: { callId?: string; transcript?: string; summary?: string },
+  partialData: { callerName?: string; callerPhone?: string; callerEmail?: string; [key: string]: unknown },
+  reason: string
+): Promise<HandlerResult> {
+  const callerName = partialData.callerName || null
+  const callerPhone = partialData.callerPhone || null
+  const callerEmail = partialData.callerEmail || null
+
+  const summary = `A call ended without enough confirmed information to submit automatically (${reason}). ` +
+    `${meta.summary ? meta.summary + ' ' : ''}Please call the customer back to confirm details.`
+
+  const request = await prisma.aiRequest.create({
+    data: {
+      platform: platform || null,
+      type: 'needs_followup',
+      callerName, callerPhone, callerEmail,
+      clientId: null,
+      summary,
+      payload: { ...partialData, reason, callId: meta.callId || null, transcript: meta.transcript || null } as any,
+    },
+  })
+  await notifyAdmin(request)
+
+  return { status: 200, body: { submitted: true, requestId: request.id, fallback: true } }
+}
+
 export async function requestService(args: {
   clientId?: string; clientName?: string; clientPhone?: string; clientEmail?: string
   address?: string; city?: string; state?: string; zip?: string; unit?: string
@@ -72,8 +106,8 @@ export async function requestService(args: {
 }, platform?: string): Promise<HandlerResult> {
   const { clientId, clientName, clientPhone, clientEmail, address, city, state, zip, type, roomSize, frequency, serviceDate, serviceTime, notes } = args
 
-  if (!address || !type || !serviceDate || !serviceTime) {
-    return { status: 400, body: { error: 'address, type, serviceDate and serviceTime are required' } }
+  if (!address || !type || !serviceDate || !serviceTime || !roomSize) {
+    return { status: 400, body: { error: 'address, type, serviceDate, serviceTime and roomSize (bedroom count) are required' } }
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
     return { status: 400, body: { error: 'serviceDate must be YYYY-MM-DD' } }
@@ -269,17 +303,50 @@ export async function requestEstimateVisit(args: {
   return { status: 200, body: { submitted: true, requestId: request.id } }
 }
 
+// needs_followup's payload uses the canonical ExtractedRequest field names
+// (serviceType, address, callerName/Phone/Email) since it's a straight dump
+// of whatever the post-call extraction produced — but createService() etc.
+// expect their own request*()-style argument names. This bridges the two
+// only for the "complete" action below, where staff is manually finishing
+// what the AI couldn't.
+function mapFollowUpPayload(requestType: string, p: any): any {
+  switch (requestType) {
+    case 'schedule_service':
+      return {
+        clientId: p.clientId, clientName: p.callerName, clientPhone: p.callerPhone, clientEmail: p.callerEmail,
+        address: p.address, city: p.city, state: p.state, zip: p.zip, unit: p.unit,
+        type: p.serviceType, roomSize: p.roomSize, frequency: p.frequency,
+        serviceDate: p.serviceDate, serviceTime: p.serviceTime, notes: p.notes,
+      }
+    case 'create_sqft_estimate':
+      return {
+        name: p.callerName, phone: p.callerPhone, email: p.callerEmail,
+        address: p.address, sqft: p.sqft, type: p.serviceType, notes: p.notes, clientId: p.clientId,
+      }
+    case 'schedule_estimate_visit':
+      return {
+        clientId: p.clientId, name: p.callerName, phone: p.callerPhone, email: p.callerEmail,
+        address: p.address, visitDate: p.visitDate, visitTime: p.visitTime, notes: p.notes,
+      }
+    default:
+      return null
+  }
+}
+
 export async function resolveAiRequest(id: string, args: {
   action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean; editedPayload?: Record<string, any>
 }, resolvedById: string): Promise<HandlerResult> {
   const { action, adminNotes, customerMessage, notifyCustomer, editedPayload } = args
-  if (action !== 'approve' && action !== 'reject') {
-    return { status: 400, body: { error: 'action must be approve or reject' } }
+  if (action !== 'approve' && action !== 'reject' && action !== 'complete') {
+    return { status: 400, body: { error: 'action must be approve, reject, or complete' } }
   }
 
   const request = await prisma.aiRequest.findUnique({ where: { id } })
   if (!request) return { status: 404, body: { error: 'Not found' } }
   if (request.status !== 'pending') return { status: 409, body: { error: 'This request was already resolved' } }
+  if (action === 'complete' && request.type !== 'needs_followup') {
+    return { status: 400, body: { error: 'complete is only valid for needs_followup requests' } }
+  }
 
   let resultServiceId: string | null = null
   let resultEstimateId: string | null = null
@@ -314,15 +381,44 @@ export async function resolveAiRequest(id: string, args: {
         if (result.status >= 400) return result
         resultEstimateVisitId = result.body.visitId
         break
+      case 'needs_followup':
+        // Informational record only by default — nothing was ever confirmed
+        // enough to create automatically. Use action "complete" instead once
+        // staff has filled in whatever was missing.
+        break
       default:
         return { status: 400, body: { error: `Unknown request type: ${request.type}` } }
+    }
+  }
+
+  if (action === 'complete') {
+    const mapped = mapFollowUpPayload(payload.requestType, payload)
+    if (!mapped) return { status: 400, body: { error: `Cannot complete a needs_followup with requestType "${payload.requestType}"` } }
+
+    let result: HandlerResult
+    switch (payload.requestType) {
+      case 'schedule_service':
+        result = await createService(mapped)
+        if (result.status >= 400) return result
+        resultServiceId = result.body.id
+        break
+      case 'create_sqft_estimate':
+        result = await createSqftEstimate(mapped)
+        if (result.status >= 400) return result
+        resultEstimateId = result.body.estimateId
+        break
+      case 'schedule_estimate_visit':
+        result = await scheduleEstimateVisit(mapped)
+        if (result.status >= 400) return result
+        resultEstimateVisitId = result.body.visitId
+        break
     }
   }
 
   const updated = await prisma.aiRequest.update({
     where: { id },
     data: {
-      status: action === 'approve' ? 'approved' : 'rejected',
+      status: action === 'reject' ? 'rejected' : 'approved',
       adminNotes: adminNotes || null,
       customerMessage: customerMessage || null,
       payload,
@@ -333,8 +429,10 @@ export async function resolveAiRequest(id: string, args: {
   })
 
   // create_sqft_estimate already emails the customer its own PDF — skip the
-  // generic note for that type to avoid sending two emails.
-  if (notifyCustomer && request.callerEmail && request.type !== 'create_sqft_estimate' && customerMessage) {
+  // generic note for that type to avoid sending two emails (also true when
+  // "completing" a needs_followup into one).
+  const isSqftEstimate = request.type === 'create_sqft_estimate' || (action === 'complete' && payload.requestType === 'create_sqft_estimate')
+  if (notifyCustomer && request.callerEmail && !isSqftEstimate && customerMessage) {
     try {
       await sendPlainEmail(
         request.callerEmail,

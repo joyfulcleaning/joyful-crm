@@ -145,7 +145,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
           }
           *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
           body{font-family:Joyful,cursive;background:#fff;}
-          @page{size:A4;margin:16mm 14mm;}
+          @page{size:letter;margin:16mm 14mm;}
         </style>
       </head>
       <body>${content.outerHTML}</body></html>`)
@@ -322,15 +322,8 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             position: 'relative',
           }}>
 
-            {/* ══ WATERMARK ══ */}
-            <div style={{
-              position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: -1, pointerEvents: 'none',
-              backgroundImage: "url('/Joyful_logo_transparent.png')", backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center', backgroundSize: '380px auto', opacity: 0.5,
-            }} />
-
             {/* ══ HEADER ══ */}
-            <div style={{ position: 'absolute', top: 136, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
+            <div style={{ position: 'absolute', top: 148, right: 40, fontSize: 32, fontWeight: 800, color: 'rgba(75,63,160,0.5)', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1 }}>
               INVOICE
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
@@ -484,17 +477,12 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             </div>
 
             {/* ══ FOOTER ══ */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300, textAlign: 'center' }}>
                 {invoice.notes
                   ? <><strong>Notes:</strong><br />{invoice.notes}</>
                   : <>Thank you for choosing Joyful Cleaning Services Corp.</>
                 }
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.7 }}>
-                <img src="/Joyful_logo_transparent.png" alt="Joyful"
-                  style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
-                <span style={joyfulFont(16)}>Joyful Cleaning Services Corp.</span>
               </div>
             </div>
 

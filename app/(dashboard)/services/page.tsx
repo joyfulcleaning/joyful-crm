@@ -45,18 +45,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  'Standard Clean':        '#4f8ef7',
-  'Deep Clean':            '#a78bfa',
-  'Heavy Deep Clean':'#c084fc',
-  'Office Clean':          '#38d9a9',
-  'Move In/Out':           '#fb923c',
-  'Touch Up':              '#60a5fa',
-  'Construction Clean':    '#f59e0b',
-  'Airbnb Clean':          '#f472b6',
-  'Cancellation Fee':      '#f87171',
-  'Inspection Fee':        '#34d399',
-}
+const TYPE_COLOR = '#4f8ef7'
 
 export default function ServicesPage() {
   const [services, setServices] = useState<any[]>([])
@@ -540,7 +529,6 @@ export default function ServicesPage() {
             ) : (
               filtered.map((s: any) => {
                 const color = STATUS_COLORS[s.status] || '#6b7280'
-                const typeColor = TYPE_COLORS[s.type] || '#6b7280'
                 return (
                   <tr key={s.id} className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.02] transition-colors whitespace-nowrap">
                     <td className="px-3 py-2.5 w-8">
@@ -567,7 +555,7 @@ export default function ServicesPage() {
                     {col('roomSize')  && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.roomSize || '—'}</td>}
                     {col('type') && <td className="px-3 py-2.5">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: `${typeColor}15`, color: typeColor }}>
+                        style={{ backgroundColor: `${TYPE_COLOR}15`, color: TYPE_COLOR }}>
                         {s.type}
                       </span>
                     </td>}

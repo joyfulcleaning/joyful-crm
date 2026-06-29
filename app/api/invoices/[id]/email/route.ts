@@ -35,7 +35,6 @@ function fmt(n: number) {
 
 async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   const fontBase64 = fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful.ttf')).toString('base64')
-  const logoDataUrl = `data:image/png;base64,${fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful_logo_transparent.png')).toString('base64')}`
   const paymentLink = invoice.paymentLinkStripe || invoice.paymentLinkSquare || ''
   const qrDataUrl = paymentLink ? await QRCode.toDataURL(paymentLink, { width: 100, margin: 1 }) : ''
   const items = [...(invoice.items || [])].sort((a: any, b: any) => {
@@ -71,14 +70,11 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     @font-face { font-family: Joyful; src: url('data:font/truetype;base64,${fontBase64}') format('truetype'); font-weight: normal; font-style: normal; }
     body { font-family: Joyful, cursive; font-size: 12px; color: #1a1a2e; background: #fff;
            border: 2px solid rgba(15,23,42,0.3); border-radius: 12px; }
-    .page { padding: 36px 40px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; min-height: 277mm; position: relative; }
-    .page::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-                     background-image: url('${logoDataUrl}'); background-repeat: no-repeat;
-                     background-position: center; background-size: 380px auto; opacity: 0.1; }
+    .page { padding: 36px 40px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; min-height: 259mm; position: relative; }
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 28px; font-weight: 700; color: #4b3fa0; white-space: nowrap; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.65; }
-    .invoice-word { position: absolute; top: 136px; right: 40px; font-size: 32px; font-weight: 800; color: rgba(75,63,160,0.5); letter-spacing: 3px; }
+    .invoice-word { position: absolute; top: 148px; right: 40px; font-size: 32px; font-weight: 800; color: rgba(75,63,160,0.5); letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
     .bill-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
@@ -92,15 +88,14 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     th { padding: 8px 10px; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
     th:last-child { text-align: right; }
     td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
-    .totals { margin-left: auto; width: 240px; background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+    .totals { margin-left: auto; width: 240px; background: transparent; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-weight: 700; }
     .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-top: auto; margin-bottom: 16px; }
     .payment-row { font-size: 11px; color: #4b5563; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
-    .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 14px; border-top: 1px solid #e5e7eb; }
-    .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 300px; }
-    .footer-brand { font-size: 14px; font-weight: 700; color: #4b3fa0; }
+    .footer { display: flex; justify-content: center; padding-top: 14px; border-top: 1px solid #e5e7eb; }
+    .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 300px; text-align: center; }
   </style>
 </head>
 <body>
@@ -189,7 +184,6 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     <div class="footer-note">
       ${invoice.notes ? `<strong>Notes:</strong><br/>${invoice.notes}` : 'Thank you for choosing Joyful Cleaning Services.'}
     </div>
-    <div class="footer-brand" style="display:flex;align-items:center;gap:8px;opacity:0.7"><img src="${logoDataUrl}" alt="Joyful" style="height:36px;width:auto;object-fit:contain"/><span>Joyful Cleaning Services</span></div>
   </div>
 </div>
 </body>
@@ -205,7 +199,7 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   const page = await browser.newPage()
   await page.setContent(html, { waitUntil: 'load' })
   const pdf = await page.pdf({
-    format: 'A4',
+    format: 'Letter',
     margin: { top: '10mm', bottom: '6mm', left: '10mm', right: '10mm' },
     printBackground: true,
   })

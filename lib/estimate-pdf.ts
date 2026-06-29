@@ -64,7 +64,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .brand-name { font-size: 26px; font-weight: 700; color: #4b3fa0; }
     .brand-info { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
-    .estimate-word { position: absolute; top: 88px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
+    .estimate-word { position: absolute; top: 100px; right: 0; font-size: 32px; font-weight: 700; color: #4b3fa0; opacity: 0.5; letter-spacing: 3px; }
     .divider { border-top: 1px solid #e5e7eb; margin: 16px 0; }
     .bill-section { display: flex; justify-content: space-between; margin-bottom: 22px; }
     .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
@@ -79,7 +79,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
     th:nth-child(2) { text-align: center; }
     td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
     td:nth-child(2) { text-align: center; }
-    .totals { margin-left: auto; width: 250px; background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+    .totals { margin-left: auto; width: 250px; background: transparent; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-family: monospace; }
@@ -172,7 +172,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'load' })
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '8px', right: '8px', bottom: '8px', left: '8px' } })
+    const pdf = await page.pdf({ format: 'Letter', printBackground: true, margin: { top: '8px', right: '8px', bottom: '8px', left: '8px' } })
     return Buffer.from(pdf)
   } finally {
     await browser.close()

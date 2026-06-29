@@ -91,12 +91,14 @@ function generateDates(
     if (monthlyMode === 'nthWeekday') {
       // e.g. "the 2nd Sunday of every month" — skip a month entirely if it
       // doesn't have that many occurrences (e.g. a "5th Friday").
+      // nthOrdinal === -1 means "last", counted backward from month end instead.
       let y = start.getUTCFullYear(), m = start.getUTCMonth()
       for (let iter = 0; iter < 120 && dates.length < maxCount; iter++) {
-        const firstWeekday = new Date(Date.UTC(y, m, 1)).getUTCDay()
-        const day = 1 + ((nthWeekday - firstWeekday + 7) % 7) + (nthOrdinal - 1) * 7
         const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-        if (day <= dim) {
+        const day = nthOrdinal === -1
+          ? dim - ((new Date(Date.UTC(y, m, dim)).getUTCDay() - nthWeekday + 7) % 7)
+          : 1 + ((nthWeekday - new Date(Date.UTC(y, m, 1)).getUTCDay() + 7) % 7) + (nthOrdinal - 1) * 7
+        if (day >= 1 && day <= dim) {
           const d = new Date(Date.UTC(y, m, day))
           if (d >= start) {
             if (maxDate && d > maxDate) return dates
@@ -807,6 +809,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                         {['First', 'Second', 'Third', 'Fourth', 'Fifth'].map((label, i) => (
                           <option key={i} value={i + 1}>{label}</option>
                         ))}
+                        <option value={-1}>Last</option>
                       </select>
                       <select
                         value={recurNthWeekday}

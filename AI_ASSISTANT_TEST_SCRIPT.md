@@ -8,6 +8,8 @@ The agent's primary language is now English — that's why most calls below are 
 
 **New behavior (2026-06-25):** the agent no longer books/reschedules/cancels/sends anything live — every one of those now ends with something like "our team will confirm and follow up by email." To actually complete a call's request, go to `/ai-requests` in the CRM (or "More → AI Requests" in the mobile app) afterward and approve it — that's when the real Service/Estimate/Visit gets created and (if you check the box) the customer email goes out.
 
+**New behavior (2026-06-28):** the `AiRequest` itself no longer gets created during the call — it's extracted from the full call after you hang up (Vapi's Analysis Plan / Retell's post-call analysis), so **hang up and wait a few seconds** before checking `/ai-requests`, don't expect anything to show up while you're still on the call or the instant you end it. If a call gets interrupted or never clearly confirms what the caller wanted, expect a `Needs Follow-up` row instead of nothing — that's the safety net, not a bug.
+
 Make each call separately. Once you're done with all of them, let me know so I can review the transcripts.
 
 ---
@@ -25,6 +27,8 @@ Make each call separately. Once you're done with all of them, let me know so I c
 9. Give a different time.
 10. "Actually, cancel it."
 11. "Thanks, that's it."
+
+**This call is the main regression test for the 2026-06-28 change:** the caller changes their mind twice in the same call (schedule → reschedule → cancel). After hanging up, `/ai-requests` should show exactly **one** new row — a `Reschedule/Cancel` request to cancel — not a leftover `Schedule Service` or an extra stale `Reschedule` row from earlier in the call.
 
 ## Call 2 — New customer
 
@@ -114,11 +118,13 @@ Make each call separately. Once you're done with all of them, let me know so I c
 ## Call 13 — Apartment address (should ask for Unit + Room Size)
 
 1. "Hi, I'd like to schedule a standard cleaning."
-2. "My phone number is 347-220-9090."
+2. "My phone number is 347-220-9090." (matches Nathasha, an existing test customer)
 3. "The address is 456 Oak Apartments, unit 12B." (or just say "apartment" somewhere — should trigger asking for unit + bedrooms)
 4. Answer with a unit number and how many bedrooms if asked.
 5. Pick a date/time.
 6. "Thanks, that's it."
+
+**Also verifies the 2026-06-28 checklist:** even though step 2's phone number matches Nathasha's existing record, the agent should still explicitly ask for/confirm the service address in step 3 rather than assuming she means her address on file (123 Test St) — she's scheduling at a different property here.
 
 ## Call 14 — Check status of a previous request (make this call AFTER Call 1)
 
@@ -126,3 +132,10 @@ Make each call separately. Once you're done with all of them, let me know so I c
 2. (If asked for your phone) "347-220-9090."
 3. Should tell you whether it's still pending, approved, or rejected — NOT ask you to repeat/spell your number over and over (that was a real bug — should be fixed now).
 4. "Thanks, that's it."
+
+## Call 15 — Interrupted before confirming everything (tests the 2026-06-28 fallback)
+
+1. "Hi, I'd like to schedule a deep cleaning."
+2. "My name is [made-up name], phone is 910-555-8888."
+3. Hang up right after giving the phone number — before giving an address, date, or time.
+4. After hanging up, `/ai-requests` should show a row labeled **Needs Follow-up** (not a `Schedule Service` row, and not nothing) — with whatever partial info was captured and the call transcript, so staff know to call back.

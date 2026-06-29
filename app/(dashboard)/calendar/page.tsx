@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { Copy, Pencil, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Copy, Pencil, SlidersHorizontal, ChevronLeft, ChevronRight, Link2, Check } from 'lucide-react'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
@@ -40,14 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: '#f87171',
 }
 
-const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  'Standard Clean': { bg: 'rgba(79,142,247,0.12)',  text: '#4f8ef7'  },
-  'Deep Clean':     { bg: 'rgba(167,139,250,0.15)', text: '#a78bfa'  },
-  'Touch Up':       { bg: 'rgba(245,158,11,0.13)',  text: '#f59e0b'  },
-  'Free Estimate':  { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af'  },
-  'Inspection Fee': { bg: 'rgba(56,217,169,0.13)',  text: '#38d9a9'  },
-}
-function typeColor(t: string) { return TYPE_COLORS[t] ?? { bg: 'rgba(79,142,247,0.12)', text: '#4f8ef7' } }
+const TYPE_COLOR = { bg: 'rgba(79,142,247,0.12)', text: '#4f8ef7' }
 
 const ESTIMATE_VISIT_COLOR = '#ec4899'
 
@@ -123,10 +117,42 @@ export default function CalendarPage() {
   const [calColPickerOpen, setCalColPickerOpen] = useState(false)
   const calColPickerRef = useRef<HTMLDivElement>(null)
 
+  const { data: session } = useSession()
+  const sessionUser = session?.user as any
+  const [shareOpen, setShareOpen]     = useState(false)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareUrl, setShareUrl]       = useState<string | null>(null)
+  const [shareError, setShareError]   = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+  const shareMenuRef = useRef<HTMLDivElement>(null)
+
+  function openShareMenu() {
+    setShareOpen(v => !v)
+    if (!shareUrl && !shareLoading) {
+      setShareLoading(true)
+      setShareError(false)
+      fetch('/api/calendar/feed-link')
+        .then(res => { if (!res.ok) throw new Error(); return res.json() })
+        .then(d => setShareUrl(d.url))
+        .catch(() => setShareError(true))
+        .finally(() => setShareLoading(false))
+    }
+  }
+
+  function copyShareUrl() {
+    if (!shareUrl) return
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 1500)
+    })
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (calColPickerRef.current && !calColPickerRef.current.contains(e.target as Node))
         setCalColPickerOpen(false)
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node))
+        setShareOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -403,6 +429,66 @@ export default function CalendarPage() {
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
             Estimate Visits
           </label>
+          {sessionUser?.role === 'admin' && (
+            <div className="relative" ref={shareMenuRef}>
+              <button
+                onClick={openShareMenu}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                  shareOpen
+                    ? 'border-[#4f8ef7] text-[#4f8ef7] bg-[rgba(79,142,247,0.08)]'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[#4f8ef7]'
+                }`}
+              >
+                <Link2 size={13} />
+                Share Calendar
+              </button>
+              {shareOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-4 w-80">
+                  <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">Subscribe to this calendar</div>
+                  {shareLoading ? (
+                    <div className="text-xs text-[var(--muted)] py-2">Loading…</div>
+                  ) : shareError || !shareUrl ? (
+                    <div className="text-xs text-[#f87171] py-2">Couldn't load the link.</div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <input
+                          readOnly
+                          value={shareUrl}
+                          onFocus={e => e.currentTarget.select()}
+                          className="flex-1 px-2 py-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--muted)] focus:outline-none"
+                        />
+                        <button
+                          onClick={copyShareUrl}
+                          title="Copy link"
+                          className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[#4f8ef7] hover:border-[#4f8ef7] transition-all flex-shrink-0"
+                        >
+                          {shareCopied ? <Check size={13} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        <a
+                          href={`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(shareUrl)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block w-full text-center px-3 py-2 bg-[var(--surface2)] hover:bg-[var(--surface3)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text)] transition-colors"
+                        >
+                          Add to Google Calendar
+                        </a>
+                        <a
+                          href={shareUrl.replace(/^https?:/, 'webcal:')}
+                          className="block w-full text-center px-3 py-2 bg-[var(--surface2)] hover:bg-[var(--surface3)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text)] transition-colors"
+                        >
+                          Add to Apple Calendar
+                        </a>
+                      </div>
+                      <p className="text-[10px] text-[var(--muted)] mt-3">For Outlook or any other app, paste the link above as a "subscribe from URL" calendar.</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={() => { setNewServiceDate(todayStr); setNewServiceOpen(true) }}
             className="px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-medium rounded-lg transition-colors"
@@ -582,7 +668,7 @@ export default function CalendarPage() {
                     {ccol('roomSize') && <td className="py-2 text-[var(--muted)] text-xs">{s.roomSize || '—'}</td>}
                     {ccol('address')  && <td className="py-2 text-[var(--muted)] text-xs max-w-32 truncate">{s.address || '—'}</td>}
                     {ccol('type')     && <td className="py-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ backgroundColor: typeColor(s.type).bg, color: typeColor(s.type).text }}>{s.type}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ backgroundColor: TYPE_COLOR.bg, color: TYPE_COLOR.text }}>{s.type}</span>
                     </td>}
                     {ccol('staff')    && <td className="py-2 text-[#9ca3af] text-xs">
                       {s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'}
