@@ -198,7 +198,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       <div class="label" style="margin-bottom:0">Payment Instructions</div>
     </div>
     <div class="payment-row">
-      <svg width="32" height="22" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg>
+      <svg width="18" height="18" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg>
       <span><strong>Debit / Credit Card</strong> — Electronic payments include a 3% service fee</span>
     </div>
     <div class="payment-row"><img src="${LOGO_ZELLE}"   style="width:18px;height:18px;object-fit:contain"/> <span><strong>Zelle:</strong> @joyfulcleaningservices</span></div>
@@ -206,7 +206,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     <div class="payment-row"><img src="${LOGO_VENMO}"   style="width:18px;height:18px;object-fit:contain"/> <span><strong>Venmo:</strong> @joyfulcleaningservices</span></div>
     <div class="payment-row"><img src="${LOGO_PAYPAL}"  style="width:18px;height:18px;object-fit:contain"/> <span><strong>PayPal:</strong> @joyfulcleaningnc</span></div>
     <div class="payment-row">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" stroke-width="1.5"/></svg>
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" stroke-width="1.5"/></svg>
       <span><strong>Cash or Check</strong></span>
     </div>
   </div>

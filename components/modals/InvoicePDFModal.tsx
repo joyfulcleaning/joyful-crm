@@ -181,7 +181,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
   const paymentMethods = [
     {
       logo: (
-        <svg width="32" height="22" viewBox="0 0 32 22" fill="none">
+        <svg width="18" height="18" viewBox="0 0 32 22" fill="none" style={{ flexShrink: 0 }}>
           <rect width="32" height="22" rx="3" fill="#1A1F71"/>
           <rect y="6" width="32" height="5" fill="#F7B600"/>
           <rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/>
@@ -207,7 +207,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
     },
     {
       logo: (
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <svg width="18" height="18" viewBox="0 0 22 22" fill="none" style={{ flexShrink: 0 }}>
           <rect width="22" height="22" rx="4" fill="#16a34a"/>
           <rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" strokeWidth="1.5"/>
           <circle cx="11" cy="11" r="2.5" stroke="white" strokeWidth="1.5"/>

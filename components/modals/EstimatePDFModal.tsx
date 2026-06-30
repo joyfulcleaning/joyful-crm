@@ -90,12 +90,12 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
   if (!open || !estimate) return null
 
   const paymentMethods = [
-    { logo: <svg width="32" height="22" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg>, label: <><span style={{ color: '#6b7280' }}>Debit / Credit Card</span> — Electronic payments include a 3% service fee</> },
+    { logo: <svg width="18" height="18" viewBox="0 0 32 22" fill="none" style={{ flexShrink: 0 }}><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg>, label: <><span style={{ color: '#6b7280' }}>Debit / Credit Card</span> — Electronic payments include a 3% service fee</> },
     { logo: <img src={LOGO_ZELLE} alt="Zelle" style={logoStyle} />, label: <><span style={{ color: '#6b7280' }}>Zelle</span> <strong style={{ color: '#111827' }}>@joyfulcleaningservices</strong></> },
     { logo: <img src={LOGO_CASHAPP} alt="CashApp" style={logoStyle} />, label: <><span style={{ color: '#6b7280' }}>Cashapp</span> <strong style={{ color: '#111827' }}>$Nathashasalcedo</strong></> },
     { logo: <img src={LOGO_VENMO} alt="Venmo" style={logoStyle} />, label: <><span style={{ color: '#6b7280' }}>Venmo</span> <strong style={{ color: '#111827' }}>@joyfulcleaningservices</strong></> },
     { logo: <img src={LOGO_PAYPAL} alt="PayPal" style={logoStyle} />, label: <><span style={{ color: '#6b7280' }}>PayPal</span> <strong style={{ color: '#111827' }}>@joyfulcleaningnc</strong></> },
-    { logo: <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" strokeWidth="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" strokeWidth="1.5"/></svg>, label: <span style={{ color: '#6b7280' }}>Cash or Check</span> },
+    { logo: <svg width="18" height="18" viewBox="0 0 22 22" fill="none" style={{ flexShrink: 0 }}><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" strokeWidth="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" strokeWidth="1.5"/></svg>, label: <span style={{ color: '#6b7280' }}>Cash or Check</span> },
   ]
 
   const cellBase: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle' }
