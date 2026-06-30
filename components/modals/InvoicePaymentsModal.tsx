@@ -22,7 +22,7 @@ interface Props {
   onSuccess: (updatedInvoice: any) => void
 }
 
-const METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'eft']
+const METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft']
 const PLATFORMS = ['other', 'stripe', 'square', 'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card']
 
 const inputCls = "w-full px-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"

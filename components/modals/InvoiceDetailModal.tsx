@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Pencil, Save, FileText } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 
-const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'eft']
+const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft']
 
 const INVOICE_STATUSES = [
   { value: 'draft',     label: 'Draft',     color: '#9ca3af' },

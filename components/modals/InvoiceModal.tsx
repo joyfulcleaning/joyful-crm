@@ -6,7 +6,7 @@ import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 
 const PAYMENT_METHODS = [
-  'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'eft'
+  'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft'
 ]
 
 const PAYMENT_TERMS = [

@@ -52,6 +52,7 @@ enum PaymentMethod {
   check
   ach
   card
+  credit_card
   eft
 }
 

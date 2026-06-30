@@ -13,7 +13,7 @@ interface Props {
   capitalize?: boolean
 }
 
-const UPPERCASE_OPTS: Record<string, string> = { eft: 'EFT', ach: 'ACH' }
+const UPPERCASE_OPTS: Record<string, string> = { eft: 'EFT', ach: 'ACH', credit_card: 'Credit Card' }
 function cap(s: string) { return s ? (UPPERCASE_OPTS[s.toLowerCase()] ?? s.charAt(0).toUpperCase() + s.slice(1)) : s }
 
 export default function SelectWithAdd({

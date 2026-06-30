@@ -39,7 +39,7 @@ const INVOICE_COLORS: Record<string, string> = {
   cancelled: '#f87171',
 }
 
-const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'eft']
+const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft']
 
 const PAYMENT_TERMS = [
   { label: 'Due on Receipt', days: 0 },
