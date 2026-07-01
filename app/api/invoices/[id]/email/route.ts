@@ -92,7 +92,7 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-weight: 700; }
-    .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-top: auto; margin-bottom: 16px; }
+    .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-top: auto; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
     .payment-row { font-size: 11px; color: #4b5563; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
     .footer { display: flex; justify-content: center; padding-top: 14px; border-top: 1px solid #e5e7eb; }
     .footer-note { font-size: 11px; color: #6b7280; line-height: 1.7; max-width: 300px; text-align: center; }
