@@ -41,6 +41,14 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: '#f87171',
 }
 
+const STATUS_PRIORITY: Record<string, number> = {
+  estimate_visit: 0,
+  pending:        1,
+  in_progress:    2,
+  cancelled:      3,
+  completed:      4,
+}
+
 const TYPE_COLOR = { bg: 'rgba(79,142,247,0.12)', text: '#4f8ef7' }
 
 const ESTIMATE_VISIT_COLOR = '#ec4899'
@@ -266,6 +274,7 @@ export default function CalendarPage() {
           backgroundColor: `${STATUS_COLORS[s.status]}20` || '#6b728020',
           borderColor: STATUS_COLORS[s.status] || '#6b7280',
           textColor: STATUS_COLORS[s.status] || '#6b7280',
+          order: STATUS_PRIORITY[s.status] ?? 4,
           extendedProps: s,
         }))
         setEvents(mapped)
@@ -389,6 +398,7 @@ export default function CalendarPage() {
     backgroundColor: `${ESTIMATE_VISIT_COLOR}20`,
     borderColor: ESTIMATE_VISIT_COLOR,
     textColor: ESTIMATE_VISIT_COLOR,
+    order: 0,
     extendedProps: { kind: 'estimateVisit', ...v },
   })) : []
   const calendarEvents = [...events, ...visitEvents]
@@ -548,6 +558,7 @@ export default function CalendarPage() {
             stickyHeaderDates={false}
             eventDisplay="block"
             dayMaxEvents={3}
+            eventOrder="order,start"
             dateClick={handleDateClick}
             displayEventTime={false}
             datesSet={handleDatesSet}
