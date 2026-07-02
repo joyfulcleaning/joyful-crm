@@ -127,30 +127,20 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
     }
   }
 
-  function handlePrint() {
-    const content = printRef.current
-    if (!content) return
-    const win = window.open('', '_blank')
-    if (!win) return
-    win.document.write(`<!DOCTYPE html><html>
-      <head>
-        <meta charset="UTF-8"/>
-        <title>${invoice?.invoiceNumber || 'Invoice'}</title>
-        <style>
-          @font-face {
-            font-family: Joyful;
-            src: url('/Joyful.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-          }
-          *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-          body{font-family:Joyful,cursive;background:#fff;}
-          @page{size:letter;margin:16mm 14mm;}
-        </style>
-      </head>
-      <body>${content.outerHTML}</body></html>`)
-    win.document.close()
-    setTimeout(() => { win.print(); win.close() }, 600)
+  async function handlePrint() {
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/email`)
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Invoice-${invoice.invoiceNumber}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // silent
+    }
   }
 
   if (!open || !invoice) return null

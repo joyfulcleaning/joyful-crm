@@ -207,6 +207,45 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   return Buffer.from(pdf)
 }
 
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        client: { select: { name: true, email: true, phone: true, address: true, city: true, state: true, zip: true, propertyCode: true } },
+        items: {
+          include: {
+            service: {
+              select: {
+                serviceNumber: true,
+                serviceDate:   true,
+                type:          true,
+                unit:          true,
+                roomSize:      true,
+              }
+            }
+          }
+        },
+      }
+    })
+    if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+    const pdfBuffer = await generateInvoicePDF(invoice as any)
+    return new Response(new Uint8Array(pdfBuffer), {
+      headers: {
+        'Content-Type':        'application/pdf',
+        'Content-Disposition': `attachment; filename="Invoice-${(invoice as any).invoiceNumber}.pdf"`,
+      },
+    })
+  } catch (error) {
+    console.error('Download PDF error:', error)
+    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
+  }
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
