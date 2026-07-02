@@ -304,19 +304,20 @@ export default function FinancesPage() {
 
   useSyncPoll(['invoices', 'expenses', 'clients', 'recurringExpenses', 'inventory', 'assets', 'services'], loadData)
 
-  function applyAutoInvoiceNum(clientId: string, currentInvoices: any[], year: string) {
-    const client = clients.find(c => c.id === clientId)
-    if (!client) return
-    const code = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-    setInvCode(code)
-    const pattern = new RegExp(`^${code}-(\\d+)-${year}$`, 'i')
-    let maxNum = 0
+  function applyAutoInvoiceNum(currentInvoices: any[]) {
+    const pattern = /^JOYFUL(\d+)$/i
+    let maxNum = 102  // next will be at least 103
     for (const inv of currentInvoices) {
       const m = inv.invoiceNumber?.match(pattern)
       if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
     }
-    setInvNum(String(maxNum + 1).padStart(3, '0'))
+    setInvNum(String(maxNum + 1))
   }
+
+  useEffect(() => {
+    if (invMode === 'auto') applyAutoInvoiceNum(invoices)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices])
 
   useEffect(() => {
     if (!invPaymentTerm) return
@@ -932,7 +933,7 @@ export default function FinancesPage() {
   }
 
   const invoiceNumber = invMode === 'auto'
-    ? `${invCode || 'XX'}-${invNum}-${invYear}`
+    ? `JOYFUL${invNum}`
     : invManualId || 'INV-0001'
 
   function setInv(field: string, value: any) {
@@ -1531,7 +1532,7 @@ export default function FinancesPage() {
                 {[{ value: 'auto', label: '⚡ Auto' }, { value: 'manual', label: '✏️ Manual' }].map(m => (
                   <button key={m.value} onClick={() => {
                     setInvMode(m.value as 'auto' | 'manual')
-                    if (m.value === 'auto' && invForm.clientId) applyAutoInvoiceNum(invForm.clientId, invoices, invYear)
+                    if (m.value === 'auto') applyAutoInvoiceNum(invoices)
                   }}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       invMode === m.value ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'
@@ -1539,22 +1540,10 @@ export default function FinancesPage() {
                 ))}
               </div>
               {invMode === 'auto' && (
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className={labelCls}>Code</label>
-                    <input value={invCode} onChange={e => setInvCode(e.target.value.toUpperCase())} maxLength={4}
-                      className={inputCls + ' text-center font-mono font-bold'} placeholder="TC" />
-                  </div>
-                  <div>
-                    <label className={labelCls}>No.</label>
-                    <input value={invNum} onChange={e => setInvNum(e.target.value)} type="number"
-                      className={inputCls + ' text-center font-mono font-bold'} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Year</label>
-                    <input value={invYear} onChange={e => setInvYear(e.target.value)} maxLength={4}
-                      className={inputCls + ' text-center font-mono font-bold'} />
-                  </div>
+                <div>
+                  <label className={labelCls}>No. <span className="text-[#6b7280] normal-case font-normal">(auto-calculated)</span></label>
+                  <input value={invNum} onChange={e => setInvNum(e.target.value)} type="number"
+                    className={inputCls + ' text-center font-mono font-bold'} />
                 </div>
               )}
             </div>
@@ -1568,7 +1557,6 @@ export default function FinancesPage() {
                 <label className={labelCls}>Client <span className="text-[#f87171]">*</span></label>
                 <select value={invForm.clientId} onChange={e => {
                   setInv('clientId', e.target.value)
-                  if (invMode === 'auto' && e.target.value) applyAutoInvoiceNum(e.target.value, invoices, invYear)
                 }} className={inputCls}>
                   <option value="">— Select client —</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
