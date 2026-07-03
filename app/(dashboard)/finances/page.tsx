@@ -48,6 +48,23 @@ const PAYMENT_TERMS = [
   { label: 'Net 30', days: 30 },
 ]
 
+const BATCH_SVC_COL_DEFS = [
+  { id: 'date',    label: 'Date',       defaultOn: true  },
+  { id: 'time',    label: 'Time',       defaultOn: true  },
+  { id: 'type',    label: 'Type',       defaultOn: true  },
+  { id: 'address', label: 'Address',    defaultOn: true  },
+  { id: 'unit',    label: 'Unit',       defaultOn: false },
+  { id: 'room',    label: 'Room Size',  defaultOn: false },
+  { id: 'key',     label: 'Key',        defaultOn: false },
+  { id: 'base',    label: 'Base Price', defaultOn: false },
+  { id: 'fee',     label: 'Add. Fee',   defaultOn: false },
+  { id: 'total',   label: 'Total',      defaultOn: true  },
+  { id: 'payment', label: 'Payment',    defaultOn: false },
+  { id: 'status',  label: 'Status',     defaultOn: true  },
+  { id: 'notes',   label: 'Notes',      defaultOn: false },
+  { id: 'invoice', label: 'Invoice',    defaultOn: true  },
+]
+
 function formatDate(dateStr: string) {
   if (!dateStr) return '—'
   const [y, m, d] = dateStr.split('T')[0].split('-')
@@ -153,6 +170,35 @@ export default function FinancesPage() {
   const [histSortKey, setHistSortKey]           = useState('issuedAt')
   const [histSortDir, setHistSortDir]           = useState<'asc'|'desc'>('desc')
   const [showBalanceCol, setShowBalanceCol]     = useState(true)
+
+  // ── Batch invoice generation ──
+  const [invSubTab, setInvSubTab] = useState<'generar' | 'historial'>('generar')
+  const [invBatchFrom, setInvBatchFrom] = useState('')
+  const [invBatchTo, setInvBatchTo] = useState('')
+  const [invBatchStatus, setInvBatchStatus] = useState('all')
+  const [invBatchSearching, setInvBatchSearching] = useState(false)
+  const [invBatchClients, setInvBatchClients] = useState<any[]>([])
+  const [invWorked, setInvWorked] = useState<Record<string, boolean>>({})
+  const [invExpanded, setInvExpanded] = useState<Set<string>>(new Set())
+  const [invGeneratingFor, setInvGeneratingFor] = useState<string | null>(null)
+  const [invClientForms, setInvClientForms] = useState<Record<string, any>>({})
+  const [invClientSelected, setInvClientSelected] = useState<Record<string, Set<string>>>({})
+  const [invClientGenerating, setInvClientGenerating] = useState<Record<string, boolean>>({})
+  const [invClientErrors, setInvClientErrors] = useState<Record<string, string>>({})
+  const [invClientCreatedInvoices, setInvClientCreatedInvoices] = useState<Record<string, any>>({})
+  const [invClientEditing, setInvClientEditing] = useState<Record<string, boolean>>({})
+  const [invClientEditForms, setInvClientEditForms] = useState<Record<string, any>>({})
+  const [batchSvcVisibleCols, setBatchSvcVisibleCols] = useState<Set<string>>(() => {
+    try {
+      const s = typeof window !== 'undefined' && localStorage.getItem('joyful_batch_svc_cols')
+      if (s) return new Set(JSON.parse(s) as string[])
+    } catch {}
+    return new Set(BATCH_SVC_COL_DEFS.filter(c => c.defaultOn).map(c => c.id))
+  })
+  const [batchColsOpen, setBatchColsOpen] = useState(false)
+  useEffect(() => {
+    try { localStorage.setItem('joyful_batch_svc_cols', JSON.stringify([...batchSvcVisibleCols])) } catch {}
+  }, [batchSvcVisibleCols])
 
   // ── Expenses tab ──
   const [recurring, setRecurring] = useState<any[]>([])
@@ -528,9 +574,31 @@ export default function FinancesPage() {
         alert(data.error || 'Failed to delete invoice')
         return
       }
-      // Elimina del state local inmediatamente
+      // Remove from local invoice state
       setInvoices(prev => prev.filter(i => i.id !== confirmTarget.id))
       setSearchResults(prev => prev.filter(i => i.id !== confirmTarget.id))
+
+      // If this invoice was created in the current batch session, clean up batch state
+      setInvClientCreatedInvoices(prev => {
+        const clientId = Object.keys(prev).find(id => prev[id]?.id === confirmTarget.id)
+        if (!clientId) return prev
+        const next = { ...prev }
+        delete next[clientId]
+        // Un-mark as worked
+        setInvWorked(w => {
+          const wNext = { ...w, [clientId]: false }
+          const key = `joyful-invoice-worked-${invBatchFrom}-${invBatchTo}`
+          try { localStorage.setItem(key, JSON.stringify(wNext)) } catch {}
+          return wNext
+        })
+        return next
+      })
+
+      // Refresh batch results so services show as uninvoiced again
+      if (invBatchFrom && invBatchTo) {
+        handleBatchSearch()
+      }
+
       setConfirmOpen(false)
       setConfirmTarget(null)
     } catch {
@@ -1141,6 +1209,247 @@ export default function FinancesPage() {
     }
   }
 
+  // ── Batch invoice generation functions ──
+  async function handleBatchSearch() {
+    if (!invBatchFrom || !invBatchTo) return
+    setInvBatchSearching(true)
+    setInvExpanded(new Set())
+    setInvGeneratingFor(null)
+    setInvClientForms({})
+    setInvClientSelected({})
+    setInvClientGenerating({})
+    setInvClientErrors({})
+    try {
+      const params = new URLSearchParams({ from: invBatchFrom, to: invBatchTo })
+      if (invBatchStatus !== 'all') params.set('status', invBatchStatus)
+      const res = await fetch(`/api/invoices/clients-by-period?${params}`)
+      const data = await res.json()
+      setInvBatchClients(Array.isArray(data) ? data : [])
+      const key = `joyful-invoice-worked-${invBatchFrom}-${invBatchTo}`
+      try { setInvWorked(JSON.parse(localStorage.getItem(key) || '{}')) } catch { setInvWorked({}) }
+    } catch {} finally { setInvBatchSearching(false) }
+  }
+
+  function toggleWorked(clientId: string) {
+    setInvWorked(prev => {
+      const next = { ...prev, [clientId]: !prev[clientId] }
+      const key = `joyful-invoice-worked-${invBatchFrom}-${invBatchTo}`
+      try { localStorage.setItem(key, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  function toggleBatchExpand(clientId: string) {
+    setInvExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(clientId)) next.delete(clientId)
+      else next.add(clientId)
+      return next
+    })
+  }
+
+  function openClientGenerateForm(clientId: string, client: any, services: any[]) {
+    const uninvoiced = services.filter((s: any) => !s.invoicedAt)
+    const termsDays = client.paymentTermsDays != null ? client.paymentTermsDays : null
+    const today = new Date().toLocaleDateString('en-CA')
+    let dueDate = ''
+    if (termsDays != null) {
+      const d = new Date(today + 'T12:00:00Z')
+      d.setUTCDate(d.getUTCDate() + termsDays)
+      dueDate = d.toISOString().split('T')[0]
+    }
+    setInvClientForms(prev => ({
+      ...prev,
+      [clientId]: {
+        invMode: 'auto' as 'auto' | 'manual',
+        invManualId: '',
+        issuedAt: today,
+        paymentTermsDays: termsDays != null ? String(termsDays) : '',
+        dueDate,
+        taxRate: client.defaultTaxRate != null ? String(client.defaultTaxRate) : '',
+        paymentMethod: client.defaultPaymentMethod || '',
+        status: 'draft',
+        notes: '',
+      }
+    }))
+    setInvClientSelected(prev => ({
+      ...prev,
+      [clientId]: new Set(uninvoiced.map((s: any) => s.id))
+    }))
+    setInvGeneratingFor(clientId)
+  }
+
+  function setClientFormField(clientId: string, field: string, value: any) {
+    setInvClientForms(prev => ({ ...prev, [clientId]: { ...prev[clientId], [field]: value } }))
+    if (field === 'paymentTermsDays' || field === 'issuedAt') {
+      setInvClientForms(prev => {
+        const f = prev[clientId]
+        const days = field === 'paymentTermsDays' ? Number(value) : Number(f?.paymentTermsDays)
+        const baseDate = field === 'issuedAt' ? value : (f?.issuedAt || new Date().toLocaleDateString('en-CA'))
+        if (!isNaN(days) && baseDate) {
+          const d = new Date(baseDate + 'T12:00:00Z')
+          d.setUTCDate(d.getUTCDate() + days)
+          return { ...prev, [clientId]: { ...prev[clientId], [field]: value, dueDate: d.toISOString().split('T')[0] } }
+        }
+        return prev
+      })
+    }
+  }
+
+  function toggleClientService(clientId: string, serviceId: string) {
+    setInvClientSelected(prev => {
+      const current = new Set(prev[clientId] || [])
+      if (current.has(serviceId)) current.delete(serviceId)
+      else current.add(serviceId)
+      return { ...prev, [clientId]: current }
+    })
+  }
+
+  async function handleClientGenerate(clientId: string, services: any[]) {
+    const form = invClientForms[clientId]
+    const selectedIds = invClientSelected[clientId] || new Set<string>()
+    const selectedSvcs = services.filter((s: any) => selectedIds.has(s.id))
+    if (selectedSvcs.length === 0) {
+      setInvClientErrors(prev => ({ ...prev, [clientId]: 'Selecciona al menos un servicio.' }))
+      return
+    }
+    setInvClientErrors(prev => ({ ...prev, [clientId]: '' }))
+    setInvClientGenerating(prev => ({ ...prev, [clientId]: true }))
+    const sub = selectedSvcs.reduce((sum: number, s: any) => sum + Number(s.basePrice || 0), 0)
+    const fees = selectedSvcs.reduce((sum: number, s: any) => sum + Number(s.additionalFee || 0), 0)
+    const rate = parseFloat(form.taxRate) || 0
+    const tax = (sub + fees) * (rate / 100)
+    const tot = sub + fees + tax
+    const invNumForClient = form.invMode === 'auto' ? `JOYFUL${invNum}` : (form.invManualId || 'INV-0001')
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceNumber: invNumForClient,
+          invoiceMode: form.invMode,
+          clientId,
+          issuedAt: form.issuedAt || new Date().toLocaleDateString('en-CA'),
+          periodFrom: invBatchFrom,
+          periodTo: invBatchTo,
+          subtotal: sub, additionalFees: fees,
+          taxRate: rate, taxAmount: tax, total: tot,
+          paymentMethod: form.paymentMethod,
+          status: form.status,
+          dueDate: form.dueDate || null,
+          notes: form.notes,
+          items: selectedSvcs.map((s: any) => ({
+            description: `${s.type} - ${s.client?.name || ''} (${s.serviceDate ? formatDate(s.serviceDate) : ''})`,
+            quantity: 1,
+            unitPrice: Number(s.total),
+            total: Number(s.total),
+            serviceId: s.id,
+          }))
+        })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to generate invoice.')
+      }
+      const created = await res.json()
+      setInvGeneratingFor(null)
+      setInvClientCreatedInvoices(prev => ({ ...prev, [clientId]: created }))
+      toggleWorked(clientId)
+      loadData()
+      applyAutoInvoiceNum([...invoices, created])
+      await handleBatchSearch()
+    } catch (e: any) {
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to generate invoice.' }))
+    } finally {
+      setInvClientGenerating(prev => ({ ...prev, [clientId]: false }))
+    }
+  }
+
+  async function handleClientEditSave(clientId: string) {
+    const inv = invClientCreatedInvoices[clientId]
+    const form = invClientEditForms[clientId]
+    if (!inv || !form) return
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: form.status, notes: form.notes, dueDate: form.dueDate || null })
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      const updated = await res.json()
+      setInvClientCreatedInvoices(prev => ({ ...prev, [clientId]: updated }))
+      setInvClientEditing(prev => ({ ...prev, [clientId]: false }))
+      loadData()
+    } catch (e: any) {
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to update invoice.' }))
+    }
+  }
+
+  async function handleClientQuickGenerate(clientId: string, client: any, services: any[]) {
+    const selectedIds = invClientSelected[clientId] || new Set<string>()
+    const selectedSvcs = services.filter((s: any) => selectedIds.has(s.id))
+    if (selectedSvcs.length === 0) {
+      setInvClientErrors(prev => ({ ...prev, [clientId]: 'Select at least one service.' }))
+      return
+    }
+    setInvClientErrors(prev => ({ ...prev, [clientId]: '' }))
+    setInvClientGenerating(prev => ({ ...prev, [clientId]: true }))
+    const sub  = selectedSvcs.reduce((sum: number, s: any) => sum + Number(s.basePrice || 0), 0)
+    const fees = selectedSvcs.reduce((sum: number, s: any) => sum + Number(s.additionalFee || 0), 0)
+    const rate = client.defaultTaxRate != null ? Number(client.defaultTaxRate) : 0
+    const tax  = (sub + fees) * (rate / 100)
+    const tot  = sub + fees + tax
+    const today = new Date().toLocaleDateString('en-CA')
+    const termsDays = client.paymentTermsDays != null ? Number(client.paymentTermsDays) : null
+    let dueDate = ''
+    if (termsDays != null) {
+      const d = new Date(today + 'T12:00:00Z')
+      d.setUTCDate(d.getUTCDate() + termsDays)
+      dueDate = d.toISOString().split('T')[0]
+    }
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceNumber: `JOYFUL${invNum}`,
+          invoiceMode: 'auto',
+          clientId,
+          issuedAt: today,
+          periodFrom: invBatchFrom,
+          periodTo: invBatchTo,
+          subtotal: sub, additionalFees: fees,
+          taxRate: rate, taxAmount: tax, total: tot,
+          paymentMethod: client.defaultPaymentMethod || null,
+          status: 'draft',
+          dueDate: dueDate || null,
+          notes: '',
+          items: selectedSvcs.map((s: any) => ({
+            description: `${s.type} - ${client.name} (${s.serviceDate ? formatDate(s.serviceDate) : ''})`,
+            quantity: 1,
+            unitPrice: Number(s.total),
+            total: Number(s.total),
+            serviceId: s.id,
+          }))
+        })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to generate invoice.')
+      }
+      const created = await res.json()
+      setInvClientCreatedInvoices(prev => ({ ...prev, [clientId]: created }))
+      toggleWorked(clientId)
+      loadData()
+      applyAutoInvoiceNum([...invoices, created])
+      await handleBatchSearch()
+    } catch (e: any) {
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to generate invoice.' }))
+    } finally {
+      setInvClientGenerating(prev => ({ ...prev, [clientId]: false }))
+    }
+  }
+
   const _today = new Date().toISOString().split('T')[0]
   const isOverdue = (i: { status: string; dueDate?: string | null | Date }) =>
     i.status === 'overdue' || (i.status === 'sent' && !!i.dueDate && String(i.dueDate).split('T')[0] < _today)
@@ -1501,550 +1810,583 @@ export default function FinancesPage() {
 
       {/* ── Invoices Tab ── */}
       {activeTab === 'invoices' && (
-        <div className="flex gap-4 min-h-[600px]">
-          {/* LEFT */}
-          <div className="w-72 flex-shrink-0 space-y-4">
-            {invError && (
-              <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-3">
-                {invError}
-              </div>
-            )}
-            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">🏷 Invoice ID</span>
-                <span className="text-[9px] px-1.5 py-0.5 bg-[#1e2330] border border-[#2a2f3d] rounded text-[#6b7280]">Step 1</span>
-              </div>
-              {invMode === 'manual' ? (
-                <input
-                  value={invManualId}
-                  onChange={e => setInvManualId(e.target.value)}
-                  placeholder="e.g. INV-2026-TC-008"
-                  className="w-full text-center py-2 px-3 bg-[#0d0f14] rounded-lg border-2 border-[#4f8ef7] text-sm font-bold text-[#4f8ef7] focus:outline-none font-mono"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                  autoFocus
-                />
-              ) : (
-                <div className="text-center py-2 px-3 bg-[#0d0f14] rounded-lg border border-[#2a2f3d]">
-                  <span className="text-sm font-bold text-[#4f8ef7]" style={{ fontFamily: 'var(--font-mono)' }}>{invoiceNumber}</span>
-                </div>
-              )}
-              <div className="flex gap-2">
-                {[{ value: 'auto', label: '⚡ Auto' }, { value: 'manual', label: '✏️ Manual' }].map(m => (
-                  <button key={m.value} onClick={() => {
-                    setInvMode(m.value as 'auto' | 'manual')
-                    if (m.value === 'auto') applyAutoInvoiceNum(invoices)
-                  }}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      invMode === m.value ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'
-                    }`}>{m.label}</button>
-                ))}
-              </div>
-              {invMode === 'auto' && (
-                <div>
-                  <label className={labelCls}>No. <span className="text-[#6b7280] normal-case font-normal">(auto-calculated)</span></label>
-                  <input value={invNum} onChange={e => setInvNum(e.target.value)} type="number"
-                    className={inputCls + ' text-center font-mono font-bold'} />
-                </div>
-              )}
-            </div>
+        <div className="space-y-4">
 
-            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">🔍 Search Filters</span>
-                <span className="text-[9px] px-1.5 py-0.5 bg-[#1e2330] border border-[#2a2f3d] rounded text-[#6b7280]">Step 2</span>
-              </div>
-              <div>
-                <label className={labelCls}>Client <span className="text-[#f87171]">*</span></label>
-                <select value={invForm.clientId} onChange={e => {
-                  setInv('clientId', e.target.value)
-                }} className={inputCls}>
-                  <option value="">— Select client —</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelCls}>From</label>
-                  <input type="date" value={invForm.periodFrom} onChange={e => setInv('periodFrom', e.target.value)} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>To</label>
-                  <input type="date" value={invForm.periodTo} onChange={e => setInv('periodTo', e.target.value)} className={inputCls} />
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>Payment Terms</label>
-                <select value={invPaymentTerm} onChange={e => setInvPaymentTerm(e.target.value)} className={inputCls}>
-                  <option value="">— Select Payment Terms —</option>
-                  {PAYMENT_TERMS.map(t => <option key={t.label} value={t.label}>{t.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Issue Date</label>
-                <input type="date" value={invForm.issuedAt} onChange={e => setInv('issuedAt', e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Due Date</label>
-                <input type="date" value={invForm.dueDate} onChange={e => setInv('dueDate', e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Service Status</label>
-                <select value={invForm.serviceStatus} onChange={e => setInv('serviceStatus', e.target.value)} className={inputCls}>
-                  <option value="all">All</option>
-                  <option value="completed">Completed</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                </select>
-              </div>
-              <div className="border-t border-[#2a2f3d] pt-3 space-y-3">
-                <div>
-                  <label className={labelCls}>Tax (%)</label>
-                  <input type="number" value={invForm.taxRate} onChange={e => setInv('taxRate', e.target.value)} placeholder="0" className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Payment Method</label>
-                  <SelectWithAdd value={invForm.paymentMethod} onChange={v => setInv('paymentMethod', v)} options={PAYMENT_METHODS} storageKey="paymentMethod" placeholder="— Select Payment Method —" addLabel="payment method" className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Invoice Status</label>
-                  <select value={invForm.status} onChange={e => setInv('status', e.target.value)} className={inputCls}>
-                    <option value="draft">Draft</option>
-                    <option value="sent">Sent</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Notes</label>
-                  <textarea value={invForm.notes} onChange={e => setInv('notes', e.target.value)}
-                    rows={2} placeholder="Additional notes..." className={inputCls + ' resize-none'} />
-                </div>
-              </div>
-              <button onClick={handleSearch} disabled={searching}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-50">
-                <Search size={13} />
-                {searching ? 'Searching...' : 'Search Services'}
-              </button>
-            </div>
+          {/* Sub-tabs */}
+          <div className="flex gap-2 border-b border-[#2a2f3d] pb-0">
+            {[{v:'generar' as const, l:'⚡ Generate Invoices'}, {v:'historial' as const, l:'📋 History'}].map(t => (
+              <button key={t.v} onClick={() => setInvSubTab(t.v)}
+                className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all -mb-px ${
+                  invSubTab === t.v
+                    ? 'border-[#4f8ef7] text-[#4f8ef7]'
+                    : 'border-transparent text-[#6b7280] hover:text-[#e8eaf0]'
+                }`}>{t.l}</button>
+            ))}
           </div>
 
-          {/* RIGHT */}
-          <div className="flex-1 space-y-4">
+          {/* ── GENERAR sub-tab ── */}
+          {invSubTab === 'generar' && (
+            <div className="space-y-4">
 
-            {/* ── Invoice Search Bar ── */}
-            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-3">
-              <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" />
-                <input
-                  value={searchQ}
-                  onChange={e => { setSearchQ(e.target.value); setShowSearch(true) }}
-                  onFocus={() => setShowSearch(true)}
-                  placeholder="Search invoice # or client name..."
-                  className="w-full pl-8 pr-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
-                />
-                {searching2 && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#6b7280]">...</div>}
+              {/* Search bar */}
+              <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
+                <div className="flex items-end gap-3 flex-wrap">
+                  <div>
+                    <label className={labelCls}>From</label>
+                    <input type="date" value={invBatchFrom} onChange={e => setInvBatchFrom(e.target.value)} className={inputCls + ' w-36'} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>To</label>
+                    <input type="date" value={invBatchTo} onChange={e => setInvBatchTo(e.target.value)} className={inputCls + ' w-36'} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Service Status</label>
+                    <select value={invBatchStatus} onChange={e => setInvBatchStatus(e.target.value)} className={inputCls + ' w-36'}>
+                      <option value="all">All</option>
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleBatchSearch}
+                    disabled={!invBatchFrom || !invBatchTo || invBatchSearching}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-50"
+                  >
+                    <Search size={13} />
+                    {invBatchSearching ? 'Searching...' : 'Search Clients'}
+                  </button>
+                  {invBatchClients.length > 0 && (
+                    <span className="text-[10px] text-[#6b7280] ml-auto">
+                      {invBatchClients.length} client{invBatchClients.length !== 1 ? 's' : ''} · {invBatchClients.reduce((s, c) => s + c.uninvoicedCount, 0)} uninvoiced
+                    </span>
+                  )}
+                  {/* Column picker — global for all client service tables */}
+                  <div className="relative ml-auto">
+                    <button
+                      onClick={() => setBatchColsOpen(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-semibold text-[#6b7280] hover:text-[#e8eaf0] border border-[#2a2f3d] hover:border-[#4f8ef7] rounded-lg transition-all"
+                    >
+                      ⚙ Columns
+                    </button>
+                    {batchColsOpen && (
+                      <div className="absolute right-0 top-9 z-50 bg-[#1e2330] border border-[#2a2f3d] rounded-xl shadow-2xl p-3 space-y-1 min-w-[150px]">
+                        <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
+                        {BATCH_SVC_COL_DEFS.map(col => (
+                          <label key={col.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded px-1 py-0.5">
+                            <input
+                              type="checkbox"
+                              checked={batchSvcVisibleCols.has(col.id)}
+                              onChange={() => setBatchSvcVisibleCols(prev => {
+                                const next = new Set(prev)
+                                if (next.has(col.id)) next.delete(col.id)
+                                else next.add(col.id)
+                                return next
+                              })}
+                              className="accent-[#4f8ef7]"
+                            />
+                            <span className="text-[10px] text-[#9ca3af]">{col.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {showSearch && searchQ.length >= 2 && (
-                <div className="mt-2 space-y-1 max-h-60 overflow-y-auto">
-                  {searchResults.length === 0 && !searching2 ? (
-                    <div className="text-center py-4 text-[#6b7280] text-xs">No results for "{searchQ}"</div>
-                  ) : searchResults.map((inv: any) => {
-                    const color      = INVOICE_COLORS[inv.status] || '#6b7280'
-                    const balanceDue = Number(inv.balanceDue ?? inv.total)
-                    return (
-                      <div key={inv.id} className="flex items-center justify-between p-2.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg hover:border-[#4f8ef7] transition-all">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#4f8ef7] font-mono">{inv.invoiceNumber}</span>
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize"
-                              style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
-                          </div>
-                          <div className="text-[10px] text-[#6b7280] mt-0.5">{inv.client?.name} · {formatDate(inv.issuedAt)}</div>
+              {/* Empty state */}
+              {!invBatchSearching && invBatchClients.length === 0 && invBatchFrom && (
+                <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl flex flex-col items-center justify-center py-20 text-center">
+                  <div className="text-5xl opacity-20 mb-4">🧾</div>
+                  <div className="text-sm text-[#6b7280]">No clients found with services in that range.</div>
+                </div>
+              )}
+              {!invBatchSearching && invBatchClients.length === 0 && !invBatchFrom && (
+                <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl flex flex-col items-center justify-center py-20 text-center">
+                  <div className="text-5xl opacity-20 mb-4">📅</div>
+                  <div className="text-sm text-[#6b7280]">Select a date range and click Search Clients</div>
+                </div>
+              )}
+
+              {/* Client cards */}
+              {invBatchClients.map(({ client, services, totalCount, uninvoicedCount }) => {
+                const isWorked    = !!invWorked[client.id]
+                const isExpanded  = invExpanded.has(client.id)
+                const isGenOpen   = invGeneratingFor === client.id
+                const cForm       = invClientForms[client.id]
+                const cSelected   = invClientSelected[client.id] || new Set<string>()
+                const cGenerating = !!invClientGenerating[client.id]
+                const cError      = invClientErrors[client.id] || ''
+                const createdInv  = invClientCreatedInvoices[client.id]
+                const isEditing   = !!invClientEditing[client.id]
+                const cEditForm   = invClientEditForms[client.id]
+
+                const cSub   = services.filter((s: any) => cSelected.has(s.id)).reduce((sum: number, s: any) => sum + Number(s.basePrice || 0), 0)
+                const cFees  = services.filter((s: any) => cSelected.has(s.id)).reduce((sum: number, s: any) => sum + Number(s.additionalFee || 0), 0)
+                const cRate  = cForm
+                  ? (parseFloat(cForm.taxRate) || 0)
+                  : (client.defaultTaxRate != null ? Number(client.defaultTaxRate) : 0)
+                const cTax   = (cSub + cFees) * (cRate / 100)
+                const cTotal = cSub + cFees + cTax
+
+                const invNumForClient = cForm?.invMode === 'auto' ? `JOYFUL${invNum}` : (cForm?.invManualId || 'INV-0001')
+
+                return (
+                  <div key={client.id} className={`border rounded-xl overflow-hidden transition-all ${isWorked ? 'border-[rgba(56,217,169,0.4)] bg-[rgba(56,217,169,0.03)]' : 'border-[#2a2f3d] bg-[#161922]'}`}>
+                    {/* Card header */}
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isWorked && <span className="text-[#38d9a9] text-xs">✓</span>}
+                          <span className="text-sm font-bold text-[#e8eaf0] truncate">{client.name}</span>
+                          <span className="text-[10px] text-[#6b7280] flex-shrink-0">
+                            {totalCount} service{totalCount !== 1 ? 's' : ''}
+                            {uninvoicedCount > 0 && <> · <span className="text-[#f59e0b]">{uninvoicedCount} uninvoiced</span></>}
+                            {uninvoicedCount === 0 && totalCount > 0 && <> · <span className="text-[#38d9a9]">all invoiced</span></>}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <div className="text-xs font-bold font-mono text-[#38d9a9]">{fmt(Number(inv.total))}</div>
-                            {balanceDue > 0 && balanceDue < Number(inv.total) && (
-                              <div className="text-[10px] font-mono text-[#f87171]">Due: {fmt(balanceDue)}</div>
+                        {(client.defaultPaymentMethod || client.paymentTermsDays != null) && (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {client.paymentTermsDays != null && (
+                              <span className="text-[9px] text-[#6b7280]">
+                                {PAYMENT_TERMS.find(t => t.days === client.paymentTermsDays)?.label ?? `Net ${client.paymentTermsDays}`}
+                              </span>
+                            )}
+                            {client.defaultPaymentMethod && (
+                              <span className="text-[9px] text-[#6b7280] capitalize">{client.defaultPaymentMethod.replace('_', ' ')}</span>
+                            )}
+                            {client.defaultTaxRate != null && Number(client.defaultTaxRate) > 0 && (
+                              <span className="text-[9px] text-[#6b7280]">Tax {client.defaultTaxRate}%</span>
                             )}
                           </div>
-                          <div className="flex gap-1.5">
-                            <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true); setShowSearch(false) }}
-                              className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]">👁</button>
-                            <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true); setShowSearch(false) }}
-                              className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]">💰</button>
-                            <button onClick={() => { requestDeleteInvoice(inv); setShowSearch(false) }}
-                              className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330]">🗑</button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => toggleWorked(client.id)}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
+                            isWorked
+                              ? 'bg-[rgba(56,217,169,0.12)] border-[#38d9a9] text-[#38d9a9]'
+                              : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:border-[#38d9a9] hover:text-[#38d9a9]'
+                          }`}
+                        >
+                          {isWorked ? '✓ Worked' : 'Mark as Worked'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!invExpanded.has(client.id) && !invClientSelected[client.id]) {
+                              setInvClientSelected(prev => ({
+                                ...prev,
+                                [client.id]: new Set(services.filter((s: any) => !s.invoicedAt).map((s: any) => s.id))
+                              }))
+                            }
+                            toggleBatchExpand(client.id)
+                          }}
+                          className="px-3 py-1 rounded-lg text-[10px] font-semibold border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] transition-all flex items-center gap-1"
+                        >
+                          {isExpanded ? '▲ Hide' : '▼ View Services'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded: service table */}
+                    {isExpanded && (
+                      <div className="border-t border-[#2a2f3d]">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="bg-[#1e2330]">
+                                <th className="px-3 py-2 w-8" />
+                                <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">#</th>
+                                {batchSvcVisibleCols.has('date')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Date</th>}
+                                {batchSvcVisibleCols.has('time')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Time</th>}
+                                {batchSvcVisibleCols.has('type')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Type</th>}
+                                {batchSvcVisibleCols.has('address') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Address</th>}
+                                {batchSvcVisibleCols.has('unit')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Unit</th>}
+                                {batchSvcVisibleCols.has('room')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Room Size</th>}
+                                {batchSvcVisibleCols.has('key')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Key</th>}
+                                {batchSvcVisibleCols.has('base')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Base Price</th>}
+                                {batchSvcVisibleCols.has('fee')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Add. Fee</th>}
+                                {batchSvcVisibleCols.has('total')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Total</th>}
+                                {batchSvcVisibleCols.has('payment') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Payment</th>}
+                                {batchSvcVisibleCols.has('status')  && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Status</th>}
+                                {batchSvcVisibleCols.has('notes')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Notes</th>}
+                                {batchSvcVisibleCols.has('invoice') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Invoice</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {services.map((s: any) => {
+                                const invoiced   = !!s.invoicedAt
+                                const checked    = cSelected.has(s.id)
+                                const invNum_svc = s.invoiceItems?.[0]?.invoice?.invoiceNumber ?? null
+                                return (
+                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced ? 'opacity-60' : ''}`}>
+                                    <td className="px-3 py-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        disabled={invoiced}
+                                        onChange={() => toggleClientService(client.id, s.id)}
+                                        className="accent-[#4f8ef7] disabled:opacity-30"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 text-[10px] font-mono">
+                                      <button
+                                        onClick={() => { setInvDetailService(s); setInvDetailOpen(true) }}
+                                        className="text-[#4f8ef7] hover:text-[#7aaefb] hover:underline transition-colors"
+                                      >
+                                        #{s.serviceNumber}
+                                      </button>
+                                    </td>
+                                    {batchSvcVisibleCols.has('date')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] whitespace-nowrap">{formatDate(s.serviceDate)}</td>}
+                                    {batchSvcVisibleCols.has('time')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] whitespace-nowrap">{s.serviceTime || '—'}</td>}
+                                    {batchSvcVisibleCols.has('type')    && <td className="px-3 py-2 text-[10px] text-[#e8eaf0]">{s.type}</td>}
+                                    {batchSvcVisibleCols.has('address') && <td className="px-3 py-2 text-[10px] text-[#9ca3af]">{s.address || '—'}</td>}
+                                    {batchSvcVisibleCols.has('unit')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af]">{s.unit || '—'}</td>}
+                                    {batchSvcVisibleCols.has('room')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af]">{s.roomSize || '—'}</td>}
+                                    {batchSvcVisibleCols.has('key')     && <td className="px-3 py-2 text-[10px] text-[#9ca3af] font-mono">{s.numericKey || '—'}</td>}
+                                    {batchSvcVisibleCols.has('base')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] font-mono whitespace-nowrap">${Number(s.basePrice).toFixed(2)}</td>}
+                                    {batchSvcVisibleCols.has('fee')     && <td className="px-3 py-2 text-[10px] text-[#f59e0b] font-mono whitespace-nowrap">{Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'}</td>}
+                                    {batchSvcVisibleCols.has('total')   && <td className="px-3 py-2 text-[10px] font-bold text-[#38d9a9] font-mono whitespace-nowrap">${Number(s.total).toFixed(2)}</td>}
+                                    {batchSvcVisibleCols.has('payment') && <td className="px-3 py-2 text-[10px] text-[#9ca3af] capitalize">{s.paymentMethod ? s.paymentMethod.replace('_', ' ') : '—'}</td>}
+                                    {batchSvcVisibleCols.has('status')  && (
+                                      <td className="px-3 py-2">
+                                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize"
+                                          style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.12)' : s.status === 'pending' ? 'rgba(245,158,11,0.12)' : 'rgba(100,116,139,0.12)',
+                                            color: s.status === 'completed' ? '#38d9a9' : s.status === 'pending' ? '#f59e0b' : '#9ca3af' }}>
+                                          {s.status}
+                                        </span>
+                                      </td>
+                                    )}
+                                    {batchSvcVisibleCols.has('notes')   && <td className="px-3 py-2 text-[10px] text-[#9ca3af] max-w-[160px] truncate">{s.internalNotes || s.completionNotes || '—'}</td>}
+                                    {batchSvcVisibleCols.has('invoice') && (
+                                      <td className="px-3 py-2 text-[10px]">
+                                        {invNum_svc
+                                          ? <span className="text-[#4f8ef7] font-mono font-semibold">{invNum_svc}</span>
+                                          : <span className="text-[#6b7280]">—</span>
+                                        }
+                                      </td>
+                                    )}
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Inline form fields — only when Preview is open */}
+                        {isGenOpen && cForm && (
+                          <div className="border-t border-[#2a2f3d] bg-[#0d0f14] p-4 space-y-4">
+                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Invoice Details · {client.name}</div>
+                            {cError && (
+                              <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-2">{cError}</div>
+                            )}
+                            {/* Invoice # */}
+                            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-3 space-y-2">
+                              <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Invoice #</span>
+                              {cForm.invMode === 'manual' ? (
+                                <input value={cForm.invManualId} onChange={e => setClientFormField(client.id, 'invManualId', e.target.value)} placeholder="e.g. INV-2026-TC-008" className="w-full text-center py-1.5 px-3 bg-[#0d0f14] rounded-lg border-2 border-[#4f8ef7] text-sm font-bold text-[#4f8ef7] focus:outline-none font-mono" />
+                              ) : (
+                                <div className="text-center py-1.5 px-3 bg-[#0d0f14] rounded-lg border border-[#2a2f3d]">
+                                  <span className="text-sm font-bold text-[#4f8ef7] font-mono">{invNumForClient}</span>
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                {[{v:'auto', l:'⚡ Auto'}, {v:'manual', l:'✏️ Manual'}].map(m => (
+                                  <button key={m.v} onClick={() => { setClientFormField(client.id, 'invMode', m.v); if (m.v === 'auto') applyAutoInvoiceNum(invoices) }}
+                                    className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-all ${cForm.invMode === m.v ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'}`}>{m.l}</button>
+                                ))}
+                              </div>
+                              {cForm.invMode === 'auto' && (
+                                <div><label className={labelCls}>No.</label><input value={invNum} onChange={e => setInvNum(e.target.value)} type="number" className={inputCls + ' text-center font-mono font-bold'} /></div>
+                              )}
+                            </div>
+                            {/* Dates + Terms */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div><label className={labelCls}>Issue Date</label><input type="date" value={cForm.issuedAt} onChange={e => setClientFormField(client.id, 'issuedAt', e.target.value)} className={inputCls} /></div>
+                              <div>
+                                <label className={labelCls}>Payment Terms</label>
+                                <select value={cForm.paymentTermsDays} onChange={e => setClientFormField(client.id, 'paymentTermsDays', e.target.value)} className={inputCls}>
+                                  <option value="">— None —</option>
+                                  {PAYMENT_TERMS.map(t => <option key={t.days} value={t.days}>{t.label}</option>)}
+                                </select>
+                              </div>
+                              <div><label className={labelCls}>Due Date</label><input type="date" value={cForm.dueDate} onChange={e => setClientFormField(client.id, 'dueDate', e.target.value)} className={inputCls} /></div>
+                              <div><label className={labelCls}>Tax (%)</label><input type="number" value={cForm.taxRate} onChange={e => setClientFormField(client.id, 'taxRate', e.target.value)} placeholder="0" className={inputCls} /></div>
+                              <div><label className={labelCls}>Payment Method</label><SelectWithAdd value={cForm.paymentMethod} onChange={v => setClientFormField(client.id, 'paymentMethod', v)} options={PAYMENT_METHODS} storageKey="paymentMethod" placeholder="— Select —" addLabel="payment method" className={inputCls} /></div>
+                              <div>
+                                <label className={labelCls}>Invoice Status</label>
+                                <select value={cForm.status} onChange={e => setClientFormField(client.id, 'status', e.target.value)} className={inputCls}>
+                                  <option value="draft">Draft</option>
+                                  <option value="sent">Sent</option>
+                                  <option value="paid">Paid</option>
+                                  <option value="overdue">Overdue</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div><label className={labelCls}>Notes</label><textarea value={cForm.notes} onChange={e => setClientFormField(client.id, 'notes', e.target.value)} rows={2} placeholder="Notes..." className={inputCls + ' resize-none'} /></div>
+                          </div>
+                        )}
+
+                        {/* Persistent summary + action bar */}
+                        <div className="px-4 py-3 border-t border-[#2a2f3d] flex items-center gap-3 flex-wrap">
+                          {/* Totals */}
+                          <div className="flex items-center gap-3 text-center">
+                            <div><div className="text-base font-bold text-[#e8eaf0]">{cSelected.size}</div><div className="text-[9px] text-[#6b7280]">Selected</div></div>
+                            <div className="w-px h-5 bg-[#2a2f3d]" />
+                            <div><div className="text-base font-bold text-[#e8eaf0]">${cSub.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Subtotal</div></div>
+                            <div className="w-px h-5 bg-[#2a2f3d]" />
+                            <div><div className="text-base font-bold text-[#f59e0b]">+${cFees.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Add. Fees</div></div>
+                            {cRate > 0 && <><div className="w-px h-5 bg-[#2a2f3d]" /><div><div className="text-base font-bold text-[#9ca3af]">${cTax.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Tax ({cRate}%)</div></div></>}
+                            <div className="w-px h-5 bg-[#2a2f3d]" />
+                            <div><div className="text-lg font-bold text-[#38d9a9]">${cTotal.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">TOTAL</div></div>
+                          </div>
+
+                          {/* Post-gen invoice actions */}
+                          {!isGenOpen && createdInv && !isEditing && (
+                            <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-[#2a2f3d]">
+                              <span className="text-[9px] text-[#6b7280] font-mono mr-1">{createdInv.invoiceNumber}</span>
+                              <button onClick={() => { setPdfInvoice(createdInv); setPdfOpen(true) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] transition-all">👁 View</button>
+                              <button onClick={() => { setInvClientEditForms(prev => ({ ...prev, [client.id]: { status: createdInv.status, notes: createdInv.notes || '', dueDate: createdInv.dueDate ? String(createdInv.dueDate).split('T')[0] : '' } })); setInvClientEditing(prev => ({ ...prev, [client.id]: true })) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#4f8ef7] hover:border-[#4f8ef7] transition-all">✏️ Edit</button>
+                              <button onClick={() => requestDeleteInvoice(createdInv)} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#f87171] hover:border-[#f87171] transition-all">🗑 Delete</button>
+                            </div>
+                          )}
+
+                          {/* Action buttons */}
+                          <div className="ml-auto flex gap-2">
+                            {cError && !isGenOpen && <span className="text-[10px] text-[#f87171]">{cError}</span>}
+                            {!isGenOpen ? (
+                              <>
+                                <button
+                                  onClick={() => openClientGenerateForm(client.id, client, services)}
+                                  disabled={cSelected.size === 0}
+                                  className="flex items-center gap-1.5 px-3 py-2 border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] text-xs font-semibold rounded-lg transition-all disabled:opacity-40"
+                                >
+                                  👁 Preview
+                                </button>
+                                <button
+                                  onClick={() => handleClientQuickGenerate(client.id, client, services)}
+                                  disabled={cGenerating || cSelected.size === 0}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc090] text-[#0d0f14] text-xs font-bold rounded-lg transition-all disabled:opacity-40"
+                                >
+                                  <Check size={13} />
+                                  {cGenerating ? 'Generating...' : 'Generate Invoice'}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => setInvGeneratingFor(null)} className="px-3 py-2 border border-[#2a2f3d] text-[#6b7280] text-xs font-semibold rounded-lg hover:text-[#e8eaf0]">
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleClientGenerate(client.id, services)}
+                                  disabled={cGenerating || cSelected.size === 0}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc090] text-[#0d0f14] text-xs font-bold rounded-lg transition-all disabled:opacity-50"
+                                >
+                                  <Check size={13} />
+                                  {cGenerating ? 'Generating...' : 'Generate Invoice'}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
 
-            {!searched ? (
-              <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl flex flex-col items-center justify-center py-20 text-center">
-                <div className="text-5xl opacity-20 mb-4">🧾</div>
-                <div className="text-sm text-[#6b7280]">Select a client and dates, then click Search Services</div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-[#6b7280]">
-                    Showing <strong className="text-[#e8eaf0]">{results.length} services</strong>
-                    {invForm.clientId && <> · {clients.find(c => c.id === invForm.clientId)?.name}</>}
-                    {results.some(s => s.invoicedAt) && (
-                      <span className="ml-2 text-[#f59e0b]">· {results.filter(s => s.invoicedAt).length} already invoiced</span>
-                    )}
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    {/* Column picker */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setInvColsOpen(o => !o)}
-                        className={`px-2 py-1 text-[10px] font-semibold border rounded-lg transition-all flex items-center gap-1 ${invColsOpen ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-[#1e2330] border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0]'}`}
-                      >
-                        <SlidersHorizontal size={10} />
-                        Columns
-                      </button>
-                      {invColsOpen && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setInvColsOpen(false)} />
-                          <div className="absolute right-0 top-8 z-20 bg-[#1a1f2e] border border-[#2a2f3d] rounded-xl shadow-2xl p-3 w-44">
-                            <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
-                            <div className="space-y-0.5">
-                              {invOrderedCols.map((col, i) => (
-                                <div key={col.id} draggable
-                                  onDragStart={() => onInvDragStart(i)}
-                                  onDragOver={e => onInvDragOver(e, i)}
-                                  onDrop={() => onInvDrop(i)}
-                                  onDragEnd={onInvDragEnd}
-                                  className={`flex items-center gap-1.5 py-0.5 rounded px-1 border transition-colors ${invDragIdx === i ? 'opacity-40' : ''} ${invDropIdx === i && invDragIdx !== i ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7]' : 'border-transparent'}`}
-                                >
-                                  <GripVertical size={11} className="text-[#4b5563] cursor-grab flex-shrink-0" />
-                                  <label className="flex items-center gap-2 cursor-pointer group flex-1 min-w-0">
-                                    <input type="checkbox" checked={invVisibleCols.has(col.id)} onChange={() => toggleInvCol(col.id)} className="accent-[#4f8ef7] flex-shrink-0" />
-                                    <span className="text-xs text-[#9ca3af] group-hover:text-[#e8eaf0] transition-colors truncate">{col.label}</span>
-                                  </label>
-                                </div>
-                              ))}
+                        {/* Inline edit form for generated invoice */}
+                        {!isGenOpen && createdInv && isEditing && cEditForm && (
+                          <div className="border-t border-[#2a2f3d] bg-[#0d0f14] p-3 space-y-3">
+                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Edit Invoice · {createdInv.invoiceNumber}</div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className={labelCls}>Status</label>
+                                <select value={cEditForm.status} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], status: e.target.value } }))} className={inputCls}>
+                                  <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option><option value="overdue">Overdue</option>
+                                </select>
+                              </div>
+                              <div><label className={labelCls}>Due Date</label><input type="date" value={cEditForm.dueDate} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], dueDate: e.target.value } }))} className={inputCls} /></div>
+                              <div><label className={labelCls}>Notes</label><input value={cEditForm.notes} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], notes: e.target.value } }))} placeholder="Notes..." className={inputCls} /></div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => setInvClientEditing(prev => ({ ...prev, [client.id]: false }))} className="px-3 py-1.5 border border-[#2a2f3d] text-[#6b7280] text-xs rounded-lg hover:text-[#e8eaf0]">Cancel</button>
+                              <button onClick={() => handleClientEditSave(client.id)} className="px-3 py-1.5 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg">Save</button>
                             </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="w-px h-4 bg-[#2a2f3d]" />
-                    <button onClick={() => toggleAll(true)}
-                      className="px-2 py-1 text-[10px] font-semibold bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-[#9ca3af] hover:text-[#e8eaf0]">☑ All</button>
-                    <button onClick={() => toggleAll(false)}
-                      className="px-2 py-1 text-[10px] font-semibold bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-[#9ca3af] hover:text-[#e8eaf0]">☐ None</button>
-                  </div>
-                </div>
-
-                {results.length === 0 ? (
-                  <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl text-center py-12 text-[#6b7280] text-xs">
-                    No services found for this criteria.
-                  </div>
-                ) : (
-                  <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-[#1e2330] border-b border-[#2a2f3d]">
-                          <th className="px-3 py-2.5 w-8">
-                            <input type="checkbox"
-                              checked={selected.size === results.filter(s => !s.invoicedAt).length && results.filter(s => !s.invoicedAt).length > 0}
-                              onChange={e => toggleAll(e.target.checked)} className="accent-[#4f8ef7]" />
-                          </th>
-                          {invVisibleOrderedCols.map(col => (
-                            <th key={col.id}
-                              onClick={() => handleInvSort(col.id)}
-                              className={`text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 cursor-pointer select-none transition-colors ${invSortKey === col.id ? 'text-[#4f8ef7]' : 'text-[#6b7280] hover:text-[#9ca3af]'}`}
-                            >
-                              <span className="flex items-center gap-1">
-                                {col.label}
-                                <span className="text-[10px] leading-none">
-                                  {invSortKey === col.id ? (invSortDir === 'asc' ? '↑' : '↓') : <span className="opacity-20">↕</span>}
-                                </span>
-                              </span>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedResults.map((s: any) => {
-                          const isInvoiced = !!s.invoicedAt
-                          return (
-                            <tr key={s.id}
-                              className={`border-t border-[#2a2f3d]/50 transition-colors ${
-                                isInvoiced ? 'opacity-40 cursor-not-allowed' : selected.has(s.id) ? 'bg-[rgba(79,142,247,0.04)]' : 'hover:bg-white/[0.02]'
-                              }`}>
-                              <td className="px-3 py-2.5">
-                                <input type="checkbox" checked={selected.has(s.id)}
-                                  onChange={() => toggleSelect(s.id, isInvoiced)} disabled={isInvoiced}
-                                  className="accent-[#4f8ef7] disabled:opacity-30 disabled:cursor-not-allowed" />
-                              </td>
-                              {invVisibleOrderedCols.map(col => (
-                                <td key={col.id}
-                                  className={getInvColTdClass(col.id)}
-                                  style={col.id === 'id' ? { color: isInvoiced ? '#6b7280' : '#4f8ef7' } : undefined}
-                                >
-                                  {col.id === 'id' ? (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); setInvDetailService(s); setInvDetailOpen(true) }}
-                                      className="font-mono font-semibold hover:underline cursor-pointer"
-                                      style={{ color: 'inherit', background: 'none', border: 'none', padding: 0 }}
-                                    >
-                                      {getInvCellContent(col.id, s, isInvoiced)}
-                                    </button>
-                                  ) : getInvCellContent(col.id, s, isInvoiced)}
-                                </td>
-                              ))}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {results.length > 0 && (
-                  <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 flex items-center gap-5 flex-wrap">
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-[#e8eaf0]">{selected.size}</div>
-                      <div className="text-[10px] text-[#6b7280]">Selected</div>
-                    </div>
-                    <div className="w-px h-8 bg-[#2a2f3d]" />
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-[#e8eaf0]">${subtotal.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#6b7280]">Subtotal</div>
-                    </div>
-                    <div className="w-px h-8 bg-[#2a2f3d]" />
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-[#f59e0b]">+${additionalFees.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#6b7280]">Add. Fees</div>
-                    </div>
-                    {parseFloat(invForm.taxRate) > 0 && (
-                      <>
-                        <div className="w-px h-8 bg-[#2a2f3d]" />
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-[#9ca3af]">${taxAmount.toFixed(2)}</div>
-                          <div className="text-[10px] text-[#6b7280]">Tax ({invForm.taxRate}%)</div>
-                        </div>
-                      </>
-                    )}
-                    <div className="w-px h-8 bg-[#2a2f3d]" />
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-[#38d9a9]">${total.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#6b7280]">TOTAL</div>
-                    </div>
-                    <div className="ml-auto flex gap-2">
-                      <button onClick={() => { setPdfInvoice(previewInvoice); setPdfOpen(true) }} disabled={selected.size === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1e2330] border border-[#2a2f3d] hover:border-[#4f8ef7] text-[#9ca3af] hover:text-[#4f8ef7] text-xs font-semibold rounded-lg transition-all disabled:opacity-50">
-                        👁 Preview
-                      </button>
-                      <button onClick={handleGenerate} disabled={generating || selected.size === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc090] text-[#0d0f14] text-xs font-bold rounded-lg transition-all disabled:opacity-50">
-                        <Check size={13} />
-                        {generating ? 'Generating...' : 'Generate Invoice'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ── Invoice History ── */}
-            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
-              {/* Header row */}
-              <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between flex-wrap gap-2">
-                <div className="text-xs font-bold text-[#e8eaf0]">📋 Invoice History</div>
-                <div className="flex gap-2 flex-wrap">
-                  {[{ key: 'all', label: 'All' }, { key: 'paid', label: 'Paid' }, { key: 'pending', label: 'Pending' }, { key: 'overdue', label: 'Overdue' }].map(f => (
-                    <button key={f.key} onClick={() => setHistFilter(f.key)}
-                      className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-all ${
-                        histFilter === f.key ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'
-                      }`}>{f.label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Filter bar */}
-              <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 flex-wrap bg-[var(--surface)]">
-                {/* General search */}
-                <div className="relative">
-                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
-                  <input
-                    type="text"
-                    value={histSearch}
-                    onChange={e => setHistSearch(e.target.value)}
-                    placeholder="Search invoices..."
-                    className="pl-7 pr-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44"
-                  />
-                </div>
-
-                {/* Client dropdown */}
-                <select
-                  value={histClientFilter}
-                  onChange={e => setHistClientFilter(e.target.value)}
-                  className="px-2.5 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
-                >
-                  <option value="all">All clients</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-
-                {/* Date range */}
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="date"
-                    value={histDateFrom}
-                    onChange={e => setHistDateFrom(e.target.value)}
-                    className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
-                  />
-                  <span className="text-[#6b7280] text-[10px]">—</span>
-                  <input
-                    type="date"
-                    value={histDateTo}
-                    onChange={e => setHistDateTo(e.target.value)}
-                    className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
-                  />
-                </div>
-
-                {/* Clear button */}
-                {histHasFilter && (
-                  <button
-                    onClick={() => { setHistFilter('all'); setHistClientFilter('all'); setHistDateFrom(''); setHistDateTo(''); setHistSearch('') }}
-                    className="flex items-center gap-1 px-2 py-1.5 bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-[10px] font-semibold rounded-lg hover:bg-[rgba(248,113,113,0.2)] transition-all"
-                  >
-                    <X size={10} /> Clear
-                  </button>
-                )}
-
-                {/* Balance toggle */}
-                <button
-                  onClick={() => setShowBalanceCol(v => !v)}
-                  className={`flex items-center gap-1 px-2 py-1.5 border rounded-lg text-[10px] font-semibold transition-all ${
-                    showBalanceCol
-                      ? 'bg-[rgba(79,142,247,0.1)] border-[rgba(79,142,247,0.25)] text-[#4f8ef7]'
-                      : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
-                  }`}
-                >
-                  Balance
-                </button>
-
-                {/* Count badge */}
-                <span className="ml-auto text-[10px] text-[#6b7280]">
-                  {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              {/* Totals strip */}
-              {filteredInvoices.length > 0 && (
-                <div className="px-4 py-2 border-b border-[var(--border)] flex items-center gap-5 flex-wrap bg-[var(--surface2)]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#6b7280]">Total invoiced:</span>
-                    <span className="text-[11px] font-bold text-[#e8eaf0] font-mono">{fmt(histTotal)}</span>
-                  </div>
-                  <div className="w-px h-4 bg-[#2a2f3d]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#6b7280]">Collected:</span>
-                    <span className="text-[11px] font-bold text-[#38d9a9] font-mono">{fmt(histPaid)}</span>
-                  </div>
-                  <div className="w-px h-4 bg-[#2a2f3d]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#6b7280]">Balance due:</span>
-                    <span className="text-[11px] font-bold font-mono" style={{ color: histBalance > 0 ? '#f87171' : '#38d9a9' }}>{fmt(histBalance)}</span>
-                  </div>
-                  <div className="w-px h-4 bg-[#2a2f3d]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#6b7280]">Pending to pay:</span>
-                    <span className="text-[11px] font-bold font-mono" style={{ color: histPending > 0 ? '#f59e0b' : '#6b7280' }}>{fmt(histPending)}</span>
-                  </div>
-                  <div className="w-px h-4 bg-[#2a2f3d]" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#6b7280]">Overdue balance:</span>
-                    <span className="text-[11px] font-bold font-mono" style={{ color: histOverdue > 0 ? '#f87171' : '#6b7280' }}>{fmt(histOverdue)}</span>
-                  </div>
-                </div>
-              )}
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#1e2330] border-b border-[#2a2f3d]">
-                    {[
-                      { label: 'Invoice #', key: 'invoiceNumber' },
-                      { label: 'Client',    key: 'client' },
-                      { label: 'Period',    key: null },
-                      { label: 'Total',     key: 'total' },
-                      { label: 'Paid',      key: 'paid' },
-                      ...(showBalanceCol ? [{ label: 'Balance', key: 'balance' }] : []),
-                      { label: 'Status',    key: 'status' },
-                      { label: 'Issued',    key: 'issuedAt' },
-                      { label: 'Paid On',   key: 'paidAt' },
-                      { label: '',          key: null },
-                    ].map(({ label, key }) => (
-                      <th
-                        key={label}
-                        onClick={key ? () => {
-                          if (histSortKey === key) setHistSortDir(d => d === 'asc' ? 'desc' : 'asc')
-                          else { setHistSortKey(key); setHistSortDir('asc') }
-                        } : undefined}
-                        className={`text-left text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 select-none ${
-                          key ? 'cursor-pointer hover:text-[#e8eaf0] transition-colors' : ''
-                        } ${histSortKey === key ? 'text-[#4f8ef7]' : 'text-[#6b7280]'}`}
-                      >
-                        {label}{key && histSortKey === key ? (histSortDir === 'asc' ? ' ↑' : ' ↓') : ''}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={showBalanceCol ? 10 : 9} className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</td></tr>
-                  ) : filteredInvoices.map((inv: any) => {
-                    const color      = INVOICE_COLORS[inv.status] || '#6b7280'
-                    const amountPaid = Number(inv.amountPaid || 0)
-                    const balanceDue = Math.max(0, Number(inv.total || 0) - amountPaid)
-                    return (
-                      <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
-                        <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
-                        <td className="px-4 py-2.5 text-xs text-[#e8eaf0]">{inv.client?.name}</td>
-                        <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.periodFrom)} — {formatDate(inv.periodTo)}</td>
-                        <td className="px-4 py-2.5 text-xs font-bold text-[#e8eaf0] font-mono">{fmt(Number(inv.total))}</td>
-                        <td className="px-4 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">{fmt(amountPaid)}</td>
-                        {showBalanceCol && (
-                          <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>
-                            {fmt(balanceDue)}
-                          </td>
                         )}
-                        <td className="px-4 py-2.5">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                            style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.issuedAt)}</td>
-                        <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: inv.paidAt ? '#38d9a9' : '#6b7280' }}>
-                          {formatDate(inv.paidAt)}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex gap-1.5">
-                            <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true) }}
-                              className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]" title="Preview">👁</button>
-                            <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true) }}
-                              className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]" title="Payments">💰</button>
-                            <button onClick={() => { setSelectedInvoice(inv); setDetailOpen(true) }}
-                              className="text-[10px] text-[#4f8ef7] hover:underline px-1.5 py-1 rounded bg-[#1e2330]" title="Edit">✏️</button>
-                            <button onClick={() => requestDeleteInvoice(inv)}
-                              className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330] hover:bg-[rgba(248,113,113,0.1)]" title="Delete">🗑</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-          </div>
+          )}
+
+          {/* ── HISTORIAL sub-tab ── */}
+          {invSubTab === 'historial' && (
+            <div className="space-y-4">
+
+              {/* Invoice search bar */}
+              <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-3">
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" />
+                  <input
+                    value={searchQ}
+                    onChange={e => { setSearchQ(e.target.value); setShowSearch(true) }}
+                    onFocus={() => setShowSearch(true)}
+                    placeholder="Search invoice # or client name..."
+                    className="w-full pl-8 pr-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
+                  />
+                  {searching2 && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#6b7280]">...</div>}
+                </div>
+                {showSearch && searchQ.length >= 2 && (
+                  <div className="mt-2 space-y-1 max-h-60 overflow-y-auto">
+                    {searchResults.length === 0 && !searching2 ? (
+                      <div className="text-center py-4 text-[#6b7280] text-xs">No results for "{searchQ}"</div>
+                    ) : searchResults.map((inv: any) => {
+                      const color = INVOICE_COLORS[inv.status] || '#6b7280'
+                      const balanceDue = Number(inv.balanceDue ?? inv.total)
+                      return (
+                        <div key={inv.id} className="flex items-center justify-between p-2.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg hover:border-[#4f8ef7] transition-all">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-[#4f8ef7] font-mono">{inv.invoiceNumber}</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
+                            </div>
+                            <div className="text-[10px] text-[#6b7280] mt-0.5">{inv.client?.name} · {formatDate(inv.issuedAt)}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-xs font-bold font-mono text-[#38d9a9]">{fmt(Number(inv.total))}</div>
+                              {balanceDue > 0 && balanceDue < Number(inv.total) && (
+                                <div className="text-[10px] font-mono text-[#f87171]">Due: {fmt(balanceDue)}</div>
+                              )}
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true); setShowSearch(false) }} className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]">👁</button>
+                              <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true); setShowSearch(false) }} className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]">💰</button>
+                              <button onClick={() => { requestDeleteInvoice(inv); setShowSearch(false) }} className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330]">🗑</button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Invoice History */}
+              <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-xs font-bold text-[#e8eaf0]">📋 Invoice History</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {[{key:'all',label:'All'},{key:'paid',label:'Paid'},{key:'pending',label:'Pending'},{key:'overdue',label:'Overdue'}].map(f => (
+                      <button key={f.key} onClick={() => setHistFilter(f.key)}
+                        className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-all ${histFilter === f.key ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'}`}>{f.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 flex-wrap bg-[var(--surface)]">
+                  <div className="relative">
+                    <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
+                    <input type="text" value={histSearch} onChange={e => setHistSearch(e.target.value)} placeholder="Search invoices..."
+                      className="pl-7 pr-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44" />
+                  </div>
+                  <select value={histClientFilter} onChange={e => setHistClientFilter(e.target.value)}
+                    className="px-2.5 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors">
+                    <option value="all">All clients</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <input type="date" value={histDateFrom} onChange={e => setHistDateFrom(e.target.value)}
+                      className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
+                    <span className="text-[#6b7280] text-[10px]">—</span>
+                    <input type="date" value={histDateTo} onChange={e => setHistDateTo(e.target.value)}
+                      className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
+                  </div>
+                  {histHasFilter && (
+                    <button onClick={() => { setHistFilter('all'); setHistClientFilter('all'); setHistDateFrom(''); setHistDateTo(''); setHistSearch('') }}
+                      className="flex items-center gap-1 px-2 py-1.5 bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-[10px] font-semibold rounded-lg hover:bg-[rgba(248,113,113,0.2)] transition-all">
+                      <X size={10} /> Clear
+                    </button>
+                  )}
+                  <button onClick={() => setShowBalanceCol(v => !v)}
+                    className={`flex items-center gap-1 px-2 py-1.5 border rounded-lg text-[10px] font-semibold transition-all ${showBalanceCol ? 'bg-[rgba(79,142,247,0.1)] border-[rgba(79,142,247,0.25)] text-[#4f8ef7]' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'}`}>
+                    Balance
+                  </button>
+                  <span className="ml-auto text-[10px] text-[#6b7280]">{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}</span>
+                </div>
+                {filteredInvoices.length > 0 && (
+                  <div className="px-4 py-2 border-b border-[var(--border)] flex items-center gap-5 flex-wrap bg-[var(--surface2)]">
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Total invoiced:</span><span className="text-[11px] font-bold text-[#e8eaf0] font-mono">{fmt(histTotal)}</span></div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Collected:</span><span className="text-[11px] font-bold text-[#38d9a9] font-mono">{fmt(histPaid)}</span></div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Balance due:</span><span className="text-[11px] font-bold font-mono" style={{ color: histBalance > 0 ? '#f87171' : '#38d9a9' }}>{fmt(histBalance)}</span></div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Pending to pay:</span><span className="text-[11px] font-bold font-mono" style={{ color: histPending > 0 ? '#f59e0b' : '#6b7280' }}>{fmt(histPending)}</span></div>
+                    <div className="w-px h-4 bg-[#2a2f3d]" />
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Overdue balance:</span><span className="text-[11px] font-bold font-mono" style={{ color: histOverdue > 0 ? '#f87171' : '#6b7280' }}>{fmt(histOverdue)}</span></div>
+                  </div>
+                )}
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#1e2330] border-b border-[#2a2f3d]">
+                      {[
+                        { label: 'Invoice #', key: 'invoiceNumber' },
+                        { label: 'Client',    key: 'client' },
+                        { label: 'Period',    key: null },
+                        { label: 'Total',     key: 'total' },
+                        { label: 'Paid',      key: 'paid' },
+                        ...(showBalanceCol ? [{ label: 'Balance', key: 'balance' }] : []),
+                        { label: 'Status',    key: 'status' },
+                        { label: 'Issued',    key: 'issuedAt' },
+                        { label: 'Paid On',   key: 'paidAt' },
+                        { label: '',          key: null },
+                      ].map(({ label, key }) => (
+                        <th key={label}
+                          onClick={key ? () => { if (histSortKey === key) setHistSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setHistSortKey(key); setHistSortDir('asc') } } : undefined}
+                          className={`text-left text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 select-none ${key ? 'cursor-pointer hover:text-[#e8eaf0] transition-colors' : ''} ${histSortKey === key ? 'text-[#4f8ef7]' : 'text-[#6b7280]'}`}>
+                          {label}{key && histSortKey === key ? (histSortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.length === 0 ? (
+                      <tr><td colSpan={showBalanceCol ? 10 : 9} className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</td></tr>
+                    ) : filteredInvoices.map((inv: any) => {
+                      const color = INVOICE_COLORS[inv.status] || '#6b7280'
+                      const amountPaid = Number(inv.amountPaid || 0)
+                      const balanceDue = Math.max(0, Number(inv.total || 0) - amountPaid)
+                      return (
+                        <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                          <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
+                          <td className="px-4 py-2.5 text-xs text-[#e8eaf0]">{inv.client?.name}</td>
+                          <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.periodFrom)} — {formatDate(inv.periodTo)}</td>
+                          <td className="px-4 py-2.5 text-xs font-bold text-[#e8eaf0] font-mono">{fmt(Number(inv.total))}</td>
+                          <td className="px-4 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">{fmt(amountPaid)}</td>
+                          {showBalanceCol && (
+                            <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>{fmt(balanceDue)}</td>
+                          )}
+                          <td className="px-4 py-2.5">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.issuedAt)}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: inv.paidAt ? '#38d9a9' : '#6b7280' }}>{formatDate(inv.paidAt)}</td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex gap-1.5">
+                              <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true) }} className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]" title="Preview">👁</button>
+                              <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true) }} className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]" title="Payments">💰</button>
+                              <button onClick={() => { setSelectedInvoice(inv); setDetailOpen(true) }} className="text-[10px] text-[#4f8ef7] hover:underline px-1.5 py-1 rounded bg-[#1e2330]" title="Edit">✏️</button>
+                              <button onClick={() => requestDeleteInvoice(inv)} className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330] hover:bg-[rgba(248,113,113,0.1)]" title="Delete">🗑</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

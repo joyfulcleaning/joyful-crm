@@ -231,8 +231,11 @@ model Client {
   frequency      Frequency?
   status         String      @default("active")
   managementId   String?
-  priceRef       Json?
-  notes          String?
+  priceRef             Json?
+  notes                String?
+  paymentTermsDays     Int?
+  defaultTaxRate       Decimal?        @db.Decimal(5, 2)
+  defaultPaymentMethod PaymentMethod?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   management     Management? @relation(fields: [managementId], references: [id])

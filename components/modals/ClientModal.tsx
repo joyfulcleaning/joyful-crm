@@ -11,6 +11,17 @@ const FREQUENCIES = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
+const PAYMENT_TERMS_OPTIONS = [
+  { label: 'Due on Receipt', days: 0 },
+  { label: 'Net 7', days: 7 },
+  { label: 'Net 15', days: 15 },
+  { label: 'Net 30', days: 30 },
+]
+
+const PAYMENT_METHOD_OPTIONS = [
+  'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft',
+]
+
 
 interface Props {
   open: boolean
@@ -45,6 +56,9 @@ export default function ClientModal({ open, onClose, onSuccess }: Props) {
     managementId: '',
     notes: '',
     priceRef: emptyPriceRef(),
+    paymentTermsDays: '' as string | number,
+    defaultTaxRate: '',
+    defaultPaymentMethod: '',
   })
 
   function loadManagements(autoSelectId?: string) {
@@ -113,6 +127,7 @@ export default function ClientModal({ open, onClose, onSuccess }: Props) {
       address: '', city: 'Fayetteville', state: 'NC', zip: '', propertyCode: '',
       frequency: 'biweekly', status: 'active', managementId: '', notes: '',
       priceRef: emptyPriceRef(),
+      paymentTermsDays: '', defaultTaxRate: '', defaultPaymentMethod: '',
     })
   }
 
@@ -472,6 +487,56 @@ export default function ClientModal({ open, onClose, onSuccess }: Props) {
               rows={3}
               className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors resize-none"
             />
+          </div>
+
+          {/* Billing Defaults */}
+          <div>
+            <div className="border-t border-[var(--border)] pt-4">
+              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-3">
+                Billing Defaults
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Payment Terms</label>
+                  <select
+                    value={form.paymentTermsDays}
+                    onChange={e => set('paymentTermsDays', e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  >
+                    <option value="">— None —</option>
+                    {PAYMENT_TERMS_OPTIONS.map(t => (
+                      <option key={t.days} value={t.days}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Tax %</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.defaultTaxRate}
+                    onChange={e => set('defaultTaxRate', e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Payment Method</label>
+                  <select
+                    value={form.defaultPaymentMethod}
+                    onChange={e => set('defaultPaymentMethod', e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors capitalize"
+                  >
+                    <option value="">— None —</option>
+                    {PAYMENT_METHOD_OPTIONS.map(m => (
+                      <option key={m} value={m} className="capitalize">{m.replace('_', ' ')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

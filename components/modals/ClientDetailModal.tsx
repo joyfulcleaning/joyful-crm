@@ -11,6 +11,17 @@ const FREQUENCIES = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
+const PAYMENT_TERMS_OPTIONS = [
+  { label: 'Due on Receipt', days: 0 },
+  { label: 'Net 7', days: 7 },
+  { label: 'Net 15', days: 15 },
+  { label: 'Net 30', days: 30 },
+]
+
+const PAYMENT_METHOD_OPTIONS = [
+  'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft',
+]
+
 interface Props {
   client: any
   open: boolean
@@ -104,12 +115,15 @@ export default function ClientDetailModal({ client, open, onClose, onSuccess }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, managementId: form.managementId || null, priceRef })
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error || `Server error ${res.status}`)
+      }
       onSuccess()
       setEditing(false)
       setForm(null)
-    } catch {
-      setError('Failed to update client. Please try again.')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update client. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -484,6 +498,77 @@ export default function ClientDetailModal({ client, open, onClose, onSuccess }: 
               />
             ) : (
               <div className="text-xs text-[var(--muted)]">{data.notes || '—'}</div>
+            )}
+          </div>
+
+          {/* Billing Defaults */}
+          <div className="border-t border-[var(--border)] pt-4">
+            <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-3">Billing Defaults</div>
+            {editing ? (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Payment Terms</label>
+                  <select
+                    value={form.paymentTermsDays ?? ''}
+                    onChange={e => set('paymentTermsDays', e.target.value === '' ? null : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  >
+                    <option value="">— None —</option>
+                    {PAYMENT_TERMS_OPTIONS.map(t => (
+                      <option key={t.days} value={t.days}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Tax %</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.defaultTaxRate ?? ''}
+                    onChange={e => set('defaultTaxRate', e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Payment Method</label>
+                  <select
+                    value={form.defaultPaymentMethod ?? ''}
+                    onChange={e => set('defaultPaymentMethod', e.target.value || null)}
+                    className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                  >
+                    <option value="">— None —</option>
+                    {PAYMENT_METHOD_OPTIONS.map(m => (
+                      <option key={m} value={m}>{m.replace('_', ' ')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <div className="text-[10px] text-[var(--muted)] mb-1">Payment Terms</div>
+                  <div className="text-xs text-[var(--text)]">
+                    {data.paymentTermsDays != null
+                      ? (PAYMENT_TERMS_OPTIONS.find(t => t.days === data.paymentTermsDays)?.label ?? `Net ${data.paymentTermsDays}`)
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-[var(--muted)] mb-1">Tax %</div>
+                  <div className="text-xs text-[var(--text)]">
+                    {data.defaultTaxRate != null ? `${data.defaultTaxRate}%` : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-[var(--muted)] mb-1">Payment Method</div>
+                  <div className="text-xs text-[var(--text)] capitalize">
+                    {data.defaultPaymentMethod?.replace('_', ' ') || '—'}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
