@@ -54,7 +54,7 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
         <td>${num}</td>
         <td>${date}</td>
         <td><strong>${unit.replace(/Bedrooms?/gi, 'BR')}</strong></td>
-        <td style="color:#6b7280">${type}</td>
+        <td>${type}</td>
         <td style="text-align:right;font-weight:700">$${fmt(Number(item.total))}</td>
       </tr>
     `
