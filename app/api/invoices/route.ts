@@ -51,6 +51,22 @@ export async function POST(request: Request) {
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 })
 
+    // Prevent duplicate invoicing: reject if any service is already linked to another invoice
+    const incomingServiceIds = (body.items || []).map((i: any) => i.serviceId).filter(Boolean) as string[]
+    if (incomingServiceIds.length > 0) {
+      const alreadyInvoiced = await prisma.invoiceItem.findFirst({
+        where: { serviceId: { in: incomingServiceIds } },
+        include: { invoice: { select: { invoiceNumber: true } } }
+      })
+      if (alreadyInvoiced) {
+        const num = alreadyInvoiced.invoice?.invoiceNumber ?? 'another invoice'
+        return NextResponse.json(
+          { error: `One or more services are already invoiced in ${num}. Delete that invoice first or deselect those services.` },
+          { status: 409 }
+        )
+      }
+    }
+
     const invoice = await prisma.invoice.create({
       data: {
         invoiceNumber: body.invoiceNumber,
