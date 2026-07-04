@@ -11,6 +11,13 @@ import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 
+function fmt12h(t?: string | null) {
+  if (!t) return '—'
+  const [h, m] = t.split(':').map(Number)
+  if (Number.isNaN(h)) return t
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
+
 const CAL_COLS = [
   { key: 'id',      label: 'ID' },
   { key: 'time',    label: 'Time' },
@@ -269,7 +276,7 @@ export default function CalendarPage() {
         servicesRef.current = data
         const mapped = data.map((s: any) => ({
           id: s.id,
-          title: `${s.serviceTime?.slice(0,5)} · ${s.client?.name?.split(' ').slice(0,2).join(' ') || 'Service'}`,
+          title: `${fmt12h(s.serviceTime)} · ${s.client?.name?.split(' ').slice(0,2).join(' ') || 'Service'}`,
           start: `${getDateStr(s.serviceDate)}T${s.serviceTime}`,
           backgroundColor: `${STATUS_COLORS[s.status]}20` || '#6b728020',
           borderColor: STATUS_COLORS[s.status] || '#6b7280',
@@ -673,7 +680,7 @@ export default function CalendarPage() {
                 {selectedServices.map((s: any) => (
                   <tr key={s.id} className="border-b border-[var(--border)] hover:bg-[var(--surface2)]">
                     {ccol('id')       && <td className="py-2 text-xs text-[#4f8ef7]" style={{ fontFamily: 'var(--font-mono)' }}>#{s.serviceNumber}</td>}
-                    {ccol('time')     && <td className="py-2 text-[var(--muted2)]">{s.serviceTime}</td>}
+                    {ccol('time')     && <td className="py-2 text-[var(--muted2)]">{fmt12h(s.serviceTime)}</td>}
                     {ccol('client')   && <td className="py-2 text-[var(--text)]">{s.client?.name}</td>}
                     {ccol('unit')     && <td className="py-2 text-[var(--muted)] text-xs">{s.unit || '—'}</td>}
                     {ccol('numericKey') && <td className="py-2 text-[var(--muted)] text-xs">{s.numericKey ? `Clave ${s.numericKey}` : '—'}</td>}

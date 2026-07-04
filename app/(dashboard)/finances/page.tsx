@@ -41,6 +41,13 @@ const INVOICE_COLORS: Record<string, string> = {
 
 const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft']
 
+function fmt12h(t?: string | null) {
+  if (!t) return '—'
+  const [h, m] = t.split(':').map(Number)
+  if (Number.isNaN(h)) return t
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
+
 const PAYMENT_TERMS = [
   { label: 'Due on Receipt', days: 0 },
   { label: 'Net 7',  days: 7  },
@@ -1086,7 +1093,7 @@ export default function FinancesPage() {
       case 'type':    return s.type
       case 'unit':    return s.unit || '—'
       case 'room':    return s.roomSize || '—'
-      case 'time':    return s.serviceTime || '—'
+      case 'time':    return fmt12h(s.serviceTime)
       case 'staff':   return s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'
       case 'price':   return `$${Number(s.basePrice).toFixed(2)}`
       case 'fee':     return Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'
@@ -2039,7 +2046,7 @@ export default function FinancesPage() {
                                       </button>
                                     </td>
                                     {batchSvcVisibleCols.has('date')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] whitespace-nowrap">{formatDate(s.serviceDate)}</td>}
-                                    {batchSvcVisibleCols.has('time')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] whitespace-nowrap">{s.serviceTime || '—'}</td>}
+                                    {batchSvcVisibleCols.has('time')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] whitespace-nowrap">{fmt12h(s.serviceTime)}</td>}
                                     {batchSvcVisibleCols.has('type')    && <td className="px-3 py-2 text-[10px] text-[#e8eaf0]">{s.type}</td>}
                                     {batchSvcVisibleCols.has('address') && <td className="px-3 py-2 text-[10px] text-[#9ca3af]">{s.address || '—'}</td>}
                                     {batchSvcVisibleCols.has('unit')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af]">{s.unit || '—'}</td>}
@@ -2512,7 +2519,7 @@ export default function FinancesPage() {
                       </td>
                       <td className="px-4 py-2.5 text-xs font-bold text-[#f87171] font-mono">{fmt(Number(rec.amount))}</td>
                       <td className="px-4 py-2.5 text-xs text-[#9ca3af] capitalize">{rec.frequency}</td>
-                      <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{rec.paymentMethod || '—'}</td>
+                      <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{rec.paymentMethod ? rec.paymentMethod.replace(/_/g, ' ') : '—'}</td>
                       <td className="px-4 py-2.5 text-xs text-[#9ca3af]">{rec.nextDueAt ? formatDate(rec.nextDueAt) : '—'}</td>
                       <td className="px-4 py-2.5">
                         <button onClick={() => toggleAutoRegister(rec)}
@@ -2589,7 +2596,7 @@ export default function FinancesPage() {
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{exp.category || '—'}</span>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-[#6b7280]">{exp.supplier || '—'}</td>
-                    <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{exp.paymentMethod || '—'}</td>
+                    <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{exp.paymentMethod ? exp.paymentMethod.replace(/_/g, ' ') : '—'}</td>
                     <td className="px-4 py-2.5 text-xs font-bold text-[#f87171] font-mono">-{fmt(Number(exp.amount))}</td>
                     <td className="px-4 py-2.5">
                       {exp.receiptUrl

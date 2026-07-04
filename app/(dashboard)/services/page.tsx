@@ -10,6 +10,13 @@ import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import CountUp from '@/components/ui/CountUp'
 
+function fmt12h(t?: string | null) {
+  if (!t) return '—'
+  const [h, m] = t.split(':').map(Number)
+  if (Number.isNaN(h)) return t
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
+
 const COLS = [
   { key: 'id',        label: 'ID' },
   { key: 'date',      label: 'Date' },
@@ -118,7 +125,7 @@ export default function ServicesPage() {
     const rows = filtered.map(s => ({
       'ID':             `#${s.serviceNumber}`,
       'Date':           s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '',
-      'Time':           s.serviceTime || '',
+      'Time':           fmt12h(s.serviceTime),
       'Client':         s.client?.name || '',
       'Address':        s.address || '',
       'Unit':           s.unit || '',
@@ -548,7 +555,7 @@ export default function ServicesPage() {
                     {col('date') && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
                       {s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'}
                     </td>}
-                    {col('time')      && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{s.serviceTime}</td>}
+                    {col('time')      && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">{fmt12h(s.serviceTime)}</td>}
                     {col('client')    && <td className="px-3 py-2.5 text-xs text-[#e8eaf0] font-medium">{s.client?.name}</td>}
                     {col('address')   && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.address || '—'}</td>}
                     {col('unit')      && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.unit || '—'}</td>}

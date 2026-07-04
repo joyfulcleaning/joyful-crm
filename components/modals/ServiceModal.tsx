@@ -596,7 +596,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
             </div>
           )}
 
-          {/* Unit + Clave Numerico + Room Size */}
+          {/* Unit + Room Size + Clave Numerico */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Unit</label>
@@ -605,16 +605,6 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                 value={form.unit}
                 onChange={e => set('unit', e.target.value)}
                 placeholder="Apt 2B, Unit 101..."
-                className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Clave Numerico</label>
-              <input
-                type="text"
-                value={form.numericKey}
-                onChange={e => set('numericKey', e.target.value)}
-                placeholder="Ej: 1234"
                 className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
               />
             </div>
@@ -629,6 +619,16 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
                 addLabel="room size"
                 capitalize={false}
                 className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Clave Numerico</label>
+              <input
+                type="text"
+                value={form.numericKey}
+                onChange={e => set('numericKey', e.target.value)}
+                placeholder="Ej: 1234"
+                className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
               />
             </div>
           </div>

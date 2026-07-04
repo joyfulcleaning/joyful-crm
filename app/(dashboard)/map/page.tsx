@@ -6,6 +6,13 @@ import { MapPin, Clock, CheckCircle, AlertCircle, CalendarDays, Loader2 } from '
 
 // ── Module-level geocode cache: persists across re-renders for the full session
 const _geocodeCache = new Map<string, [number, number] | null>()
+
+function fmt12h(t?: string | null) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  if (Number.isNaN(h)) return t
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
 let _lastGeocodeMs = 0
 
 async function geocodeAddress(address: string): Promise<[number, number] | null> {
@@ -228,7 +235,7 @@ export default function MapPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold text-[#e8eaf0] truncate">{s.client?.name}</div>
                         <div className="text-[10px] text-[#6b7280] mt-0.5 truncate">{s.address}</div>
-                        <div className="text-[10px] text-[#6b7280] mt-0.5">{s.serviceTime} · {s.type}</div>
+                        <div className="text-[10px] text-[#6b7280] mt-0.5">{fmt12h(s.serviceTime)} · {s.type}</div>
                       </div>
                       <span
                         className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
