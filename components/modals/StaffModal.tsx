@@ -30,7 +30,7 @@ const IMMIGRATION_OPTIONS = [
 
 const BLANK = {
   name: '', email: '', phone: '',
-  role: 'user', status: 'active', password: 'joyful2026',
+  role: 'user', status: 'active', password: '',
   scheduleType: 'weekly', hourlyRate: '',
   payRates: { per1BR: '', per2BR: '', per3BR: '', extraFee: '' },
   taxIdType: 'SSN', taxId: '',
@@ -48,6 +48,7 @@ export default function StaffModal({ open, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [form, setForm]       = useState({ ...BLANK })
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
 
   function set(field: string, value: any) {
     setForm(f => ({ ...f, [field]: value }))
@@ -66,16 +67,55 @@ export default function StaffModal({ open, onClose, onSuccess }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) throw new Error()
-      onSuccess(); onClose(); setForm({ ...BLANK })
-    } catch {
-      setError('Failed to create staff member. Please try again.')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || '')
+      onSuccess()
+      if (data.tempPassword) {
+        setTempPassword(data.tempPassword)
+      } else {
+        onClose(); setForm({ ...BLANK })
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create staff member. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
+  function handleDoneAfterTempPassword() {
+    setTempPassword(null); onClose(); setForm({ ...BLANK })
+  }
+
   if (!open) return null
+
+  if (tempPassword) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" />
+        <div className="relative bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md shadow-[0_32px_100px_rgba(0,0,0,0.6)] mx-4 p-6 space-y-4">
+          <div className="text-sm font-bold text-[#e8eaf0]">Staff member created</div>
+          <p className="text-xs text-[#9ca3af]">
+            Se generó una contraseña temporal aleatoria porque no pusiste una. Cópiala y compártela con el empleado ahora — no se volverá a mostrar.
+          </p>
+          <div className="flex items-center gap-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg px-3 py-2.5">
+            <code className="flex-1 text-sm font-mono text-[#38d9a9] break-all">{tempPassword}</code>
+            <button
+              onClick={() => navigator.clipboard.writeText(tempPassword)}
+              className="px-2 py-1 text-[10px] font-semibold text-[#6b7280] hover:text-[#e8eaf0] border border-[#2a2f3d] rounded-md transition-colors shrink-0"
+            >
+              Copiar
+            </button>
+          </div>
+          <button
+            onClick={handleDoneAfterTempPassword}
+            className="w-full py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            Listo
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -326,8 +366,12 @@ export default function StaffModal({ open, onClose, onSuccess }: Props) {
           <div>
             <label className={LABEL}>Temporary Password</label>
             <input type="text" value={form.password} onChange={e => set('password', e.target.value)}
-              className={INPUT} />
-            <p className="text-[10px] text-[#6b7280] mt-1">Staff member will use this to log in for the first time.</p>
+              placeholder="Leave blank to auto-generate a secure password" className={INPUT} />
+            <p className="text-[10px] text-[#6b7280] mt-1">
+              {form.password
+                ? 'Staff member will use this to log in for the first time.'
+                : 'A random one-time password will be generated and shown to you after saving.'}
+            </p>
           </div>
         </div>
 

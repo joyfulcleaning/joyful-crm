@@ -1,5 +1,6 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
+import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 
@@ -33,8 +34,17 @@ export async function POST(request: Request) {
     if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
+
+    if (body.password && body.password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+    }
+
+    // No hardcoded default — generate a random one-time password when the
+    // admin leaves the field blank, instead of every new hire sharing the
+    // same predictable temp password.
+    const generatedPassword = body.password ? null : crypto.randomBytes(9).toString('base64url')
     const bcrypt = await import('bcryptjs')
-    const hashedPassword = await bcrypt.hash(body.password || 'joyful2026', 12)
+    const hashedPassword = await bcrypt.hash(body.password || generatedPassword!, 12)
 
     const user = await prisma.user.create({
       data: {
@@ -60,7 +70,9 @@ export async function POST(request: Request) {
       }
     })
     const { password, ...safeUser } = user
-    return NextResponse.json(safeUser)
+    // Only echoed back when we generated it — an admin-supplied password is
+    // already known to them, no need to send it back over the wire again.
+    return NextResponse.json(generatedPassword ? { ...safeUser, tempPassword: generatedPassword } : safeUser)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create staff member' }, { status: 500 })
   }
