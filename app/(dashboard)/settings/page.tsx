@@ -142,6 +142,13 @@ export default function SettingsPage() {
   const [payCredsMsg, setPayCredsMsg] = useState<Record<'stripe' | 'square', string>>({ stripe: '', square: '' })
   const [payCredsSaving, setPayCredsSaving] = useState<'stripe' | 'square' | null>(null)
 
+  // Not a secret — reflects the real saved value from the general settings
+  // GET, unlike the write-only fields above.
+  const [squareEnv, setSquareEnv] = useState<'sandbox' | 'production'>('sandbox')
+  useEffect(() => {
+    setSquareEnv(cfg['integration.square.environment'] === 'production' ? 'production' : 'sandbox')
+  }, [cfg['integration.square.environment']])
+
   // Reveal-on-demand for saved payment credentials — fetched only when the
   // admin explicitly clicks "View saved values", never on page load.
   const [revealedCreds, setRevealedCreds] = useState<Record<string, string> | null>(null)
@@ -177,7 +184,7 @@ export default function SettingsPage() {
     setPayCredsMsg(prev => ({ ...prev, [provider]: '' }))
     const fields = provider === 'stripe'
       ? { stripeSecretKey: payCreds.stripeSecretKey, stripeWebhookSecret: payCreds.stripeWebhookSecret }
-      : { squareAccessToken: payCreds.squareAccessToken, squareLocationId: payCreds.squareLocationId, squareWebhookSignatureKey: payCreds.squareWebhookSignatureKey, squareWebhookUrl: payCreds.squareWebhookUrl }
+      : { squareAccessToken: payCreds.squareAccessToken, squareLocationId: payCreds.squareLocationId, squareWebhookSignatureKey: payCreds.squareWebhookSignatureKey, squareWebhookUrl: payCreds.squareWebhookUrl, squareEnvironment: squareEnv }
     try {
       const res = await fetch('/api/settings/payment-credentials', {
         method: 'POST',
@@ -742,6 +749,28 @@ export default function SettingsPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
+                          <div className="col-span-2">
+                            <label className={labelCls}>Environment</label>
+                            <div className="flex items-center bg-[#0d0f14] border border-[#2a2f3d] rounded-lg overflow-hidden w-fit">
+                              {(['sandbox', 'production'] as const).map(env => (
+                                <button
+                                  key={env}
+                                  type="button"
+                                  onClick={() => setSquareEnv(env)}
+                                  className={`px-3 py-1.5 text-[11px] font-semibold capitalize transition-colors ${
+                                    squareEnv === env ? 'bg-[#4f8ef7] text-white' : 'text-[#6b7280] hover:text-[#e8eaf0]'
+                                  }`}
+                                >
+                                  {env}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="text-[9px] text-[#6b7280] mt-1">
+                              {squareEnv === 'production'
+                                ? '⚠ Production cobra tarjetas reales. Pega las credenciales de Production de abajo y Guarda.'
+                                : 'Sandbox — usa las tarjetas de prueba de Square, no cobra dinero real.'}
+                            </div>
+                          </div>
                           <div>
                             <label className={labelCls}>Access Token</label>
                             <input type="password" placeholder={isConnected ? '•••••••••••• (guardado)' : 'EAAA...'}

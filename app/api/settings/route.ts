@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { isStripeConfigured, isSquareConfigured } from '@/lib/payments'
+import { getPaymentConfig } from '@/lib/payment-config'
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +17,10 @@ export async function GET(request: Request) {
     rows.forEach(r => { if (!r.key.startsWith('payments.')) map[r.key] = r.value })
     map['integration.stripe.connected'] = String(await isStripeConfigured())
     map['integration.square.connected'] = String(await isSquareConfigured())
+    // Not a secret (just "sandbox" or "production") — safe to surface directly,
+    // unlike the actual Square/Stripe credentials.
+    const { squareEnvironment } = await getPaymentConfig()
+    map['integration.square.environment'] = squareEnvironment === 'production' ? 'production' : 'sandbox'
     return NextResponse.json(map)
   } catch (error) {
     console.error('GET /api/settings:', error)
