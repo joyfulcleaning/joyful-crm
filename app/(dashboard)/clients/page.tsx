@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Building2, Home, Layers, Pencil, Trash2, Users } from 'lucide-react'
+import { Plus, Search, Building2, Home, Layers, Pencil, Trash2, Users, X } from 'lucide-react'
 import ClientModal from '@/components/modals/ClientModal'
 import ClientDetailModal from '@/components/modals/ClientDetailModal'
 import ManagementModal, { PRICE_FIELDS, PRIVATE_CUSTOMER_FIELDS } from '@/components/modals/ManagementModal'
@@ -63,8 +63,14 @@ function ClientsTab() {
               placeholder="Search client..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] w-48"
+              className="pl-8 pr-7 py-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] w-48"
             />
+            {search && (
+              <button type="button" onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] transition-colors">
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
         <button

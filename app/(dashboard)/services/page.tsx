@@ -422,8 +422,14 @@ export default function ServicesPage() {
               placeholder="Search services..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-48"
+              className="pl-8 pr-7 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-48"
             />
+            {search && (
+              <button type="button" onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
+                <X size={12} />
+              </button>
+            )}
           </div>
           {/* Client dropdown */}
           <div className="relative">

@@ -2254,9 +2254,15 @@ export default function FinancesPage() {
                     onChange={e => { setSearchQ(e.target.value); setShowSearch(true) }}
                     onFocus={() => setShowSearch(true)}
                     placeholder="Search invoice # or client name..."
-                    className="w-full pl-8 pr-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
+                    className="w-full pl-8 pr-7 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
                   />
                   {searching2 && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#6b7280]">...</div>}
+                  {!searching2 && searchQ && (
+                    <button type="button" onClick={() => { setSearchQ(''); setShowSearch(false) }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
                 {showSearch && searchQ.length >= 2 && (
                   <div className="mt-2 space-y-1 max-h-60 overflow-y-auto">
@@ -2309,7 +2315,13 @@ export default function FinancesPage() {
                   <div className="relative">
                     <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
                     <input type="text" value={histSearch} onChange={e => setHistSearch(e.target.value)} placeholder="Search invoices..."
-                      className="pl-7 pr-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44" />
+                      className="pl-7 pr-6 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44" />
+                    {histSearch && (
+                      <button type="button" onClick={() => setHistSearch('')}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
+                        <X size={11} />
+                      </button>
+                    )}
                   </div>
                   <select value={histClientFilter} onChange={e => setHistClientFilter(e.target.value)}
                     className="px-2.5 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors">
@@ -2570,7 +2582,13 @@ export default function FinancesPage() {
                   <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
                   <input value={expSearch} onChange={e => setExpSearch(e.target.value)}
                     placeholder="Search..."
-                    className="pl-7 pr-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-36 transition-colors" />
+                    className="pl-7 pr-6 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-36 transition-colors" />
+                  {expSearch && (
+                    <button type="button" onClick={() => setExpSearch('')}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
+                      <X size={11} />
+                    </button>
+                  )}
                 </div>
                 {/* Category filter */}
                 <select value={expCatFilter} onChange={e => setExpCatFilter(e.target.value)}
@@ -2943,6 +2961,12 @@ export default function FinancesPage() {
                 value={invSearchQ} onChange={e => setInvSearchQ(e.target.value)}
                 className="bg-transparent text-xs text-[#e8eaf0] placeholder-[#6b7280] outline-none flex-1"
               />
+              {invSearchQ && (
+                <button type="button" onClick={() => setInvSearchQ('')}
+                  className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors shrink-0">
+                  <X size={12} />
+                </button>
+              )}
             </div>
             <select value={invCatFilter} onChange={e => setInvCatFilter(e.target.value)}
               className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] px-2 py-1.5 outline-none">
@@ -3175,6 +3199,12 @@ export default function FinancesPage() {
                 value={assetSearchQ} onChange={e => setAssetSearchQ(e.target.value)}
                 className="bg-transparent text-xs text-[#e8eaf0] placeholder-[#6b7280] outline-none flex-1"
               />
+              {assetSearchQ && (
+                <button type="button" onClick={() => setAssetSearchQ('')}
+                  className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors shrink-0">
+                  <X size={12} />
+                </button>
+              )}
             </div>
             <select value={assetTypeFilter} onChange={e => setAssetTypeFilter(e.target.value)}
               className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] px-2 py-1.5 outline-none">
