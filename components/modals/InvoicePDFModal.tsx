@@ -91,6 +91,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
   const [linkError, setLinkError] = useState('')
   const [linkVisible, setLinkVisible] = useState(true)
   const [visibilitySaving, setVisibilitySaving] = useState(false)
+  const [settings, setSettings] = useState<Record<string, string>>({})
 
   const stripeLink = linkOverrides.stripe !== undefined ? linkOverrides.stripe : invoice?.paymentLinkStripe
   const squareLink = linkOverrides.square !== undefined ? linkOverrides.square : invoice?.paymentLinkSquare
@@ -158,7 +159,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
       setSent(false); setShowEmail(false); setEmailError(''); setBccEnabled(false)
       setLinkOverrides({}); setLinkError(''); setConfirmDelete(null)
       setLinkVisible(invoice?.paymentLinkVisible ?? true)
-      fetch('/api/settings').then(r => r.json()).then(s => setCompanyEmail(s['biz.email'] || '')).catch(() => {})
+      fetch('/api/settings').then(r => r.json()).then(s => { setCompanyEmail(s['biz.email'] || ''); setSettings(s) }).catch(() => {})
     }
   }, [open, invoice?.client?.email])
 
@@ -238,6 +239,8 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
     width: 18, height: 18, objectFit: 'contain', borderRadius: 4, flexShrink: 0,
   }
 
+  const cfg = (key: string, fb: string) => settings[key] || fb
+
   const paymentMethods = [
     {
       logo: (
@@ -247,23 +250,23 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
           <rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/>
         </svg>
       ),
-      label: <><span style={{ color: '#6b7280' }}>Debit / Credit Card</span> — Electronic payments include a 3% service fee</>,
+      label: <><span style={{ color: '#6b7280' }}>Debit / Credit Card</span> — {cfg('inv.pay.cardFeeNote', 'Electronic payments include a 3% service fee')}</>,
     },
     {
       logo: <img src={LOGO_ZELLE} alt="Zelle" style={logoStyle} />,
-      label: <><span style={{ color: '#6b7280' }}>Zelle</span> <strong style={{ color: '#111827' }}>@joyfulcleaningservices</strong></>,
+      label: <><span style={{ color: '#6b7280' }}>Zelle</span> <strong style={{ color: '#111827' }}>{cfg('inv.pay.zelleHandle', '@joyfulcleaningservices')}</strong></>,
     },
     {
       logo: <img src={LOGO_CASHAPP} alt="CashApp" style={logoStyle} />,
-      label: <><span style={{ color: '#6b7280' }}>Cashapp</span> <strong style={{ color: '#111827' }}>$Nathashasalcedo</strong></>,
+      label: <><span style={{ color: '#6b7280' }}>Cashapp</span> <strong style={{ color: '#111827' }}>{cfg('inv.pay.cashappHandle', '$Nathashasalcedo')}</strong></>,
     },
     {
       logo: <img src={LOGO_VENMO} alt="Venmo" style={logoStyle} />,
-      label: <><span style={{ color: '#6b7280' }}>Venmo</span> <strong style={{ color: '#111827' }}>@joyfulcleaningservices</strong></>,
+      label: <><span style={{ color: '#6b7280' }}>Venmo</span> <strong style={{ color: '#111827' }}>{cfg('inv.pay.venmoHandle', '@joyfulcleaningservices')}</strong></>,
     },
     {
       logo: <img src={LOGO_PAYPAL} alt="PayPal" style={logoStyle} />,
-      label: <><span style={{ color: '#6b7280' }}>PayPal</span> <strong style={{ color: '#111827' }}>@joyfulcleaningnc</strong></>,
+      label: <><span style={{ color: '#6b7280' }}>PayPal</span> <strong style={{ color: '#111827' }}>{cfg('inv.pay.paypalHandle', '@joyfulcleaningnc')}</strong></>,
     },
     {
       logo: (
@@ -467,12 +470,12 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
                 style={{ height: 115, width: 'auto', objectFit: 'contain' }} />
               <div>
                 <div style={joyfulFont(28, { lineHeight: 1.1, marginBottom: 4, whiteSpace: 'nowrap' })}>
-                  Joyful Cleaning Services Corp.
+                  {cfg('biz.name', 'Joyful Cleaning Services Corp.')}
                 </div>
                 <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65 }}>
-                  320 Laketree Blvd, Spring Lake NC 28390<br />
-                  (919) 322-9092 · joyfulcleaningservicescorp@gmail.com<br />
-                  joyfulcleaningservicesnc.com
+                  {cfg('biz.address', '320 Laketree Blvd')}, {cfg('biz.city', 'Spring Lake')} {cfg('biz.state', 'NC')} {cfg('biz.zip', '28390')}<br />
+                  {cfg('biz.phone', '(919) 322-9092')} · {cfg('biz.email', 'joyfulcleaningservicescorp@gmail.com')}<br />
+                  {cfg('biz.website', 'joyfulcleaningservicesnc.com')}
                 </div>
               </div>
             </div>
@@ -616,7 +619,7 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
               <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.7, maxWidth: 300, textAlign: 'center' }}>
                 {invoice.notes
                   ? <><strong>Notes:</strong><br />{invoice.notes}</>
-                  : <>Thank you for choosing Joyful Cleaning Services Corp.</>
+                  : <>{cfg('inv.footer', 'Thank you for choosing Joyful Cleaning Services Corp.')}</>
                 }
               </div>
             </div>
