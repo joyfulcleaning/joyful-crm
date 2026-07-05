@@ -46,7 +46,6 @@ const DEFAULTS: Record<string, string> = {
   'inv.pay.paypalHandle': '@joyfulcleaningnc',
   'inv.pay.cardFeeNote':  'Electronic payments include a 3% service fee',
   // Notifications
-  'notif.email':     'info@joyfulservices.com',
   'notif.newSvc':    'true',
   'notif.completed': 'true',
   'notif.paid':      'true',
