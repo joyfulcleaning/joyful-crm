@@ -71,7 +71,10 @@ export default function ServicesPage() {
   const [clientModalOpen, setClientModalOpen] = useState(false)
 
   const [sortKey, setSortKey]   = useState('serviceDate')
-  const [sortDir, setSortDir]   = useState<'asc'|'desc'>('desc')
+  const [sortDir, setSortDir]   = useState<'asc'|'desc'>('asc')
+
+  const tableBodyRef = useRef<HTMLTableSectionElement>(null)
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map())
 
   // ── Column picker ──
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(DEFAULT_VISIBLE_COLS)
@@ -260,6 +263,18 @@ export default function ServicesPage() {
     const completedUninvoiced = filtered.filter(s => s.status === 'completed' && !s.invoicedAt).length
     return { total: filtered.length, totalAmount, counts, amounts, completedRevenue: amounts.completed, completedUninvoiced }
   }, [filtered])
+
+  useEffect(() => {
+    if (loading || filtered.length === 0 || sortKey !== 'serviceDate') return
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const target = sortDir === 'asc'
+      ? filtered.find(s => (s.serviceDate ? s.serviceDate.slice(0, 10) : '') >= todayStr)
+      : filtered.find(s => (s.serviceDate ? s.serviceDate.slice(0, 10) : '') <= todayStr)
+    const targetId = target?.id ?? filtered[filtered.length - 1]?.id
+    const row = targetId ? rowRefs.current.get(targetId) : null
+    row?.scrollIntoView({ block: 'center', behavior: 'auto' })
+  }, [loading, filtered, sortKey, sortDir])
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(s => selectedIds.has(s.id))
   const someFilteredSelected = filtered.some(s => selectedIds.has(s.id))
@@ -529,7 +544,7 @@ export default function ServicesPage() {
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={tableBodyRef}>
             {loading ? (
               <tr>
                 <td colSpan={visibleCols.size + 2} className="text-center py-10 text-[#6b7280] text-xs">Loading...</td>
@@ -544,7 +559,11 @@ export default function ServicesPage() {
               filtered.map((s: any) => {
                 const color = STATUS_COLORS[s.status] || '#6b7280'
                 return (
-                  <tr key={s.id} className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.02] transition-colors whitespace-nowrap">
+                  <tr
+                    key={s.id}
+                    ref={el => { if (el) rowRefs.current.set(s.id, el); else rowRefs.current.delete(s.id) }}
+                    className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.02] transition-colors whitespace-nowrap"
+                  >
                     <td className="px-3 py-2.5 w-8">
                       <input
                         type="checkbox"
