@@ -12,6 +12,7 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
 import ErrorBanner from '@/components/ErrorBanner'
 import { fetchJsonOrThrow } from '@/lib/fetchJson'
+import { localDateStr } from '@/lib/local-date'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const ROLE_COLORS:   Record<string, string> = { admin: '#4f8ef7', user: '#a78bfa' }
@@ -83,11 +84,11 @@ export default function StaffPage() {
   const [reportTo, setReportTo]             = useState('')
 
   // Date range
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateStr()
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date(); const day = d.getDay()
     const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
-    return mon.toISOString().split('T')[0]
+    return localDateStr(mon)
   })
   const [toDate, setToDate] = useState(today)
 
@@ -624,13 +625,13 @@ export default function StaffPage() {
                     const d = new Date(); const day = d.getDay()
                     const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
                     const fri = new Date(mon); fri.setDate(mon.getDate() + 4)
-                    setFromDate(mon.toISOString().split('T')[0]); setToDate(fri.toISOString().split('T')[0])
+                    setFromDate(localDateStr(mon)); setToDate(localDateStr(fri))
                   }},
                   { label: 'Last week', fn: () => {
                     const d = new Date(); const day = d.getDay()
                     const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) - 7)
                     const fri = new Date(mon); fri.setDate(mon.getDate() + 4)
-                    setFromDate(mon.toISOString().split('T')[0]); setToDate(fri.toISOString().split('T')[0])
+                    setFromDate(localDateStr(mon)); setToDate(localDateStr(fri))
                   }},
                   { label: 'This month', fn: () => {
                     const d = new Date()

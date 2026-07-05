@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { businessToday } from './business-date'
 
 /**
  * Records a payment coming from a payment-processor webhook (Stripe/Square)
@@ -20,6 +21,8 @@ export async function recordAutomaticPayment(params: {
   const alreadyRecorded = await prisma.invoicePayment.findFirst({ where: { invoiceId, reference } })
   if (alreadyRecorded) return
 
+  const paidAt = businessToday()
+
   await prisma.invoicePayment.create({
     data: {
       invoiceId,
@@ -29,7 +32,7 @@ export async function recordAutomaticPayment(params: {
       reference,
       notes: `Auto-recorded from ${platform} webhook`,
       createdById: invoice.createdById,
-      paidAt: new Date(),
+      paidAt,
     },
   })
 
@@ -43,7 +46,7 @@ export async function recordAutomaticPayment(params: {
       amountPaid,
       balanceDue,
       status: balanceDue === 0 ? 'paid' : invoice.status,
-      paidAt: balanceDue === 0 ? new Date() : invoice.paidAt,
+      paidAt: balanceDue === 0 ? paidAt : invoice.paidAt,
     },
   })
 }

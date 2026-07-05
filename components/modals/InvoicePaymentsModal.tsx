@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Plus, Trash2, CheckCircle, DollarSign } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
+import { localDateStr } from '@/lib/local-date'
 
 interface Payment {
   id: string
@@ -51,7 +52,7 @@ export default function InvoicePaymentsModal({ invoice, open, onClose, onSuccess
     platform:  'other',
     reference: '',
     notes:     '',
-    paidAt:    new Date().toISOString().split('T')[0],
+    paidAt:    localDateStr(),
   })
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function InvoicePaymentsModal({ invoice, open, onClose, onSuccess
       await loadPayments()
       onSuccess(data.invoice)
       setShowForm(false)
-      setForm({ amount: '', method: 'zelle', platform: 'other', reference: '', notes: '', paidAt: new Date().toISOString().split('T')[0] })
+      setForm({ amount: '', method: 'zelle', platform: 'other', reference: '', notes: '', paidAt: localDateStr() })
     } catch {
       alert('Failed to add payment')
     } finally {

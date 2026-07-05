@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { businessToday } from '@/lib/business-date'
 
 export async function GET(
   request: Request,
@@ -53,7 +54,7 @@ export async function POST(
         reference:   body.reference || null,
         notes:       body.notes || null,
         createdById: user.id,
-        paidAt:      body.paidAt ? new Date(body.paidAt) : new Date(),
+        paidAt:      body.paidAt ? new Date(body.paidAt) : businessToday(),
       }
     })
 
@@ -69,7 +70,7 @@ export async function POST(
         amountPaid,
         balanceDue,
         status:  balanceDue === 0 ? 'paid' : invoice.status === 'paid' ? 'sent' : invoice.status,
-        paidAt:  balanceDue === 0 ? new Date() : null,
+        paidAt:  balanceDue === 0 ? businessToday() : null,
       },
       include: {
         client: { select: { name: true } },
@@ -128,7 +129,7 @@ export async function DELETE(
         amountPaid,
         balanceDue,
         status: balanceDue === 0 ? 'paid' : 'sent',
-        paidAt: balanceDue === 0 ? new Date() : null,
+        paidAt: balanceDue === 0 ? businessToday() : null,
       }
     })
 
