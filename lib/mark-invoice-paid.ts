@@ -1,5 +1,10 @@
 import { prisma } from './prisma'
 import { businessToday } from './business-date'
+import { notifyEvent } from './notify-admin'
+
+function fmtMoney(n: number) {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+}
 
 /**
  * Records a payment coming from a payment-processor webhook (Stripe/Square)
@@ -15,7 +20,10 @@ export async function recordAutomaticPayment(params: {
 }) {
   const { invoiceId, amount, platform, reference } = params
 
-  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } })
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: { client: { select: { name: true } } },
+  })
   if (!invoice) return
 
   const alreadyRecorded = await prisma.invoicePayment.findFirst({ where: { invoiceId, reference } })
@@ -49,4 +57,24 @@ export async function recordAutomaticPayment(params: {
       paidAt: balanceDue === 0 ? paidAt : invoice.paidAt,
     },
   })
+
+  if (balanceDue === 0) {
+    const platformLabel = platform === 'stripe' ? 'Stripe' : 'Square'
+    await notifyEvent('paid', {
+      pushTitle: 'Payment received',
+      pushBody:  `${fmtMoney(amount)} paid via ${platformLabel} — Invoice ${invoice.invoiceNumber} (${invoice.client?.name ?? 'client'})`,
+      pushData:  { type: 'invoicePaid', invoiceId },
+      emailSubject: `Payment received — Invoice ${invoice.invoiceNumber}`,
+      emailHtml: `
+        <p>A payment was just approved and recorded automatically.</p>
+        <ul>
+          <li><strong>Invoice:</strong> ${invoice.invoiceNumber}</li>
+          <li><strong>Client:</strong> ${invoice.client?.name ?? '—'}</li>
+          <li><strong>Amount:</strong> ${fmtMoney(amount)}</li>
+          <li><strong>Platform:</strong> ${platformLabel}</li>
+        </ul>
+        <p>The invoice is now fully paid.</p>
+      `,
+    })
+  }
 }
