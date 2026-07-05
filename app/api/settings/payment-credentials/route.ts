@@ -2,11 +2,31 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
-import { PAYMENT_SETTING_KEYS } from '@/lib/payment-config'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { PAYMENT_SETTING_KEYS, getPaymentConfig } from '@/lib/payment-config'
 
-// Write-only by design: there is no GET here and the values are never
-// echoed back in any response, including this one. Settings → Integrations
-// only ever displays a computed "connected" boolean (see /api/settings).
+// Reveal-on-demand: an admin can fetch the actual saved values (e.g. to
+// re-check a key while testing), but this never happens implicitly — the
+// Settings → Integrations page only calls this when the admin clicks
+// "View saved values", not on page load.
+export async function GET(request: Request) {
+  try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!checkRateLimit(`payment-creds-view:${authUser.id}`, 20, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests, try again later' }, { status: 429 })
+    }
+
+    const config = await getPaymentConfig()
+    return NextResponse.json(config)
+  } catch (error) {
+    console.error('GET /api/settings/payment-credentials:', error)
+    return NextResponse.json({ error: 'Failed to load credentials' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const authUser = await getAuthUser(request)

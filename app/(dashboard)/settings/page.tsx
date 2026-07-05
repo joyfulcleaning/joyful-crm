@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { Save, RotateCcw, CheckCircle } from 'lucide-react'
+import { Save, RotateCcw, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { applyTheme } from '@/lib/theme'
 import ErrorBanner from '@/components/ErrorBanner'
 import { StripeIcon, SquareIcon } from '@/components/icons/PaymentIcons'
@@ -142,6 +142,36 @@ export default function SettingsPage() {
   const [payCredsMsg, setPayCredsMsg] = useState<Record<'stripe' | 'square', string>>({ stripe: '', square: '' })
   const [payCredsSaving, setPayCredsSaving] = useState<'stripe' | 'square' | null>(null)
 
+  // Reveal-on-demand for saved payment credentials — fetched only when the
+  // admin explicitly clicks "View saved values", never on page load.
+  const [revealedCreds, setRevealedCreds] = useState<Record<string, string> | null>(null)
+  const [showCreds, setShowCreds] = useState<Record<'stripe' | 'square', boolean>>({ stripe: false, square: false })
+  const [revealLoading, setRevealLoading] = useState<'stripe' | 'square' | null>(null)
+  const [revealError, setRevealError] = useState('')
+
+  async function toggleReveal(provider: 'stripe' | 'square') {
+    if (showCreds[provider]) {
+      setShowCreds(prev => ({ ...prev, [provider]: false }))
+      return
+    }
+    setRevealError('')
+    if (!revealedCreds) {
+      setRevealLoading(provider)
+      try {
+        const res = await fetch('/api/settings/payment-credentials')
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar')
+        setRevealedCreds(data)
+      } catch (err: any) {
+        setRevealError(err.message || 'Error al cargar los valores guardados')
+        setRevealLoading(null)
+        return
+      }
+      setRevealLoading(null)
+    }
+    setShowCreds(prev => ({ ...prev, [provider]: true }))
+  }
+
   async function savePaymentCredentials(provider: 'stripe' | 'square') {
     setPayCredsSaving(provider)
     setPayCredsMsg(prev => ({ ...prev, [provider]: '' }))
@@ -162,6 +192,9 @@ export default function SettingsPage() {
       setPayCreds(prev => provider === 'stripe'
         ? { ...prev, stripeSecretKey: '', stripeWebhookSecret: '' }
         : { ...prev, squareAccessToken: '', squareLocationId: '', squareWebhookSignatureKey: '', squareWebhookUrl: '' })
+      // Force a re-fetch next time "View saved values" is opened, so it can't show stale data.
+      setRevealedCreds(null)
+      setShowCreds(prev => ({ ...prev, [provider]: false }))
       loadSettings()
     } catch (err: any) {
       setPayCredsMsg(prev => ({ ...prev, [provider]: err.message || 'Error al guardar' }))
@@ -751,12 +784,45 @@ export default function SettingsPage() {
                         >
                           {payCredsSaving === intg.key ? 'Guardando...' : 'Guardar'}
                         </button>
+                        {isConnected && (
+                          <button
+                            type="button"
+                            onClick={() => toggleReveal(intg.key as 'stripe' | 'square')}
+                            disabled={revealLoading !== null}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {revealLoading === intg.key
+                              ? <RotateCcw size={12} className="animate-spin" />
+                              : showCreds[intg.key as 'stripe' | 'square'] ? <EyeOff size={12} /> : <Eye size={12} />}
+                            {showCreds[intg.key as 'stripe' | 'square'] ? 'Ocultar' : 'Ver guardado'}
+                          </button>
+                        )}
                         {payCredsMsg[intg.key as 'stripe' | 'square'] && (
                           <span className={`text-[11px] ${payCredsMsg[intg.key as 'stripe' | 'square'].startsWith('✓') ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>
                             {payCredsMsg[intg.key as 'stripe' | 'square']}
                           </span>
                         )}
+                        {revealError && <span className="text-[11px] text-[#f87171]">{revealError}</span>}
                       </div>
+
+                      {showCreds[intg.key as 'stripe' | 'square'] && revealedCreds && (
+                        <div className="p-3 rounded-lg bg-[#0d0f14] border border-[#2a2f3d] space-y-1.5">
+                          <div className="text-[9px] text-[#f59e0b] font-semibold">⚠ Sensible — no compartas estos valores</div>
+                          {intg.key === 'stripe' ? (
+                            <>
+                              <div className="text-[10px] text-[#6b7280]">Secret Key: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.stripeSecretKey || '—'}</span></div>
+                              <div className="text-[10px] text-[#6b7280]">Webhook Signing Secret: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.stripeWebhookSecret || '—'}</span></div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-[10px] text-[#6b7280]">Access Token: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.squareAccessToken || '—'}</span></div>
+                              <div className="text-[10px] text-[#6b7280]">Location ID: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.squareLocationId || '—'}</span></div>
+                              <div className="text-[10px] text-[#6b7280]">Webhook Signature Key: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.squareWebhookSignatureKey || '—'}</span></div>
+                              <div className="text-[10px] text-[#6b7280]">Webhook URL: <span className="font-mono text-[#e8eaf0] break-all">{revealedCreds.squareWebhookUrl || '—'}</span></div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : !isConnected && (
                     <div className="mt-4 pt-4 border-t border-[#2a2f3d] text-[11px] text-[#9ca3af]">
