@@ -42,7 +42,7 @@ async function sendPlainEmail(to: string, subject: string, html: string) {
 async function notifyAdmin(request: { id: string; type: string; summary: string; callerName: string | null; callerPhone: string | null; callerEmail: string | null }) {
   try {
     const [emailSetting, toggleSetting] = await Promise.all([
-      prisma.setting.findUnique({ where: { key: 'notif.email' } }),
+      prisma.setting.findUnique({ where: { key: 'biz.email' } }),
       prisma.setting.findUnique({ where: { key: 'notif.aiRequest' } }),
     ])
     const adminEmail = emailSetting?.value

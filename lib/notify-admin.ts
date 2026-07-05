@@ -3,9 +3,11 @@ import { sendPushToRoles } from './push'
 
 // Fires both channels for a Settings → Notifications event: push (via
 // sendPushToRoles, respecting notif.{eventKey}.push/.roles) and email (to
-// the single address in notif.email, gated by the base notif.{eventKey}
-// toggle). Mirrors the existing aiRequest push-only pattern but adds the
-// email leg those toggles were already labeled for in the UI.
+// the company's Primary Email — Settings → Business → biz.email — gated by
+// the base notif.{eventKey} toggle). Mirrors the existing aiRequest
+// push-only pattern but adds the email leg those toggles were already
+// labeled for in the UI. All company notifications share one address by
+// design; there is no separate per-notification email setting.
 export async function notifyEvent(eventKey: string, opts: {
   pushTitle: string
   pushBody: string
@@ -18,7 +20,7 @@ export async function notifyEvent(eventKey: string, opts: {
   try {
     const [emailSetting, toSetting] = await Promise.all([
       prisma.setting.findUnique({ where: { key: `notif.${eventKey}` } }),
-      prisma.setting.findUnique({ where: { key: 'notif.email' } }),
+      prisma.setting.findUnique({ where: { key: 'biz.email' } }),
     ])
     if (emailSetting?.value !== 'true') return
     const to = toSetting?.value

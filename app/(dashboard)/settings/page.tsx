@@ -40,6 +40,11 @@ const DEFAULTS: Record<string, string> = {
   'inv.autoSend':    'false',
   'inv.footer':      'Thank you for choosing Joyful Cleaning Services Corp.! We appreciate your business.',
   'inv.methods':     'cash,zelle,venmo,check',
+  'inv.pay.zelleHandle':  '@joyfulcleaningservices',
+  'inv.pay.cashappHandle': '$Nathashasalcedo',
+  'inv.pay.venmoHandle':  '@joyfulcleaningservices',
+  'inv.pay.paypalHandle': '@joyfulcleaningnc',
+  'inv.pay.cardFeeNote':  'Electronic payments include a 3% service fee',
   // Notifications
   'notif.email':     'info@joyfulservices.com',
   'notif.newSvc':    'true',
@@ -428,6 +433,10 @@ export default function SettingsPage() {
         {tab === 'invoicing' && (
           <div className="space-y-4">
 
+            <div className="text-[10px] text-[#6b7280] px-1">
+              The company name, address, phone, email and website printed on the invoice header come from the <button type="button" onClick={() => setTab('business')} className="text-[#4f8ef7] hover:underline">Business tab</button>.
+            </div>
+
             <div className={cardCls}>
               <div className={sectionTitle}>Invoice Settings</div>
               <div className="grid grid-cols-3 gap-4">
@@ -501,6 +510,35 @@ export default function SettingsPage() {
             </div>
 
             <div className={cardCls}>
+              <div className={sectionTitle}>Payment Method Details</div>
+              <div className="text-[10px] text-[#6b7280] mb-3">
+                Handles and notes shown next to each payment method on the invoice PDF. Editing these updates every future invoice — the layout, fonts and sizes stay the same.
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Zelle Handle</label>
+                  <input value={val('inv.pay.zelleHandle')} onChange={e => set('inv.pay.zelleHandle', e.target.value)} className={inputCls} placeholder="@yourbusiness" />
+                </div>
+                <div>
+                  <label className={labelCls}>CashApp Handle</label>
+                  <input value={val('inv.pay.cashappHandle')} onChange={e => set('inv.pay.cashappHandle', e.target.value)} className={inputCls} placeholder="$yourbusiness" />
+                </div>
+                <div>
+                  <label className={labelCls}>Venmo Handle</label>
+                  <input value={val('inv.pay.venmoHandle')} onChange={e => set('inv.pay.venmoHandle', e.target.value)} className={inputCls} placeholder="@yourbusiness" />
+                </div>
+                <div>
+                  <label className={labelCls}>PayPal Handle</label>
+                  <input value={val('inv.pay.paypalHandle')} onChange={e => set('inv.pay.paypalHandle', e.target.value)} className={inputCls} placeholder="@yourbusiness" />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelCls}>Card Payment Note</label>
+                  <input value={val('inv.pay.cardFeeNote')} onChange={e => set('inv.pay.cardFeeNote', e.target.value)} className={inputCls} placeholder="Electronic payments include a 3% service fee" />
+                </div>
+              </div>
+            </div>
+
+            <div className={cardCls}>
               <div className={sectionTitle}>Invoice Footer</div>
               <div className="text-[10px] text-[#6b7280] mb-3">Text shown at the bottom of every invoice sent to clients</div>
               <textarea
@@ -523,7 +561,14 @@ export default function SettingsPage() {
               <div className={sectionTitle}>Notification Email</div>
               <div className="max-w-sm">
                 <label className={labelCls}>Send alerts to</label>
-                <input type="email" value={val('notif.email')} onChange={e => set('notif.email', e.target.value)} className={inputCls} placeholder="your@email.com" />
+                <input type="email" value={val('biz.email')} readOnly
+                  className={inputCls + ' cursor-default opacity-70'} />
+                <p className="text-[9px] text-[#6b7280] mt-1">
+                  This is the company's Primary Email — change it from{' '}
+                  <button type="button" onClick={() => setTab('business')} className="text-[#4f8ef7] hover:underline">
+                    Settings → Business
+                  </button>. Every notification (email + push) shares this one address.
+                </p>
               </div>
             </div>
 
