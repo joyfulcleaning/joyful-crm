@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return NextResponse.json(visits)
   } catch (error) {
     console.error('GET /api/estimate-visits error:', error)
-    return NextResponse.json([], { status: 200 })
+    return NextResponse.json({ error: 'Failed to load estimate visits' }, { status: 500 })
   }
 }
 

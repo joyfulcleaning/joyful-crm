@@ -1,6 +1,7 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 function calcNextDueDate(from: Date, frequency: string, dayOfMonth?: number | null): Date {
   const d = new Date(from)
@@ -91,8 +92,11 @@ export async function GET(request: Request) {
   }
 }
 
-// Manual trigger from UI (no secret needed — protected by session in calling page)
-export async function POST() {
+// Manual trigger from UI — requires a logged-in user
+export async function POST(request: Request) {
+  const authUser = await getAuthUser(request)
+  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const result = await registerDueExpenses()
     return NextResponse.json({ ok: true, ...result })

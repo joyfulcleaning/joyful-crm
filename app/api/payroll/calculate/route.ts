@@ -1,11 +1,15 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 const EXTRA_FEE_TYPES = new Set(['Deep Clean', 'Heavy Deep Clean'])
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const from = searchParams.get('from')
     const to   = searchParams.get('to')
@@ -14,8 +18,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'from and to dates required' }, { status: 400 })
     }
 
-    const fromDate = new Date(from + 'T00:00:00')
-    const toDate   = new Date(to   + 'T23:59:59')
+    const fromDate = new Date(`${from}T00:00:00.000Z`)
+    const toDate   = new Date(`${to}T23:59:59.999Z`)
 
     // Get all active staff (non-admin)
     const staffList = await prisma.user.findMany({

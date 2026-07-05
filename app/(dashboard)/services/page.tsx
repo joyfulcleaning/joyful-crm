@@ -9,6 +9,7 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import CountUp from '@/components/ui/CountUp'
+import ErrorBanner from '@/components/ErrorBanner'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -57,6 +58,7 @@ const TYPE_COLOR = '#4f8ef7'
 export default function ServicesPage() {
   const [services, setServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch]           = useState('')
   const [filter, setFilter]           = useState('all')
   const [clientFilter, setClientFilter] = useState('')
@@ -150,9 +152,13 @@ export default function ServicesPage() {
 
   function loadServices() {
     fetch('/api/services')
-      .then(res => res.json())
-      .then(data => { setServices(data); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar los servicios.')
+        return data
+      })
+      .then(data => { setServices(data); setLoadError(null); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los servicios.'); setLoading(false) })
   }
 
   useEffect(() => { loadServices() }, [])
@@ -291,6 +297,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={loadServices} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

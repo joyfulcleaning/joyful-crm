@@ -10,6 +10,8 @@ import StaffModal from '@/components/modals/StaffModal'
 import StaffDetailModal from '@/components/modals/StaffDetailModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
+import ErrorBanner from '@/components/ErrorBanner'
+import { fetchJsonOrThrow } from '@/lib/fetchJson'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const ROLE_COLORS:   Record<string, string> = { admin: '#4f8ef7', user: '#a78bfa' }
@@ -63,6 +65,8 @@ interface RowEdits {
 export default function StaffPage() {
   const [staff, setStaff]           = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
+  const [loadError, setLoadError]   = useState<string | null>(null)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [activeTab, setActiveTab]   = useState('team')
   const [modalOpen, setModalOpen]   = useState(false)
   const [selectedMember, setSelectedMember] = useState<any>(null)
@@ -118,22 +122,21 @@ export default function StaffPage() {
 
   // ── Loaders ──────────────────────────────────────────────────────────────────
   function loadStaff() {
-    fetch('/api/staff')
-      .then(r => r.json())
+    fetchJsonOrThrow('/api/staff')
       .then(d => {
         setStaff(d)
+        setLoadError(null)
         setLoading(false)
         setSelectedMember((prev: any) => prev ? (d.find((s: any) => s.id === prev.id) ?? prev) : null)
       })
-      .catch(() => setLoading(false))
+      .catch((err) => { setLoadError(err.message || 'No se pudo cargar el staff.'); setLoading(false) })
   }
 
   function loadHistory() {
     setHistoryLoading(true)
-    fetch('/api/payroll')
-      .then(r => r.json())
-      .then(d => { setPayrollRecords(d); setHistoryLoading(false) })
-      .catch(() => setHistoryLoading(false))
+    fetchJsonOrThrow('/api/payroll')
+      .then(d => { setPayrollRecords(d); setHistoryError(null); setHistoryLoading(false) })
+      .catch((err) => { setHistoryError(err.message || 'No se pudo cargar el historial de payroll.'); setHistoryLoading(false) })
   }
 
   useEffect(() => { loadStaff() }, [])
@@ -528,6 +531,7 @@ export default function StaffPage() {
       {/* ── Team Tab ─────────────────────────────────────────────────────────── */}
       {activeTab === 'team' && (
         <div className="grid grid-cols-4 gap-3">
+          {loadError && <div className="col-span-4"><ErrorBanner message={loadError} onRetry={loadStaff} /></div>}
           {loading ? (
             <div className="col-span-4 text-center py-10 text-[#6b7280] text-xs">Loading...</div>
           ) : (
@@ -594,6 +598,7 @@ export default function StaffPage() {
       {/* ── Payroll Tab ───────────────────────────────────────────────────────── */}
       {activeTab === 'payroll' && (
         <div className="space-y-4">
+          {historyError && <ErrorBanner message={historyError} onRetry={loadHistory} />}
 
           {/* ── Date range + Calculate ───────────────────────────────────────── */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-5">

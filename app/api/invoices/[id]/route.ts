@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const invoice = await prisma.invoice.findUnique({
       where: { id },
@@ -44,6 +48,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const body = await request.json()
 
@@ -56,6 +63,7 @@ export async function PATCH(
       ...(body.taxRate            !== undefined && { taxRate:            parseFloat(body.taxRate) }),
       ...(body.paymentLinkStripe  !== undefined && { paymentLinkStripe:  body.paymentLinkStripe }),
       ...(body.paymentLinkSquare  !== undefined && { paymentLinkSquare:  body.paymentLinkSquare }),
+      ...(body.paymentLinkVisible !== undefined && { paymentLinkVisible: !!body.paymentLinkVisible }),
       ...(body.emailSentAt        !== undefined && { emailSentAt:        body.emailSentAt ? new Date(body.emailSentAt) : null }),
       ...(body.issuedAt           !== undefined && { issuedAt:           body.issuedAt ? new Date(body.issuedAt + 'T12:00:00.000Z') : new Date() }),
     }
@@ -98,6 +106,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
 
     // Desvincula los servicios facturados antes de borrar

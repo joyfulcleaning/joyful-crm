@@ -15,6 +15,6 @@ export async function GET(request: Request) {
     return NextResponse.json(requests)
   } catch (error) {
     console.error('GET /api/ai-requests error:', error)
-    return NextResponse.json([], { status: 200 })
+    return NextResponse.json({ error: 'Failed to load AI requests' }, { status: 500 })
   }
 }

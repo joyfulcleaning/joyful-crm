@@ -1,9 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authUser = await getAuthUser(_)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const management = await prisma.management.findUnique({
       where: { id },
@@ -18,6 +22,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const body = await request.json()
     const management = await prisma.management.update({
@@ -36,6 +43,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authUser = await getAuthUser(_)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     await prisma.management.delete({ where: { id } })
     return NextResponse.json({ ok: true })

@@ -7,6 +7,7 @@ import {
   Users, DollarSign, Package, Building2, RotateCcw,
   CheckCircle, Layers, ClipboardList, UserCheck,
 } from 'lucide-react'
+import ErrorBanner from '@/components/ErrorBanner'
 
 // ─── Date helpers ────────────────────────────────────────────────
 const TODAY = new Date()
@@ -403,31 +404,36 @@ export default function ExportPage() {
     estimates: [], staff: [], payroll: [], invoice_payments: [], recurring_expenses: [], management: [],
   })
   const [loading,   setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
   const [done,      setDone]      = useState<string[]>([])
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/services').then(r => r.json()).catch(() => []),
-      fetch('/api/clients').then(r => r.json()).catch(() => []),
-      fetch('/api/invoices').then(r => r.json()).catch(() => []),
-      fetch('/api/expenses').then(r => r.json()).catch(() => []),
-      fetch('/api/inventory').then(r => r.json()).catch(() => []),
-      fetch('/api/assets').then(r => r.json()).catch(() => []),
-      fetch('/api/estimates').then(r => r.json()).catch(() => []),
-      fetch('/api/staff').then(r => r.json()).catch(() => []),
-      fetch('/api/payroll').then(r => r.json()).catch(() => []),
-      fetch('/api/invoice-payments').then(r => r.json()).catch(() => []),
-      fetch('/api/recurring-expenses').then(r => r.json()).catch(() => []),
-      fetch('/api/management').then(r => r.json()).catch(() => []),
-    ]).then(([
-      services, clients, invoices, expenses, inventory, assets,
-      estimates, staff, payroll, invoice_payments, recurring_expenses, management,
-    ]) => {
-      setRaw({ services, clients, invoices, expenses, inventory, assets, estimates, staff, payroll, invoice_payments, recurring_expenses, management })
+  function loadAll() {
+    setLoading(true)
+    const endpoints: [string, string][] = [
+      ['services', '/api/services'], ['clients', '/api/clients'], ['invoices', '/api/invoices'],
+      ['expenses', '/api/expenses'], ['inventory', '/api/inventory'], ['assets', '/api/assets'],
+      ['estimates', '/api/estimates'], ['staff', '/api/staff'], ['payroll', '/api/payroll'],
+      ['invoice_payments', '/api/invoice-payments'], ['recurring_expenses', '/api/recurring-expenses'],
+      ['management', '/api/management'],
+    ]
+    const failed: string[] = []
+    Promise.all(endpoints.map(([key, url]) =>
+      fetch(url)
+        .then(async res => {
+          const data = await res.json()
+          if (!res.ok) throw new Error()
+          return [key, Array.isArray(data) ? data : []] as const
+        })
+        .catch(() => { failed.push(key); return [key, []] as const })
+    )).then((results) => {
+      setRaw(Object.fromEntries(results) as unknown as RawData)
+      setLoadError(failed.length > 0 ? `No se pudo cargar: ${failed.join(', ')}. Los datos exportados podrían estar incompletos.` : null)
       setLoading(false)
     })
-  }, [])
+  }
+
+  useEffect(() => { loadAll() }, [])
 
   const getRange = useCallback((): { from: Date; to: Date } => {
     if (preset === 'custom' && customFrom && customTo) {
@@ -541,6 +547,7 @@ export default function ExportPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={loadAll} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
-import { X, Download, FileText, AlertCircle, CheckCircle, Send, Loader2, Mail } from 'lucide-react'
+import { X, Download, FileText, AlertCircle, CheckCircle, Send, Loader2, Mail, Trash2 } from 'lucide-react'
+import { StripeIcon, SquareIcon } from '@/components/icons/PaymentIcons'
 
 // ── Logos embebidos en base64 ──
 const LOGO_VENMO   = 'data:image/png;base64,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'
@@ -83,11 +84,80 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
   const [emailError, setEmailError] = useState('')
   const [bccEnabled, setBccEnabled] = useState(false)
   const [companyEmail, setCompanyEmail] = useState('')
+  const [linkOverrides, setLinkOverrides] = useState<{ stripe?: string | null; square?: string | null }>({})
+  const [generatingLink, setGeneratingLink] = useState<'stripe' | 'square' | null>(null)
+  const [deletingLink, setDeletingLink] = useState<'stripe' | 'square' | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<'stripe' | 'square' | null>(null)
+  const [linkError, setLinkError] = useState('')
+  const [linkVisible, setLinkVisible] = useState(true)
+  const [visibilitySaving, setVisibilitySaving] = useState(false)
+
+  const stripeLink = linkOverrides.stripe !== undefined ? linkOverrides.stripe : invoice?.paymentLinkStripe
+  const squareLink = linkOverrides.square !== undefined ? linkOverrides.square : invoice?.paymentLinkSquare
+
+  async function toggleLinkVisible() {
+    const next = !linkVisible
+    setLinkVisible(next)
+    setVisibilitySaving(true)
+    try {
+      await fetch(`/api/invoices/${invoice.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentLinkVisible: next }),
+      })
+    } catch {
+      setLinkVisible(!next) // revert on failure
+    } finally {
+      setVisibilitySaving(false)
+    }
+  }
+
+  async function generatePaymentLink(provider: 'stripe' | 'square') {
+    setGeneratingLink(provider)
+    setLinkError('')
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/payment-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'No se pudo generar el link')
+      setLinkOverrides(prev => ({ ...prev, [provider]: data.url }))
+    } catch (err: any) {
+      setLinkError(err.message || 'No se pudo generar el link')
+    } finally {
+      setGeneratingLink(null)
+    }
+  }
+
+  async function deletePaymentLink(provider: 'stripe' | 'square') {
+    if (confirmDelete !== provider) { setConfirmDelete(provider); return }
+    setConfirmDelete(null)
+    setDeletingLink(provider)
+    setLinkError('')
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/payment-link`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'No se pudo eliminar el link')
+      setLinkOverrides(prev => ({ ...prev, [provider]: null }))
+    } catch (err: any) {
+      setLinkError(err.message || 'No se pudo eliminar el link')
+    } finally {
+      setDeletingLink(null)
+    }
+  }
 
   useEffect(() => {
     if (open && invoice?.client?.email) setEmailTo(invoice.client.email)
     if (open) {
       setSent(false); setShowEmail(false); setEmailError(''); setBccEnabled(false)
+      setLinkOverrides({}); setLinkError(''); setConfirmDelete(null)
+      setLinkVisible(invoice?.paymentLinkVisible ?? true)
       fetch('/api/settings').then(r => r.json()).then(s => setCompanyEmail(s['biz.email'] || '')).catch(() => {})
     }
   }, [open, invoice?.client?.email])
@@ -242,6 +312,82 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
               </button>
             </div>
           </div>
+
+          {/* ── Payment link row ── */}
+          {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
+            <div className="flex items-center gap-2 px-6 py-2.5 border-b border-[#2a2f3d] bg-[#0d0f14] flex-wrap">
+              <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mr-1">Payment Link</span>
+              <button
+                onClick={() => generatePaymentLink('stripe')}
+                disabled={generatingLink !== null}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg border border-[#2a2f3d] text-[#94a3b8] hover:text-[#e8eaf0] hover:border-[#635bff] transition-all disabled:opacity-50"
+              >
+                {generatingLink === 'stripe' ? <Loader2 size={12} className="animate-spin" /> : <StripeIcon size={13} />}
+                {stripeLink ? 'Regenerate Stripe' : 'Generate Stripe'}
+              </button>
+              {stripeLink && (
+                <button
+                  onClick={() => deletePaymentLink('stripe')}
+                  onBlur={() => setConfirmDelete(null)}
+                  disabled={deletingLink !== null}
+                  title="Delete Stripe payment link"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-all disabled:opacity-50 ${
+                    confirmDelete === 'stripe' ? 'border-[#f87171] text-[#f87171] bg-[rgba(248,113,113,0.08)]' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#f87171] hover:border-[#f87171]'
+                  }`}
+                >
+                  {deletingLink === 'stripe' ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  {confirmDelete === 'stripe' ? 'Confirm?' : ''}
+                </button>
+              )}
+              <button
+                onClick={() => generatePaymentLink('square')}
+                disabled={generatingLink !== null}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg border border-[#2a2f3d] text-[#94a3b8] hover:text-[#e8eaf0] hover:border-[#38d9a9] transition-all disabled:opacity-50"
+              >
+                {generatingLink === 'square' ? <Loader2 size={12} className="animate-spin" /> : <SquareIcon size={13} />}
+                {squareLink ? 'Regenerate Square' : 'Generate Square'}
+              </button>
+              {squareLink && (
+                <button
+                  onClick={() => deletePaymentLink('square')}
+                  onBlur={() => setConfirmDelete(null)}
+                  disabled={deletingLink !== null}
+                  title="Delete Square payment link"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-all disabled:opacity-50 ${
+                    confirmDelete === 'square' ? 'border-[#f87171] text-[#f87171] bg-[rgba(248,113,113,0.08)]' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#f87171] hover:border-[#f87171]'
+                  }`}
+                >
+                  {deletingLink === 'square' ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  {confirmDelete === 'square' ? 'Confirm?' : ''}
+                </button>
+              )}
+
+              {(stripeLink || squareLink) && (
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-[#2a2f3d]">
+                  <span className="text-[10px] text-[#94a3b8]">Show on PDF/Email</span>
+                  <button
+                    type="button"
+                    onClick={toggleLinkVisible}
+                    disabled={visibilitySaving}
+                    className={`rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${linkVisible ? 'bg-[#38d9a9]' : 'bg-[#2a2f3d]'}`}
+                    style={{ width: 32, height: 18 }}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all"
+                      style={{ left: linkVisible ? 16 : 2 }}
+                    />
+                  </button>
+                </div>
+              )}
+
+              {(stripeLink || squareLink) && !linkError && (
+                <span className="text-[10px] ml-1" style={{ color: linkVisible ? '#38d9a9' : '#94a3b8' }}>
+                  {linkVisible ? '✓ Visible on PDF, email and download' : '○ Hidden — link saved but won\'t show on PDF/email'}
+                </span>
+              )}
+              {linkError && <span className="text-[10px] text-[#f87171] ml-1">{linkError}</span>}
+            </div>
+          )}
 
           {/* ── Email form panel ── */}
           {showEmail && (
@@ -432,17 +578,8 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
 
             {/* ══ PAYMENT INSTRUCTIONS ══ */}
             <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 7, padding: '8px 12px', marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Payment Instructions
-                </div>
-                {(invoice.paymentLinkStripe || invoice.paymentLinkSquare) && (
-                  <a href={invoice.paymentLinkStripe || invoice.paymentLinkSquare}
-                     target="_blank" rel="noreferrer"
-                     style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 16px', background: '#635bff', color: '#fff', textDecoration: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                    Pay Online
-                  </a>
-                )}
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                Payment Instructions
               </div>
               <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -453,14 +590,22 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
                     </div>
                   ))}
                 </div>
-                {(invoice.paymentLinkStripe || invoice.paymentLinkSquare) && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                {linkVisible && (stripeLink || squareLink) && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 18 }}>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(invoice.paymentLinkStripe || invoice.paymentLinkSquare)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(stripeLink || squareLink)}`}
                       alt="QR Code"
-                      style={{ width: 86, height: 86, borderRadius: 6, border: '1px solid #e5e7eb', padding: 3, background: '#fff' }}
+                      style={{ width: 130, height: 130, borderRadius: 8, border: '1px solid #e5e7eb', padding: 4, background: '#fff' }}
                     />
-                    <span style={{ fontSize: 9, color: '#9ca3af' }}>Scan to pay</span>
+                    <a href={stripeLink || squareLink}
+                       target="_blank" rel="noreferrer"
+                       style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 22px', background: '#635bff', color: '#fff', textDecoration: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700 }}>
+                      Pay Online
+                    </a>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#9ca3af' }}>
+                      {stripeLink ? <StripeIcon size={10} /> : <SquareIcon size={10} />}
+                      <span>Paid via {stripeLink ? 'Stripe' : 'Square'}</span>
+                    </div>
                   </div>
                 )}
               </div>

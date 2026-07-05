@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const body = await request.json()
 
@@ -40,7 +44,8 @@ export async function PATCH(
         notes:                 body.notes                 ?? null,
       }
     })
-    return NextResponse.json(user)
+    const { password, ...safeUser } = user
+    return NextResponse.json(safeUser)
   } catch (error) {
     console.error('Error updating staff:', error)
     return NextResponse.json({ error: 'Failed to update staff member' }, { status: 500 })
@@ -52,12 +57,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const user = await prisma.user.findUnique({
       where: { id }
     })
     if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json(user)
+    const { password, ...safeUser } = user
+    return NextResponse.json(safeUser)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch staff member' }, { status: 500 })
   }

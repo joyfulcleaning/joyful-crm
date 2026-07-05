@@ -1,9 +1,13 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const now = new Date()
 
@@ -14,8 +18,8 @@ export async function GET(request: Request) {
     const fromParam = searchParams.get('from')
     const toParam   = searchParams.get('to')
     if (fromParam && toParam) {
-      from = new Date(fromParam)
-      to   = new Date(toParam + 'T23:59:59')
+      from = new Date(`${fromParam}T00:00:00.000Z`)
+      to   = new Date(`${toParam}T23:59:59.999Z`)
       days = Math.max(1, Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)))
     } else {
       days = Math.min(Math.max(parseInt(searchParams.get('days') || '30'), 7), 365)

@@ -1,25 +1,27 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/mobile-auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const assets = await prisma.asset.findMany({
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(assets)
   } catch (error) {
     console.error('GET /api/assets:', error)
-    return NextResponse.json([], { status: 200 })
+    return NextResponse.json({ error: 'Failed to load assets' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     const asset = await prisma.asset.create({

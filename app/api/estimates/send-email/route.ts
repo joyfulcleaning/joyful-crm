@@ -2,9 +2,13 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import { generateEstimatePDF, buildEmailHtml, EstimateData } from '@/lib/estimate-pdf'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function POST(req: Request) {
   try {
+    const authUser = await getAuthUser(req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const estimate: EstimateData = await req.json()
 
     if (!estimate.clientEmail) {

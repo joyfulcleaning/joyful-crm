@@ -6,11 +6,14 @@ import ClientModal from '@/components/modals/ClientModal'
 import ClientDetailModal from '@/components/modals/ClientDetailModal'
 import ManagementModal, { PRICE_FIELDS, PRIVATE_CUSTOMER_FIELDS } from '@/components/modals/ManagementModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
+import ErrorBanner from '@/components/ErrorBanner'
+import { fetchJsonOrThrow } from '@/lib/fetchJson'
 
 // ─── Clients Tab ──────────────────────────────────────────────────────────────
 function ClientsTab() {
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('active')
   const [modalOpen, setModalOpen] = useState(false)
@@ -18,14 +21,14 @@ function ClientsTab() {
   const [detailOpen, setDetailOpen] = useState(false)
 
   function loadClients() {
-    fetch('/api/clients')
-      .then(res => res.json())
+    fetchJsonOrThrow('/api/clients')
       .then(data => {
         setClients(data)
+        setLoadError(null)
         setLoading(false)
         setSelectedClient((prev: any) => prev ? (data.find((c: any) => c.id === prev.id) ?? prev) : null)
       })
-      .catch(() => setLoading(false))
+      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los clientes.'); setLoading(false) })
   }
 
   useEffect(() => { loadClients() }, [])
@@ -49,6 +52,7 @@ function ClientsTab() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={loadClients} />}
       {/* Actions bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -189,16 +193,16 @@ function ClientsTab() {
 function ManagementTab() {
   const [managements, setManagements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
 
   function loadManagements() {
-    fetch('/api/management')
-      .then(r => r.json())
-      .then(data => { setManagements(Array.isArray(data) ? data : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    fetchJsonOrThrow('/api/management')
+      .then(data => { setManagements(Array.isArray(data) ? data : []); setLoadError(null); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los managements.'); setLoading(false) })
   }
 
   useEffect(() => { loadManagements() }, [])
@@ -214,6 +218,7 @@ function ManagementTab() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={loadManagements} />}
       <div className="flex items-center justify-end">
         <button
           onClick={() => { setEditing(null); setModalOpen(true) }}

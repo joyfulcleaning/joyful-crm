@@ -1,11 +1,13 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/mobile-auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const recurring = await prisma.recurringExpense.findMany({
       where:   { isActive: true },
       orderBy: { createdAt: 'desc' },
@@ -13,14 +15,14 @@ export async function GET() {
     return NextResponse.json(recurring)
   } catch (error) {
     console.error('GET /api/recurring-expenses:', error)
-    return NextResponse.json([], { status: 200 })
+    return NextResponse.json({ error: 'Failed to load recurring expenses' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
 

@@ -19,14 +19,19 @@ export async function GET(request: Request) {
     const staff = await prisma.user.findMany({
       orderBy: { name: 'asc' }
     })
-    return NextResponse.json(staff)
+    // Never ship password hashes to the browser, even for admins
+    return NextResponse.json(staff.map(({ password, ...rest }) => rest))
   } catch (error) {
-    return NextResponse.json([], { status: 200 })
+    console.error('GET /api/staff:', error)
+    return NextResponse.json({ error: 'Failed to load staff' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await request.json()
     const bcrypt = await import('bcryptjs')
     const hashedPassword = await bcrypt.hash(body.password || 'joyful2026', 12)
@@ -54,7 +59,8 @@ export async function POST(request: Request) {
         notes:                 body.notes                 || null,
       }
     })
-    return NextResponse.json(user)
+    const { password, ...safeUser } = user
+    return NextResponse.json(safeUser)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create staff member' }, { status: 500 })
   }

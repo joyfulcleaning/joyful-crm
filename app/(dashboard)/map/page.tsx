@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin, Clock, CheckCircle, AlertCircle, CalendarDays, Loader2 } from 'lucide-react'
+import ErrorBanner from '@/components/ErrorBanner'
 
 // ── Module-level geocode cache: persists across re-renders for the full session
 const _geocodeCache = new Map<string, [number, number] | null>()
@@ -64,6 +65,7 @@ const STATUS_ICONS: Record<string, any> = {
 
 export default function MapPage() {
   const [services, setServices] = useState<any[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState<any | null>(null)
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'))
@@ -72,12 +74,18 @@ export default function MapPage() {
   const [geoServices, setGeoServices] = useState<any[]>([])
   const [geocoding, setGeocoding] = useState(false)
 
-  useEffect(() => {
+  function loadServices() {
     fetch('/api/services')
-      .then(res => res.json())
-      .then(data => setServices(data))
-      .catch(() => setServices([]))
-  }, [])
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar los servicios.')
+        return data
+      })
+      .then(data => { setServices(data); setLoadError(null) })
+      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los servicios.'); setServices([]) })
+  }
+
+  useEffect(() => { loadServices() }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -127,6 +135,7 @@ export default function MapPage() {
 
   return (
     <div className="flex flex-col h-full gap-0 -m-6">
+      {loadError && <div className="px-6 pt-4"><ErrorBanner message={loadError} onRetry={loadServices} /></div>}
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2f3d] flex-shrink-0">
         <div>

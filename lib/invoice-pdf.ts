@@ -1,5 +1,6 @@
 import chromium from '@sparticuz/chromium'
 import puppeteer from 'puppeteer-core'
+import QRCode from 'qrcode'
 import fs from 'node:fs'
 import nodePath from 'node:path'
 
@@ -56,11 +57,19 @@ export interface InvoiceData {
   items:                InvoiceItemData[]
   paymentLinkStripe?:   string | null
   paymentLinkSquare?:   string | null
+  paymentLinkVisible?:  boolean
 }
+
+const STRIPE_ICON_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#635BFF" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>'
+const SQUARE_ICON_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#3E4348" xmlns="http://www.w3.org/2000/svg"><path d="M4.01 0A4.01 4.01 0 000 4.01v15.98c0 2.21 1.8 4 4.01 4.01h15.98C22.2 24 24 22.2 24 19.99V4A4.01 4.01 0 0019.99 0H4zm1.62 4.36h12.74c.7 0 1.26.57 1.26 1.27v12.74c0 .7-.56 1.27-1.26 1.27H5.63c-.7 0-1.26-.57-1.26-1.27V5.63a1.27 1.27 0 011.26-1.27zm3.83 4.35a.73.73 0 00-.73.73v5.09c0 .4.32.72.72.72h5.1a.73.73 0 00.73-.72V9.44a.73.73 0 00-.73-.73h-5.1Z"/></svg>'
 
 export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> {
   const fontBase64  = fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful.ttf')).toString('base64')
   const logoDataUrl = `data:image/png;base64,${fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful_logo_transparent.png')).toString('base64')}`
+
+  const paymentLink = invoice.paymentLinkVisible !== false ? (invoice.paymentLinkStripe || invoice.paymentLinkSquare || '') : ''
+  const paymentProvider: 'stripe' | 'square' | null = !paymentLink ? null : invoice.paymentLinkStripe ? 'stripe' : 'square'
+  const qrDataUrl = paymentLink ? await QRCode.toDataURL(paymentLink, { width: 160, margin: 1 }) : ''
 
   const sortedItems = [...invoice.items].sort((a, b) => {
     const da = a.serviceDate || ''
@@ -193,9 +202,8 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     <div class="total-final"><span>TOTAL</span><span class="total-amount">$${fmt(Number(invoice.total))}</span></div>
   </div>
   <div class="payment-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div class="label" style="margin-bottom:0">Payment Instructions</div>
-    </div>
+    <div class="label" style="margin-bottom:8px">Payment Instructions</div>
+    <div style="display:flex;gap:14px;align-items:flex-start"><div style="flex:1">
     <div class="payment-row">
       <svg width="18" height="18" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg>
       <span><strong>Debit / Credit Card</strong> — Electronic payments include a 3% service fee</span>
@@ -207,6 +215,13 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     <div class="payment-row">
       <svg width="18" height="18" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" stroke-width="1.5"/></svg>
       <span><strong>Cash or Check</strong></span>
+    </div>
+    </div>
+    ${qrDataUrl ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;margin-top:18px">
+      <img src="${qrDataUrl}" alt="QR Code" style="width:130px;height:130px;border-radius:8px;border:1px solid #e5e7eb;padding:4px;background:#fff"/>
+      <a href="${paymentLink}" style="display:inline-flex;align-items:center;padding:7px 22px;background:#635bff;color:#fff;text-decoration:none;border-radius:7px;font-size:12px;font-weight:700">Pay Online</a>
+      <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#9ca3af">${paymentProvider === 'stripe' ? STRIPE_ICON_SVG : SQUARE_ICON_SVG}<span>Paid via ${paymentProvider === 'stripe' ? 'Stripe' : 'Square'}</span></div>
+    </div>` : ''}
     </div>
   </div>
   <div class="footer">

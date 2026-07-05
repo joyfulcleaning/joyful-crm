@@ -10,6 +10,7 @@ import { Copy, Pencil, SlidersHorizontal, ChevronLeft, ChevronRight, Link2, Chec
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
+import ErrorBanner from '@/components/ErrorBanner'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -107,6 +108,7 @@ export default function CalendarPage() {
   const [services, setServices] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [estimateVisits, setEstimateVisits] = useState<any[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedVisits, setSelectedVisits] = useState<any[]>([])
   const [showEstimateVisits, setShowEstimateVisits] = useState<boolean>(initShowEstimateVisits)
   const [viewStart, setViewStart] = useState<Date | null>(null)
@@ -270,8 +272,13 @@ export default function CalendarPage() {
     const range = from && to ? { from, to } : viewRangeRef.current
     const qs = range ? `?from=${range.from}&to=${range.to}&cal=1` : '?cal=1'
     fetch(`/api/services${qs}`, { cache: 'no-store' })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar los servicios del calendario.')
+        return data
+      })
       .then(data => {
+        setLoadError(null)
         setServices(data)
         servicesRef.current = data
         const mapped = data.map((s: any) => ({
@@ -293,7 +300,7 @@ export default function CalendarPage() {
         }
         injectBadges()
       })
-      .catch(() => setEvents([]))
+      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los servicios del calendario.'); setEvents([]) })
   }
 
   function loadExpenses() {
@@ -428,6 +435,7 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={() => loadServices()} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

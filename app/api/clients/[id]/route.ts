@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const body = await request.json()
 
@@ -89,6 +93,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(_request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const client = await prisma.client.findUnique({ where: { id } })
     if (!client) return NextResponse.json({ error: 'Not found' }, { status: 404 })

@@ -1,11 +1,13 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
     const search   = searchParams.get('search')
@@ -37,23 +39,15 @@ export async function GET(request: Request) {
     return NextResponse.json(expenses)
   } catch (error) {
     console.error('GET /api/expenses:', error)
-    return NextResponse.json([], { status: 200 })
+    return NextResponse.json({ error: 'Failed to load expenses' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    let createdById: string
-    if (session?.user) {
-      const u = await prisma.user.findUnique({ where: { email: session.user.email! }, select: { id: true } })
-      createdById = u?.id ?? ''
-    } else {
-      const admin = await prisma.user.findUnique({ where: { email: 'admin@joyfulcleaning.com' }, select: { id: true } })
-      createdById = admin?.id ?? ''
-    }
-    if (!createdById) return NextResponse.json({ error: 'User not found' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const createdById = authUser.id
 
     const body = await request.json()
     const expense = await prisma.expense.create({

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import AiRequestModal from '@/components/modals/AiRequestModal'
+import ErrorBanner from '@/components/ErrorBanner'
 
 const TYPE_LABELS: Record<string, string> = {
   schedule_service: 'Schedule Service',
@@ -31,6 +32,7 @@ export function formatDateTime(iso: string) {
 export default function AiRequestsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<any>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
 
@@ -38,7 +40,11 @@ export default function AiRequestsPage() {
     try {
       const res = await fetch('/api/ai-requests')
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar las solicitudes AI.')
       setRequests(Array.isArray(data) ? data : [])
+      setLoadError(null)
+    } catch (err: any) {
+      setLoadError(err.message || 'No se pudieron cargar las solicitudes AI.')
     } finally {
       setLoading(false)
     }
@@ -81,6 +87,7 @@ export default function AiRequestsPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={load} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-[#e8eaf0]">AI Requests</h1>

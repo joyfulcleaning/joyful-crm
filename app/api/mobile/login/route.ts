@@ -3,12 +3,18 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signMobileToken } from '@/lib/mobile-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (!checkRateLimit(`mlogin:${String(email).toLowerCase()}`) || !checkRateLimit(`mlogin-ip:${ip}`, 30)) {
+      return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
     }
 
     const user = await prisma.user.findUnique({ where: { email } })

@@ -1,9 +1,13 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const estimates = await prisma.estimate.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -20,6 +24,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const authUser = await getAuthUser(req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await req.json()
     const {
       estimateNumber, issueDate, validUntil,

@@ -1,16 +1,15 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await context.params
     const body = await request.json()
@@ -37,8 +36,8 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(_)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await context.params
     await prisma.expense.delete({ where: { id } })

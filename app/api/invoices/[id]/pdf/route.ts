@@ -2,12 +2,16 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateInvoicePDF, InvoiceData, InvoiceItemData } from '@/lib/invoice-pdf'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(_req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const raw = await prisma.invoice.findUnique({
       where: { id },
@@ -59,6 +63,9 @@ export async function GET(
       additionalFees:      Number(inv.additionalFees),
       total:               Number(inv.total),
       items,
+      paymentLinkStripe:   inv.paymentLinkStripe  ?? null,
+      paymentLinkSquare:   inv.paymentLinkSquare  ?? null,
+      paymentLinkVisible:  inv.paymentLinkVisible ?? true,
     }
 
     const pdf = await generateInvoicePDF(data)

@@ -326,6 +326,9 @@ model Invoice {
   paymentMethod     PaymentMethod?
   paymentLinkStripe String?                                           // ── NUEVO
   paymentLinkSquare String?                                           // ── NUEVO
+  paymentLinkStripeId String?                                         // ── NUEVO
+  paymentLinkSquareId String?                                         // ── NUEVO
+  paymentLinkVisible Boolean         @default(true)                   // ── NUEVO
   status            InvoiceStatus    @default(draft)
   dueDate           DateTime?        @db.Date
   paidAt            DateTime?
@@ -346,7 +349,7 @@ model Invoice {
 model InvoiceItem {
   id          String   @id @default(uuid())
   invoiceId   String
-  serviceId   String?
+  serviceId   String?  @unique
   description String
   quantity    Int      @default(1)
   unitPrice   Decimal  @db.Decimal(10, 2)

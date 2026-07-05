@@ -1,8 +1,7 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 // Standard working days per period — used to compute daily rate for proration
 const STD_DAYS: Record<string, number> = {
@@ -12,8 +11,11 @@ const STD_DAYS: Record<string, number> = {
   monthly:  22,
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const records = await prisma.payrollRecord.findMany({
       include: {
         staff: { select: { id: true, name: true, scheduleType: true, hourlyRate: true } },
@@ -25,19 +27,17 @@ export async function GET() {
     })
     return NextResponse.json(records)
   } catch (error) {
-    return NextResponse.json([], { status: 200 })
+    console.error('GET /api/payroll:', error)
+    return NextResponse.json({ error: 'Failed to load payroll' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    const body = await request.json()
+    const adminUser = await getAuthUser(request)
+    if (!adminUser || adminUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const adminUser = await prisma.user.findUnique({
-      where: { email: session?.user?.email || 'admin@joyfulcleaning.com' }
-    })
-    if (!adminUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const body = await request.json()
 
     const staff = await prisma.user.findUnique({ where: { id: body.userId } })
     if (!staff) return NextResponse.json({ error: 'Staff not found' }, { status: 404 })

@@ -1,14 +1,16 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const payments = await prisma.invoicePayment.findMany({
       where: { invoiceId: id },
@@ -26,14 +28,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthUser(request)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const body = await request.json()
-
-    const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email || 'admin@joyfulcleaning.com' }
-    })
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 })
 
     // Obtiene el invoice actual
     const invoice = await prisma.invoice.findUnique({ where: { id } })
@@ -107,6 +106,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const { paymentId } = await request.json()
 

@@ -1,8 +1,12 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(req: Request) {
+  const authUser = await getAuthUser(req)
+  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') ?? new Date().getFullYear().toString())
 

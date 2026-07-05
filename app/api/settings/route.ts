@@ -1,28 +1,39 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/mobile-auth'
+import { isStripeConfigured, isSquareConfigured } from '@/lib/payments'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const rows = await prisma.setting.findMany()
     const map: Record<string, string> = {}
-    rows.forEach(r => { map[r.key] = r.value })
+    // payments.* rows hold Stripe/Square secrets — never forward their raw
+    // value here, no matter who's asking. Only a computed connected flag ships.
+    rows.forEach(r => { if (!r.key.startsWith('payments.')) map[r.key] = r.value })
+    map['integration.stripe.connected'] = String(await isStripeConfigured())
+    map['integration.square.connected'] = String(await isSquareConfigured())
     return NextResponse.json(map)
-  } catch {
-    return NextResponse.json({})
+  } catch (error) {
+    console.error('GET /api/settings:', error)
+    return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body: Record<string, string> = await request.json()
+    // Payment credentials only go through the admin-gated, write-only
+    // /api/settings/payment-credentials endpoint — never through this one.
+    const entries = Object.entries(body).filter(([key]) => !key.startsWith('payments.'))
     await Promise.all(
-      Object.entries(body).map(([key, value]) =>
+      entries.map(([key, value]) =>
         prisma.setting.upsert({
           where: { key },
           update: { value: String(value) },

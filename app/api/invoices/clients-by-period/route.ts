@@ -1,9 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const from = searchParams.get('from')
     const to = searchParams.get('to')
@@ -13,10 +17,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'from and to are required' }, { status: 400 })
     }
 
+    // serviceDate is a @db.Date column — Prisma round-trips it as UTC midnight
+    // of the calendar date, so both bounds must be anchored to UTC explicitly.
+    // Mixing a bare `new Date(from)` (UTC) with a local-time string for `to`
+    // let the server's timezone (America/New_York) push the upper bound past
+    // midnight UTC, pulling in the next day's services.
     const where: Record<string, any> = {
       serviceDate: {
-        gte: new Date(from),
-        lte: new Date(`${to}T23:59:59`),
+        gte: new Date(`${from}T00:00:00.000Z`),
+        lte: new Date(`${to}T23:59:59.999Z`),
       },
     }
     if (status && status !== 'all') {

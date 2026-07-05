@@ -1,7 +1,5 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
@@ -64,14 +62,15 @@ export async function GET(request: Request) {
     const result = authUser.role === 'user' ? services.map(stripPriceFields) : services
     return NextResponse.json(result)
   } catch (error) {
-    return NextResponse.json([], { status: 200 })
+    console.error('GET /api/services:', error)
+    return NextResponse.json({ error: 'Failed to load services' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { ids } = await request.json()
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -88,16 +87,10 @@ export async function DELETE(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthUser(request)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await request.json()
-
-    const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email || 'admin@joyfulcleaning.com' }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
 
     const service = await prisma.service.create({
       data: {

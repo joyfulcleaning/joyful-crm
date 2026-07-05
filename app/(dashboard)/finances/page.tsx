@@ -14,6 +14,7 @@ import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import ServiceModal, { TIME_SLOTS } from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
+import ErrorBanner from '@/components/ErrorBanner'
 
 const INV_COL_DEFS = [
   { id: 'id',      label: 'ID',       defaultOn: true  },
@@ -330,17 +331,24 @@ export default function FinancesPage() {
   const [estEditId, setEstEditId] = useState<string | null>(null)
   const [estFromEstimate, setEstFromEstimate] = useState<any | null>(null)
   const [estServiceModalOpen, setEstServiceModalOpen] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadData = useCallback(() => {
-    Promise.all([
-      fetch('/api/invoices').then(r => r.json()).catch(() => []),
-      fetch('/api/expenses').then(r => r.json()).catch(() => []),
-      fetch('/api/clients').then(r => r.json()).catch(() => []),
-      fetch('/api/recurring-expenses').then(r => r.json()).catch(() => []),
-      fetch('/api/inventory').then(r => r.json()).catch(() => []),
-      fetch('/api/assets').then(r => r.json()).catch(() => []),
-      fetch('/api/services').then(r => r.json()).catch(() => []),
-    ]).then(([inv, exp, cli, rec, products, ass, svcs]) => {
+    const endpoints: [string, string][] = [
+      ['invoices', '/api/invoices'], ['expenses', '/api/expenses'], ['clients', '/api/clients'],
+      ['recurring-expenses', '/api/recurring-expenses'], ['inventory', '/api/inventory'],
+      ['assets', '/api/assets'], ['services', '/api/services'],
+    ]
+    const failed: string[] = []
+    Promise.all(endpoints.map(([key, url]) =>
+      fetch(url)
+        .then(async res => {
+          const data = await res.json()
+          if (!res.ok) throw new Error()
+          return data
+        })
+        .catch(() => { failed.push(key); return [] })
+    )).then(([inv, exp, cli, rec, products, ass, svcs]) => {
       setInvoices(Array.isArray(inv) ? inv : [])
       setExpenses(Array.isArray(exp) ? exp : [])
       setClients(Array.isArray(cli) ? cli : [])
@@ -349,6 +357,7 @@ export default function FinancesPage() {
       setAssets(Array.isArray(ass) ? ass : [])
       setCompletedServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'completed') : [])
       setPendingServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'pending') : [])
+      setLoadError(failed.length > 0 ? `No se pudo cargar: ${failed.join(', ')}.` : null)
       setLoading(false)
     })
   }, [])
@@ -1618,6 +1627,7 @@ export default function FinancesPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && <ErrorBanner message={loadError} onRetry={loadData} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-[#e8eaf0]">Finances</h1>
@@ -1917,7 +1927,10 @@ export default function FinancesPage() {
 
               {/* Client cards */}
               {invBatchClients.map(({ client, services, totalCount, uninvoicedCount }) => {
-                const isWorked    = !!invWorked[client.id]
+                // A client counts as "worked" if someone manually flagged it, or if every
+                // service in this range already got invoiced through any channel — including
+                // the mobile app's on-the-spot invoicing flow, not just this batch screen.
+                const isWorked    = !!invWorked[client.id] || (totalCount > 0 && uninvoicedCount === 0)
                 const isExpanded  = invExpanded.has(client.id)
                 const isGenOpen   = invGeneratingFor === client.id
                 const cForm       = invClientForms[client.id]
@@ -1984,7 +1997,7 @@ export default function FinancesPage() {
                             if (!invExpanded.has(client.id) && !invClientSelected[client.id]) {
                               setInvClientSelected(prev => ({
                                 ...prev,
-                                [client.id]: new Set(services.filter((s: any) => !s.invoicedAt).map((s: any) => s.id))
+                                [client.id]: new Set(services.filter((s: any) => !s.invoicedAt && s.status !== 'cancelled').map((s: any) => s.id))
                               }))
                             }
                             toggleBatchExpand(client.id)
@@ -2024,15 +2037,17 @@ export default function FinancesPage() {
                             <tbody>
                               {services.map((s: any) => {
                                 const invoiced   = !!s.invoicedAt
+                                const cancelled  = s.status === 'cancelled'
                                 const checked    = cSelected.has(s.id)
                                 const invNum_svc = s.invoiceItems?.[0]?.invoice?.invoiceNumber ?? null
                                 return (
-                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced ? 'opacity-60' : ''}`}>
+                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced || cancelled ? 'opacity-60' : ''}`}>
                                     <td className="px-3 py-2">
                                       <input
                                         type="checkbox"
                                         checked={checked}
-                                        disabled={invoiced}
+                                        disabled={invoiced || cancelled}
+                                        title={cancelled ? 'Cancelled services cannot be invoiced' : undefined}
                                         onChange={() => toggleClientService(client.id, s.id)}
                                         className="accent-[#4f8ef7] disabled:opacity-30"
                                       />

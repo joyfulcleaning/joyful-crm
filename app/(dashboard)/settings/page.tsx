@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Save, RotateCcw, CheckCircle } from 'lucide-react'
 import { applyTheme } from '@/lib/theme'
+import ErrorBanner from '@/components/ErrorBanner'
+import { StripeIcon, SquareIcon } from '@/components/icons/PaymentIcons'
 
 // ── Defaults ──────────────────────────────────────────────────────
 const DAYS     = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -92,12 +95,12 @@ const INTEGRATIONS = [
     status: 'connected' as const,
   },
   {
-    key: 'stripe', icon: '💳', name: 'Stripe', desc: 'Online credit card payments',
-    status: 'disconnected' as const,
+    key: 'stripe', icon: '💳', name: 'Stripe', desc: 'Online credit card payments — payment links on invoices',
+    status: 'live' as const,
   },
   {
-    key: 'square', icon: '🟩', name: 'Square', desc: 'Square point of sale and payments',
-    status: 'soon' as const,
+    key: 'square', icon: '🟩', name: 'Square', desc: 'Square checkout links on invoices',
+    status: 'live' as const,
   },
   {
     key: 'quickbooks', icon: '📊', name: 'QuickBooks', desc: 'Accounting sync',
@@ -120,20 +123,65 @@ const TABS = [
 
 // ── Page ──────────────────────────────────────────────────────────
 export default function SettingsPage() {
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as any)?.role === 'admin'
   const [tab,     setTab]     = useState('business')
   const [cfg,     setCfg]     = useState<Record<string, string>>(DEFAULTS)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
   const [pwMsg,   setPwMsg]   = useState('')
 
-  useEffect(() => {
+  // Payment credentials — write-only fields, never populated from the server
+  const [payCreds, setPayCreds] = useState({
+    stripeSecretKey: '', stripeWebhookSecret: '',
+    squareAccessToken: '', squareLocationId: '', squareWebhookSignatureKey: '', squareWebhookUrl: '',
+  })
+  const [payCredsMsg, setPayCredsMsg] = useState<Record<'stripe' | 'square', string>>({ stripe: '', square: '' })
+  const [payCredsSaving, setPayCredsSaving] = useState<'stripe' | 'square' | null>(null)
+
+  async function savePaymentCredentials(provider: 'stripe' | 'square') {
+    setPayCredsSaving(provider)
+    setPayCredsMsg(prev => ({ ...prev, [provider]: '' }))
+    const fields = provider === 'stripe'
+      ? { stripeSecretKey: payCreds.stripeSecretKey, stripeWebhookSecret: payCreds.stripeWebhookSecret }
+      : { squareAccessToken: payCreds.squareAccessToken, squareLocationId: payCreds.squareLocationId, squareWebhookSignatureKey: payCreds.squareWebhookSignatureKey, squareWebhookUrl: payCreds.squareWebhookUrl }
+    try {
+      const res = await fetch('/api/settings/payment-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'No se pudo guardar')
+      setPayCredsMsg(prev => ({ ...prev, [provider]: '✓ Guardado' }))
+      // Clear the fields from the form — they're saved server-side and this
+      // screen never displays a saved secret back.
+      setPayCreds(prev => provider === 'stripe'
+        ? { ...prev, stripeSecretKey: '', stripeWebhookSecret: '' }
+        : { ...prev, squareAccessToken: '', squareLocationId: '', squareWebhookSignatureKey: '', squareWebhookUrl: '' })
+      loadSettings()
+    } catch (err: any) {
+      setPayCredsMsg(prev => ({ ...prev, [provider]: err.message || 'Error al guardar' }))
+    } finally {
+      setPayCredsSaving(null)
+    }
+  }
+
+  function loadSettings() {
     fetch('/api/settings')
-      .then(r => r.json())
-      .then(data => { setCfg(prev => ({ ...prev, ...data })); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error || 'No se pudo cargar la configuración.')
+        return data
+      })
+      .then(data => { setCfg(prev => ({ ...prev, ...data })); setLoadError(null); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || 'No se pudo cargar la configuración.'); setLoading(false) })
+  }
+
+  useEffect(() => { loadSettings() }, [])
 
   const set    = (key: string, value: string) => setCfg(prev => ({ ...prev, [key]: value }))
   const toggle = (key: string) => set(key, cfg[key] === 'true' ? 'false' : 'true')
@@ -185,6 +233,8 @@ export default function SettingsPage() {
   const currentTab = TABS.find(t => t.key === tab)!
 
   return (
+    <>
+      {loadError && <ErrorBanner message={loadError} onRetry={loadSettings} />}
     <div className="flex gap-5 items-start">
 
       {/* ── Left Sidebar ── */}
@@ -589,40 +639,33 @@ export default function SettingsPage() {
         {/* ══════════ INTEGRATIONS ══════════ */}
         {tab === 'integrations' && (
           <div className="space-y-3">
-            {INTEGRATIONS.map(intg => (
+            {INTEGRATIONS.map(intg => {
+              const isConnected = intg.key === 'stripe' ? bool('integration.stripe.connected')
+                : intg.key === 'square' ? bool('integration.square.connected')
+                : intg.status === 'connected'
+              const origin = typeof window !== 'undefined' ? window.location.origin : ''
+              return (
               <div key={intg.key} className={cardCls}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#0d0f14] flex items-center justify-center text-xl shrink-0">
-                      {intg.icon}
+                      {intg.key === 'stripe' ? <StripeIcon size={20} />
+                        : intg.key === 'square' ? <SquareIcon size={20} />
+                        : intg.icon}
                     </div>
                     <div>
                       <div className="text-xs font-bold text-[#e8eaf0]">{intg.name}</div>
                       <div className="text-[10px] text-[#6b7280] mt-0.5">{intg.desc}</div>
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        {intg.status === 'connected' && (
-                          <><div className="w-1.5 h-1.5 rounded-full bg-[#38d9a9]" /><span className="text-[10px] text-[#38d9a9] font-semibold">Connected</span></>
-                        )}
-                        {intg.status === 'disconnected' && (
-                          <><div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" /><span className="text-[10px] text-[#f59e0b] font-semibold">Not connected</span></>
-                        )}
-                        {intg.status === 'soon' && (
+                        {intg.status === 'soon' ? (
                           <span className="text-[9px] bg-[rgba(107,114,128,0.1)] text-[#6b7280] border border-[#2a2f3d] px-2 py-0.5 rounded-full font-semibold">Coming Soon</span>
+                        ) : isConnected ? (
+                          <><div className="w-1.5 h-1.5 rounded-full bg-[#38d9a9]" /><span className="text-[10px] text-[#38d9a9] font-semibold">Connected</span></>
+                        ) : (
+                          <><div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" /><span className="text-[10px] text-[#f59e0b] font-semibold">Not connected</span></>
                         )}
                       </div>
                     </div>
-                  </div>
-                  <div className="shrink-0">
-                    {intg.status === 'connected' && (
-                      <button className="px-3 py-1.5 text-xs font-semibold border border-[#f87171] text-[#f87171] rounded-lg hover:bg-[rgba(248,113,113,0.08)] transition-colors">
-                        Disconnect
-                      </button>
-                    )}
-                    {intg.status === 'disconnected' && (
-                      <button className="px-3 py-1.5 text-xs font-semibold bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white rounded-lg transition-colors">
-                        Connect
-                      </button>
-                    )}
                   </div>
                 </div>
                 {/* Email sub-config */}
@@ -640,8 +683,90 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+                {/* Stripe / Square credentials — admin-only, write-only. Saved values are
+                    never sent back to the browser; this form always starts empty. */}
+                {(intg.key === 'stripe' || intg.key === 'square') && (
+                  isAdmin ? (
+                    <div className="mt-4 pt-4 border-t border-[#2a2f3d] space-y-3">
+                      {intg.key === 'stripe' ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={labelCls}>Secret Key</label>
+                            <input type="password" placeholder={isConnected ? '•••••••••••• (guardada)' : 'sk_test_...'}
+                              value={payCreds.stripeSecretKey}
+                              onChange={e => setPayCreds(p => ({ ...p, stripeSecretKey: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Dashboard de Stripe → Developers → API keys</div>
+                          </div>
+                          <div>
+                            <label className={labelCls}>Webhook Signing Secret</label>
+                            <input type="password" placeholder={isConnected ? '•••••••••••• (guardada)' : 'whsec_...'}
+                              value={payCreds.stripeWebhookSecret}
+                              onChange={e => setPayCreds(p => ({ ...p, stripeWebhookSecret: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Developers → Webhooks → Add endpoint → URL: <code className="text-[#4f8ef7]">{origin}/api/webhooks/stripe</code>, evento <code>checkout.session.completed</code></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={labelCls}>Access Token</label>
+                            <input type="password" placeholder={isConnected ? '•••••••••••• (guardado)' : 'EAAA...'}
+                              value={payCreds.squareAccessToken}
+                              onChange={e => setPayCreds(p => ({ ...p, squareAccessToken: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Developer Dashboard → tu aplicación → Credentials</div>
+                          </div>
+                          <div>
+                            <label className={labelCls}>Location ID</label>
+                            <input placeholder={isConnected ? '•••••••••••• (guardado)' : 'L1234...'}
+                              value={payCreds.squareLocationId}
+                              onChange={e => setPayCreds(p => ({ ...p, squareLocationId: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Developer Dashboard → Locations</div>
+                          </div>
+                          <div>
+                            <label className={labelCls}>Webhook Signature Key</label>
+                            <input type="password" placeholder={isConnected ? '•••••••••••• (guardada)' : ''}
+                              value={payCreds.squareWebhookSignatureKey}
+                              onChange={e => setPayCreds(p => ({ ...p, squareWebhookSignatureKey: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Webhooks → Add endpoint → URL: <code className="text-[#4f8ef7]">{origin}/api/webhooks/square</code></div>
+                          </div>
+                          <div>
+                            <label className={labelCls}>Webhook URL (exacta, tal como la registraste)</label>
+                            <input placeholder={origin ? `${origin}/api/webhooks/square` : ''}
+                              value={payCreds.squareWebhookUrl}
+                              onChange={e => setPayCreds(p => ({ ...p, squareWebhookUrl: e.target.value }))}
+                              className={inputCls} autoComplete="off" />
+                            <div className="text-[9px] text-[#6b7280] mt-1">Debe coincidir exacto con la URL puesta en el dashboard de Square</div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => savePaymentCredentials(intg.key as 'stripe' | 'square')}
+                          disabled={payCredsSaving !== null}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {payCredsSaving === intg.key ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        {payCredsMsg[intg.key as 'stripe' | 'square'] && (
+                          <span className={`text-[11px] ${payCredsMsg[intg.key as 'stripe' | 'square'].startsWith('✓') ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>
+                            {payCredsMsg[intg.key as 'stripe' | 'square']}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : !isConnected && (
+                    <div className="mt-4 pt-4 border-t border-[#2a2f3d] text-[11px] text-[#9ca3af]">
+                      Esta integración aún no está configurada. Pídele a un administrador que agregue las credenciales en esta misma pantalla.
+                    </div>
+                  )
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -745,5 +870,6 @@ export default function SettingsPage() {
 
       </div>
     </div>
+    </>
   )
 }

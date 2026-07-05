@@ -2,12 +2,16 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin, PHOTOS_BUCKET } from '@/lib/supabase'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string; photoId: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(_req)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { photoId } = await params
     const photo = await prisma.servicePhoto.findUnique({ where: { id: photoId } })
     if (!photo) return NextResponse.json({ error: 'Not found' }, { status: 404 })

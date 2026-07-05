@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(_request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await context.params
     const record = await prisma.payrollRecord.findUnique({ where: { id } })
     if (!record) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -27,6 +31,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id }  = await context.params
     const body    = await request.json()
 

@@ -1,9 +1,13 @@
 ﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/mobile-auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const payments = await prisma.invoicePayment.findMany({
       include: {
         invoice: {
@@ -17,7 +21,8 @@ export async function GET() {
       orderBy: { paidAt: 'desc' },
     })
     return NextResponse.json(payments)
-  } catch {
-    return NextResponse.json([], { status: 200 })
+  } catch (error) {
+    console.error('GET /api/invoice-payments:', error)
+    return NextResponse.json({ error: 'Failed to load payments' }, { status: 500 })
   }
 }
