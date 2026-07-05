@@ -10,6 +10,7 @@ import ClientModal from '@/components/modals/ClientModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import CountUp from '@/components/ui/CountUp'
 import ErrorBanner from '@/components/ErrorBanner'
+import { localDateStr } from '@/lib/local-date'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -672,7 +673,7 @@ export default function ServicesPage() {
       {/* Modals */}
       <ServiceModal
         open={modalOpen}
-        initialDate={new Date().toISOString().split('T')[0]}
+        initialDate={localDateStr()}
         onClose={() => setModalOpen(false)}
         onSuccess={loadServices}
       />

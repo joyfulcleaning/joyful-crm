@@ -73,8 +73,11 @@ function getDateStr(dateVal: string) {
   return dateVal?.split('T')[0]
 }
 
+// Local Y-M-D, never through toISOString() — FullCalendar hands datesSet/
+// selectDay plain local-midnight Date objects, and converting those to UTC
+// can roll the boundary to the wrong day depending on the device's timezone.
 function utcStr(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function getCalWeeks(viewStart: Date, viewEnd: Date): { start: string; end: string }[] {

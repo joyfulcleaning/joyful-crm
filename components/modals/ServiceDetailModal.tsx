@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2 } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import ServiceModal from './ServiceModal'
+import { localDateStr } from '@/lib/local-date'
 
 const SERVICE_TYPES = [
   'Standard Clean',
@@ -140,7 +141,7 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
     if (open && isDuplicate && service) {
       setForm({
         ...service,
-        serviceDate: service.serviceDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+        serviceDate: service.serviceDate?.split('T')[0] || localDateStr(),
         staffIds: service.staff?.map((st: any) => st.userId) || [],
       })
       setEditing(true)
