@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
 
 async function assertUserCanAccess(serviceId: string, userId: string) {
-  const visibleDates = getVisibleServiceDates()
+  const visibleDates = await getVisibleServiceDates()
   const service = await prisma.service.findFirst({
     where: {
       id: serviceId,

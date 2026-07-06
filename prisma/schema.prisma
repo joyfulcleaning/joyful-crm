@@ -141,6 +141,7 @@ model User {
   createdPayments  InvoicePayment[] @relation("PaymentCreatedBy")
   auditLogs        AuditLog[]
   resolvedAiRequests AiRequest[]    @relation("AiRequestResolvedBy")
+  publishedSchedules PublishedSchedule[] @relation("SchedulePublishedBy")
   pushTokens       PushToken[]
 
   @@map("users")
@@ -584,6 +585,20 @@ model AiRequest {
   updatedAt              DateTime  @updatedAt
 
   @@map("ai_requests")
+}
+
+// A calendar date the admin has explicitly released to staff, per the new
+// "Publish schedule" flow — staff only see a future date's services (their
+// own assignments) once it shows up here, instead of the old automatic
+// "tomorrow after 6pm" rule.
+model PublishedSchedule {
+  id            String   @id @default(uuid())
+  date          DateTime @db.Date @unique
+  publishedAt   DateTime @default(now())
+  publishedById String
+  publishedBy   User     @relation("SchedulePublishedBy", fields: [publishedById], references: [id])
+
+  @@map("published_schedules")
 }
 
 model PushToken {

@@ -54,6 +54,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.lowStock':  'true',
   'notif.weekly':    'true',
   'notif.aiRequest': 'true',
+  'notif.schedulePublished': 'false',
   // Push notifications (per event) — off by default, admin-only when enabled
   'notif.newSvc.push':    'false', 'notif.newSvc.roles':    'admin',
   'notif.completed.push': 'false', 'notif.completed.roles': 'admin',
@@ -63,6 +64,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.lowStock.push':  'false', 'notif.lowStock.roles':  'admin',
   'notif.weekly.push':    'false', 'notif.weekly.roles':    'admin',
   'notif.aiRequest.push': 'true',  'notif.aiRequest.roles': 'admin',
+  'notif.schedulePublished.push': 'true', 'notif.schedulePublished.roles': 'user',
   // Integrations
   'smtp.from':       'noreply@joyfulservices.com',
   // Appearance
@@ -575,7 +577,7 @@ export default function SettingsPage() {
               <div className={sectionTitle}>Alerts by Event</div>
               <p className="text-[10px] text-[#6b7280] -mt-2 mb-3">
                 Email and push can be turned on independently per event. Push only reaches roles checked below, and only people who enabled push on their phone — see the app's menu.
-                Today only "AI phone assistant request" actually fires; the rest are ready for when that event's logic is built.
+                "AI phone assistant request", "Invoice paid", and "Schedule published" actually fire today; the rest are ready for when that event's logic is built.
               </p>
               {[
                 { k: 'notif.newSvc',    label: 'New service scheduled',      sub: 'When a service is created on the calendar' },
@@ -586,6 +588,7 @@ export default function SettingsPage() {
                 { k: 'notif.aiRequest', label: 'AI phone assistant request',  sub: "When a caller's request needs your approval" },
                 { k: 'notif.lowStock',  label: 'Low inventory alert',         sub: 'When a product falls below minimum stock' },
                 { k: 'notif.weekly',    label: 'Weekly summary (every Monday)', sub: 'Performance report for the previous week' },
+                { k: 'notif.schedulePublished', label: 'Schedule published', sub: "When you publish tomorrow's service schedule to staff" },
               ].map(item => (
                 <div key={item.k} className="py-3.5 border-b border-[#2a2f3d]/50 last:border-0">
                   <div className="flex items-center justify-between">

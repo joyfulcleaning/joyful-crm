@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     const where = authUser.role === 'user'
       ? {
-          serviceDate: { in: getVisibleServiceDates().map(d => new Date(d)) },
+          serviceDate: { in: (await getVisibleServiceDates()).map(d => new Date(d)) },
           staff: { some: { userId: authUser.id } },
         }
       : dateFilter

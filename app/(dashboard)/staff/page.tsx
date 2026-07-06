@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Plus, UserCheck, Mail, Phone, CheckCircle2, DollarSign,
   CalendarDays, Loader2, Search, ChevronDown, ChevronUp,
@@ -64,6 +65,9 @@ interface RowEdits {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function StaffPage() {
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as any)?.role === 'admin'
+
   const [staff, setStaff]           = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
   const [loadError, setLoadError]   = useState<string | null>(null)
@@ -72,6 +76,36 @@ export default function StaffPage() {
   const [modalOpen, setModalOpen]   = useState(false)
   const [selectedMember, setSelectedMember] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+
+  // ── Schedule access tab state ────────────────────────────────────────────────
+  const [daysAhead, setDaysAhead]         = useState('1')
+  const [daysAheadSaving, setDaysAheadSaving] = useState(false)
+  const [daysAheadMsg, setDaysAheadMsg]   = useState('')
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(s => {
+      if (s['staff.visibleDaysAhead']) setDaysAhead(s['staff.visibleDaysAhead'])
+    }).catch(() => {})
+  }, [])
+
+  async function saveDaysAhead(value: string) {
+    setDaysAhead(value)
+    setDaysAheadSaving(true)
+    setDaysAheadMsg('')
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'staff.visibleDaysAhead': value }),
+      })
+      setDaysAheadMsg('✓ Saved')
+      setTimeout(() => setDaysAheadMsg(''), 2000)
+    } catch {
+      setDaysAheadMsg('Error saving')
+    } finally {
+      setDaysAheadSaving(false)
+    }
+  }
 
   // ── Payroll tab state ────────────────────────────────────────────────────────
   const [payrollRecords, setPayrollRecords] = useState<any[]>([])
@@ -516,7 +550,11 @@ export default function StaffPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-[#2a2f3d]">
-        {[{ key: 'team', label: '👥 Team' }, { key: 'payroll', label: '💰 Payroll' }].map(tab => (
+        {[
+          { key: 'team',    label: '👥 Team' },
+          { key: 'payroll', label: '💰 Payroll' },
+          ...(isAdmin ? [{ key: 'schedule', label: '📅 Schedule Access' }] : []),
+        ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -1180,6 +1218,47 @@ export default function StaffPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Schedule Access Tab (admin only) ────────────────────────────────────── */}
+      {activeTab === 'schedule' && isAdmin && (
+        <div className="max-w-lg bg-[#161922] border border-[#2a2f3d] rounded-xl p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-[#e8eaf0]">Staff App — Service Visibility</h3>
+            <p className="text-xs text-[#6b7280] mt-1">
+              How far ahead staff can see their assigned services in the mobile app, once you publish
+              a day's schedule (Publish button is in the mobile app's menu). Today is always visible;
+              this only controls the look-ahead window for future days.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: '1', label: 'Next day (1 day)' },
+              { value: '2', label: '2 days' },
+              { value: '3', label: '3 days' },
+              { value: '4', label: '4 days' },
+              { value: 'week', label: 'Full week' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => saveDaysAhead(opt.value)}
+                disabled={daysAheadSaving}
+                className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-50 ${
+                  daysAhead === opt.value
+                    ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]'
+                    : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {daysAheadMsg && (
+            <span className={`text-[11px] ${daysAheadMsg.startsWith('✓') ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>
+              {daysAheadMsg}
+            </span>
+          )}
         </div>
       )}
 
