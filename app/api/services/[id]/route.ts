@@ -5,11 +5,11 @@ import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
 
 async function assertUserCanAccess(serviceId: string, userId: string) {
-  const visibleDates = await getVisibleServiceDates()
+  const visibility = await getVisibleServiceDates(userId)
   const service = await prisma.service.findFirst({
     where: {
       id: serviceId,
-      serviceDate: { in: visibleDates.map(d => new Date(d)) },
+      ...(visibility.unrestricted ? {} : { serviceDate: { in: visibility.dates.map(d => new Date(d)) } }),
       staff: { some: { userId } },
     },
     select: { id: true },

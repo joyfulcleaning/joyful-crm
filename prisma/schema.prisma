@@ -126,6 +126,11 @@ model User {
   emergencyContactName  String?
   emergencyContactPhone String?
   notes                 String?
+  // How far ahead this staff member can see their own assigned services in
+  // the mobile calendar, once an admin publishes a day: '1'..'4' (days),
+  // 'week' (7 days), or 'full' (no date restriction at all, bypasses the
+  // publish gate too). Set per-person from their card on the Staff page.
+  scheduleVisibility    String           @default("1")
   lastLoginAt      DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt

@@ -21,12 +21,14 @@ export async function GET(request: Request) {
       }
     } : {}
 
-    const where = authUser.role === 'user'
-      ? {
-          serviceDate: { in: (await getVisibleServiceDates()).map(d => new Date(d)) },
-          staff: { some: { userId: authUser.id } },
-        }
-      : dateFilter
+    let where: any = dateFilter
+    if (authUser.role === 'user') {
+      const visibility = await getVisibleServiceDates(authUser.id)
+      where = {
+        ...(visibility.unrestricted ? {} : { serviceDate: { in: visibility.dates.map(d => new Date(d)) } }),
+        staff: { some: { userId: authUser.id } },
+      }
+    }
 
     const services = await prisma.service.findMany({
       where,

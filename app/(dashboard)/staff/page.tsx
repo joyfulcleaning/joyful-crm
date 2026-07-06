@@ -19,6 +19,15 @@ import { localDateStr } from '@/lib/local-date'
 const ROLE_COLORS:   Record<string, string> = { admin: '#4f8ef7', user: '#a78bfa' }
 const STATUS_COLORS: Record<string, string> = { active: '#38d9a9', invited: '#f59e0b', inactive: '#6b7280' }
 
+const SCHEDULE_VISIBILITY_OPTIONS = [
+  { value: '1',    label: '1 day' },
+  { value: '2',    label: '2 days' },
+  { value: '3',    label: '3 days' },
+  { value: '4',    label: '4 days' },
+  { value: 'week', label: 'Full week' },
+  { value: 'full', label: 'Full calendar' },
+]
+
 const PAY_METHODS = [
   { value: 'check',   label: 'Check'   },
   { value: 'zelle',   label: 'Zelle'   },
@@ -77,33 +86,23 @@ export default function StaffPage() {
   const [selectedMember, setSelectedMember] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
-  // ── Schedule access tab state ────────────────────────────────────────────────
-  const [daysAhead, setDaysAhead]         = useState('1')
-  const [daysAheadSaving, setDaysAheadSaving] = useState(false)
-  const [daysAheadMsg, setDaysAheadMsg]   = useState('')
+  // ── Per-staff schedule visibility (set from each card) ───────────────────────
+  const [visibilitySaving, setVisibilitySaving] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetch('/api/settings').then(r => r.json()).then(s => {
-      if (s['staff.visibleDaysAhead']) setDaysAhead(s['staff.visibleDaysAhead'])
-    }).catch(() => {})
-  }, [])
-
-  async function saveDaysAhead(value: string) {
-    setDaysAhead(value)
-    setDaysAheadSaving(true)
-    setDaysAheadMsg('')
+  async function saveScheduleVisibility(memberId: string, value: string) {
+    setVisibilitySaving(memberId)
     try {
-      await fetch('/api/settings', {
-        method: 'POST',
+      const res = await fetch(`/api/staff/${memberId}/schedule-visibility`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'staff.visibleDaysAhead': value }),
+        body: JSON.stringify({ value }),
       })
-      setDaysAheadMsg('✓ Saved')
-      setTimeout(() => setDaysAheadMsg(''), 2000)
+      if (!res.ok) throw new Error()
+      setStaff(prev => prev.map(m => m.id === memberId ? { ...m, scheduleVisibility: value } : m))
     } catch {
-      setDaysAheadMsg('Error saving')
+      alert('Could not update schedule access. Please try again.')
     } finally {
-      setDaysAheadSaving(false)
+      setVisibilitySaving(null)
     }
   }
 
@@ -553,7 +552,6 @@ export default function StaffPage() {
         {[
           { key: 'team',    label: '👥 Team' },
           { key: 'payroll', label: '💰 Payroll' },
-          ...(isAdmin ? [{ key: 'schedule', label: '📅 Schedule Access' }] : []),
         ].map(tab => (
           <button
             key={tab.key}
@@ -617,6 +615,23 @@ export default function StaffPage() {
                         <UserCheck size={9} /><span className="capitalize">{member.status}</span>
                       </div>
                     </div>
+                    {isAdmin && member.role === 'user' && (
+                      <div className="mt-2 pt-2 border-t border-[#2a2f3d]" onClick={e => e.stopPropagation()}>
+                        <label className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1 text-left">
+                          Calendar access
+                        </label>
+                        <select
+                          value={member.scheduleVisibility || '1'}
+                          disabled={visibilitySaving === member.id}
+                          onChange={e => saveScheduleVisibility(member.id, e.target.value)}
+                          className="w-full px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-50"
+                        >
+                          {SCHEDULE_VISIBILITY_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1218,47 +1233,6 @@ export default function StaffPage() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* ── Schedule Access Tab (admin only) ────────────────────────────────────── */}
-      {activeTab === 'schedule' && isAdmin && (
-        <div className="max-w-lg bg-[#161922] border border-[#2a2f3d] rounded-xl p-5 space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-[#e8eaf0]">Staff App — Service Visibility</h3>
-            <p className="text-xs text-[#6b7280] mt-1">
-              How far ahead staff can see their assigned services in the mobile app, once you publish
-              a day's schedule (Publish button is in the mobile app's menu). Today is always visible;
-              this only controls the look-ahead window for future days.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { value: '1', label: 'Next day (1 day)' },
-              { value: '2', label: '2 days' },
-              { value: '3', label: '3 days' },
-              { value: '4', label: '4 days' },
-              { value: 'week', label: 'Full week' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => saveDaysAhead(opt.value)}
-                disabled={daysAheadSaving}
-                className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-50 ${
-                  daysAhead === opt.value
-                    ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]'
-                    : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          {daysAheadMsg && (
-            <span className={`text-[11px] ${daysAheadMsg.startsWith('✓') ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>
-              {daysAheadMsg}
-            </span>
-          )}
         </div>
       )}
 
