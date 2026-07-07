@@ -471,8 +471,23 @@ model InventoryProduct {
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  movements     InventoryMovement[]
 
   @@map("inventory_products")
+}
+
+model InventoryMovement {
+  id        String   @id @default(uuid())
+  productId String
+  type      String   // 'out' (usage) | 'in' (restock)
+  quantity  Int      // always positive; type determines direction
+  date      DateTime
+  comment   String?
+  createdBy String?  // user name at the time of the movement
+  createdAt DateTime @default(now())
+  product   InventoryProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_movements")
 }
 
 model Asset {

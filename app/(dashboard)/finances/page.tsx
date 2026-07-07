@@ -295,6 +295,51 @@ export default function FinancesPage() {
   const [editProdForm, setEditProdForm] = useState({ sku: '', name: '', category: 'Chemicals', unitOfMeasure: 'Unit', unitCost: '', currentStock: '0', minimumStock: '0', supplier: '', notes: '' })
   const [editProdSaving, setEditProdSaving] = useState(false)
 
+  // ── Inventory movements (stock in/out with history) ──
+  const [invMovements, setInvMovements] = useState<any[]>([])
+  const [movModalOpen, setMovModalOpen] = useState(false)
+  const [movForm, setMovForm] = useState({ productId: '', type: 'out', quantity: '', date: new Date().toLocaleDateString('en-CA'), comment: '' })
+  const [movSaving, setMovSaving] = useState(false)
+  const [movError, setMovError] = useState('')
+  const [movHistoryOpen, setMovHistoryOpen] = useState(false)
+
+  function openMovementModal(product?: any, type: 'out' | 'in' = 'out') {
+    setMovForm({ productId: product?.id || '', type, quantity: '', date: new Date().toLocaleDateString('en-CA'), comment: '' })
+    setMovError('')
+    setMovModalOpen(true)
+  }
+
+  async function loadMovements() {
+    try {
+      const res = await fetch('/api/inventory/movements')
+      const data = await res.json()
+      if (res.ok && Array.isArray(data)) setInvMovements(data)
+    } catch {}
+  }
+
+  async function handleSaveMovement() {
+    if (!movForm.productId) { setMovError('Select a product'); return }
+    if (!movForm.quantity || parseInt(movForm.quantity) <= 0) { setMovError('Enter a valid quantity'); return }
+    setMovSaving(true)
+    setMovError('')
+    try {
+      const res = await fetch('/api/inventory/movements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movForm),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to register movement')
+      setInventory(prev => prev.map(p => p.id === data.product.id ? data.product : p))
+      setMovModalOpen(false)
+      loadMovements()
+    } catch (err: any) {
+      setMovError(err.message || 'Failed to register movement')
+    } finally {
+      setMovSaving(false)
+    }
+  }
+
   // ── Invoice search ──
   const [searchQ, setSearchQ] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -360,6 +405,9 @@ export default function FinancesPage() {
       setLoadError(failed.length > 0 ? `No se pudo cargar: ${failed.join(', ')}.` : null)
       setLoading(false)
     })
+    fetch('/api/inventory/movements')
+      .then(async res => { const d = await res.json(); if (res.ok && Array.isArray(d)) setInvMovements(d) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
@@ -2981,8 +3029,20 @@ export default function FinancesPage() {
               }`}>
               ⚠ Low Stock {lowStockCount > 0 && `(${lowStockCount})`}
             </button>
+            <button onClick={() => openMovementModal()}
+              className="ml-auto flex items-center gap-1.5 bg-[#f59e0b] hover:bg-[#d97706] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
+              ↓↑ Stock In/Out
+            </button>
+            <button onClick={() => setMovHistoryOpen(v => !v)}
+              className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                movHistoryOpen
+                  ? 'bg-[rgba(79,142,247,0.15)] border-[#4f8ef7] text-[#4f8ef7]'
+                  : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
+              }`}>
+              🕘 History {invMovements.length > 0 && `(${invMovements.length})`}
+            </button>
             <button onClick={() => setAddProdOpen(true)}
-              className="ml-auto flex items-center gap-1.5 bg-[#4f8ef7] hover:bg-[#3a7de8] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
+              className="flex items-center gap-1.5 bg-[#4f8ef7] hover:bg-[#3a7de8] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
               <Plus size={12} /> Add Product
             </button>
           </div>
@@ -3027,6 +3087,11 @@ export default function FinancesPage() {
                         )}
                       </td>
                       <td className="px-3 py-2.5 flex items-center gap-2">
+                        <button onClick={() => openMovementModal(prod, 'out')}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[rgba(245,158,11,0.15)] text-[#f59e0b] hover:bg-[rgba(245,158,11,0.25)] transition-colors"
+                          title="Register usage (stock out)">
+                          − Use
+                        </button>
                         <button onClick={() => openEditProduct(prod)} className="text-[#9ca3af] hover:text-[#e8eaf0] transition-colors" title="Edit">✏️</button>
                         {isLow && (
                           <button onClick={() => openEditProduct(prod)}
@@ -3042,6 +3107,113 @@ export default function FinancesPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Movement History */}
+          {movHistoryOpen && (
+            <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
+                <h3 className="text-xs font-bold text-[#e8eaf0]">🕘 Stock Movement History</h3>
+                <span className="text-[10px] text-[#6b7280]">{invMovements.length} movements</span>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-[#1e2330]">
+                    {['Date', 'Product', 'Type', 'Qty', 'Comment', 'By'].map(h => (
+                      <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {invMovements.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-8 text-[#6b7280] text-xs">No movements registered yet.</td></tr>
+                  ) : invMovements.map(m => (
+                    <tr key={m.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                      <td className="px-3 py-2 text-[#9ca3af] whitespace-nowrap">{formatDate(m.date)}</td>
+                      <td className="px-3 py-2 font-semibold text-[#e8eaf0]">{m.productName} <span className="text-[#6b7280] font-mono font-normal">({m.sku})</span></td>
+                      <td className="px-3 py-2">
+                        {m.type === 'out' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">↓ Out</span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(56,217,169,0.15)] text-[#38d9a9]">↑ In</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-bold font-mono" style={{ color: m.type === 'out' ? '#f59e0b' : '#38d9a9' }}>
+                        {m.type === 'out' ? '−' : '+'}{m.quantity} <span className="font-normal text-[#6b7280]">{m.unitOfMeasure}</span>
+                      </td>
+                      <td className="px-3 py-2 text-[#9ca3af]">{m.comment || '—'}</td>
+                      <td className="px-3 py-2 text-[#6b7280]">{m.createdBy || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Stock Movement Modal */}
+          {movModalOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMovModalOpen(false)}>
+              <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{movForm.type === 'out' ? '↓ Register Usage' : '↑ Register Restock'}</h3>
+                  <button onClick={() => setMovModalOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
+                </div>
+                {movError && <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-3">{movError}</div>}
+                <div className="flex gap-2">
+                  {([['out', '↓ Out (use)'], ['in', '↑ In (restock)']] as const).map(([t, label]) => (
+                    <button key={t} onClick={() => setMovForm(f => ({ ...f, type: t }))}
+                      className={`flex-1 text-[11px] font-bold px-3 py-2 rounded-lg border transition-colors ${
+                        movForm.type === t
+                          ? t === 'out'
+                            ? 'bg-[rgba(245,158,11,0.15)] border-[#f59e0b] text-[#f59e0b]'
+                            : 'bg-[rgba(56,217,169,0.15)] border-[#38d9a9] text-[#38d9a9]'
+                          : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <label className={labelCls}>Product *</label>
+                  <select className={inputCls} value={movForm.productId} onChange={e => setMovForm(f => ({ ...f, productId: e.target.value }))}>
+                    <option value="">— Select product —</option>
+                    {inventory.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.currentStock} {p.unitOfMeasure} available)</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Quantity *</label>
+                    <input type="number" min="1" className={inputCls} value={movForm.quantity}
+                      onChange={e => setMovForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Date</label>
+                    <input type="date" className={inputCls} value={movForm.date}
+                      onChange={e => setMovForm(f => ({ ...f, date: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Comment</label>
+                  <input className={inputCls} value={movForm.comment}
+                    onChange={e => setMovForm(f => ({ ...f, comment: e.target.value }))}
+                    placeholder={movForm.type === 'out' ? 'e.g. Used at Franklin Cleaning job' : 'e.g. Walmart purchase'} />
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setMovModalOpen(false)}
+                    className="flex-1 text-xs font-bold text-[#9ca3af] border border-[#2a2f3d] rounded-lg py-2.5 hover:text-[#e8eaf0] transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleSaveMovement} disabled={movSaving}
+                    className={`flex-1 text-xs font-bold text-white rounded-lg py-2.5 transition-colors disabled:opacity-50 ${
+                      movForm.type === 'out' ? 'bg-[#f59e0b] hover:bg-[#d97706]' : 'bg-[#38d9a9] hover:bg-[#2bc394]'
+                    }`}>
+                    {movSaving ? 'Saving…' : movForm.type === 'out' ? 'Deduct from stock' : 'Add to stock'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Add Product Modal */}
           {addProdOpen && (

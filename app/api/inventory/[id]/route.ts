@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { maybeNotifyLowStock } from '@/lib/low-stock'
 
 export async function PATCH(
   request: Request,
@@ -24,7 +25,17 @@ export async function PATCH(
     if (body.supplier      !== undefined) data.supplier      = body.supplier || null
     if (body.notes         !== undefined) data.notes         = body.notes || null
 
+    const before = data.currentStock !== undefined
+      ? await prisma.inventoryProduct.findUnique({ where: { id }, select: { currentStock: true } })
+      : null
+
     const product = await prisma.inventoryProduct.update({ where: { id }, data })
+
+    // Low-stock alert if a manual stock edit crossed below the minimum
+    if (before) {
+      await maybeNotifyLowStock(product as any, before.currentStock).catch(() => {})
+    }
+
     return NextResponse.json(product)
   } catch (error) {
     console.error('PATCH /api/inventory/[id]:', error)
