@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function PATCH(
   request: Request,
@@ -43,6 +44,8 @@ export async function PATCH(
       },
       include: { management: true }
     })
+
+    logAudit(authUser, 'update', 'client', client.id, { name: client.name })
 
     return NextResponse.json(client)
   } catch (error) {

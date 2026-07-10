@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -70,6 +71,9 @@ export async function POST(request: Request) {
       }
     })
     const { password, ...safeUser } = user
+
+    logAudit(authUser, 'create', 'staff', user.id, { name: user.name, role: user.role })
+
     // Only echoed back when we generated it — an admin-supplied password is
     // already known to them, no need to send it back over the wire again.
     return NextResponse.json(generatedPassword ? { ...safeUser, tempPassword: generatedPassword } : safeUser)

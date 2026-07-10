@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function PATCH(
   request: Request,
@@ -45,6 +46,14 @@ export async function PATCH(
       }
     })
     const { password, ...safeUser } = user
+
+    logAudit(authUser, 'update', 'staff', user.id, {
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      passwordChanged: !!hashedPassword,
+    })
+
     return NextResponse.json(safeUser)
   } catch (error) {
     console.error('Error updating staff:', error)

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
       },
       include: { management: true }
     })
+
+    logAudit(authUser, 'create', 'client', client.id, { name: client.name, type: client.type })
 
     return NextResponse.json(client)
   } catch {

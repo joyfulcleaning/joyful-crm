@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { businessToday } from '@/lib/business-date'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(
   request: Request,
@@ -95,6 +96,13 @@ export async function POST(
       }
     })
 
+    logAudit(user, 'create', 'payment', payment.id, {
+      invoiceId: id,
+      invoiceNumber: invoice.invoiceNumber,
+      amount: payment.amount,
+      method: payment.method,
+    })
+
     return NextResponse.json({ payment, invoice: updatedInvoice })
   } catch (error) {
     console.error('Error creating payment:', error)
@@ -113,7 +121,13 @@ export async function DELETE(
     const { id } = await context.params
     const { paymentId } = await request.json()
 
-    await prisma.invoicePayment.delete({ where: { id: paymentId } })
+    const deletedPayment = await prisma.invoicePayment.delete({ where: { id: paymentId } })
+
+    logAudit(authUser, 'delete', 'payment', paymentId, {
+      invoiceId: id,
+      amount: deletedPayment.amount,
+      method: deletedPayment.method,
+    })
 
     // Recalcula después de borrar
     const invoice = await prisma.invoice.findUnique({ where: { id } })

@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -64,6 +65,13 @@ export async function POST(request: Request) {
         createdById,
       },
     })
+
+    logAudit(authUser, 'create', 'expense', expense.id, {
+      description: expense.description,
+      category: expense.category,
+      amount: expense.amount,
+    })
+
     return NextResponse.json(expense)
   } catch (error) {
     console.error('POST /api/expenses:', error)

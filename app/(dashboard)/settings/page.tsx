@@ -125,7 +125,50 @@ const TABS = [
   { key: 'security',       emoji: '🔒', label: 'Security'       },
   { key: 'integrations',   emoji: '🔗', label: 'Integrations'   },
   { key: 'appearance',     emoji: '🎨', label: 'Appearance'     },
+  { key: 'activity',       emoji: '📜', label: 'Activity Log'   },
 ]
+
+const AUDIT_ENTITIES = [
+  { key: 'all',      label: 'All' },
+  { key: 'invoice',  label: 'Invoices' },
+  { key: 'service',  label: 'Services' },
+  { key: 'client',   label: 'Clients' },
+  { key: 'expense',  label: 'Expenses' },
+  { key: 'payment',  label: 'Payments' },
+  { key: 'staff',    label: 'Staff' },
+]
+
+const AUDIT_ACTION_COLOR: Record<string, string> = {
+  create: '#38d9a9',
+  update: '#4f8ef7',
+  delete: '#f87171',
+}
+
+function auditSummary(log: any): string {
+  const d = log.details || {}
+  switch (log.entity) {
+    case 'invoice':
+      if (log.action === 'create') return `Created invoice ${d.invoiceNumber} for ${d.client || 'client'} — $${Number(d.total ?? 0).toFixed(2)}`
+      if (log.action === 'delete') return `Deleted invoice ${d.invoiceNumber} ($${Number(d.total ?? 0).toFixed(2)})`
+      return `Updated invoice ${d.invoiceNumber ?? ''}`.trim()
+    case 'service':
+      if (log.action === 'create') return `Created service #${d.serviceNumber} (${d.type ?? ''})`
+      if (log.action === 'delete') return `Deleted service #${d.serviceNumber ?? ''} (${d.type ?? ''})`
+      if (d.bulk) return `Bulk-deleted ${d.count} services`
+      return `Updated service #${d.serviceNumber ?? ''}`
+    case 'client':
+      return `${log.action === 'create' ? 'Created' : 'Updated'} client ${d.name ?? ''}`
+    case 'expense':
+      if (log.action === 'delete') return `Deleted expense "${d.description ?? ''}" ($${Number(d.amount ?? 0).toFixed(2)})`
+      return `${log.action === 'create' ? 'Created' : 'Updated'} expense "${d.description ?? ''}" ($${Number(d.amount ?? 0).toFixed(2)})`
+    case 'payment':
+      return `${log.action === 'create' ? 'Recorded' : 'Deleted'} payment of $${Number(d.amount ?? 0).toFixed(2)} (${d.method ?? ''}) on invoice ${d.invoiceNumber ?? d.invoiceId ?? ''}`
+    case 'staff':
+      return `${log.action === 'create' ? 'Created' : 'Updated'} staff member ${d.name ?? ''}${d.role ? ` (${d.role})` : ''}`
+    default:
+      return `${log.action} ${log.entity}`
+  }
+}
 
 // ── Page ──────────────────────────────────────────────────────────
 export default function SettingsPage() {
@@ -216,6 +259,36 @@ export default function SettingsPage() {
     }
   }
 
+  // ── Activity Log ──
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditError, setAuditError] = useState('')
+  const [auditEntity, setAuditEntity] = useState('all')
+  const [auditAction, setAuditAction] = useState('all')
+  const [auditSearch, setAuditSearch] = useState('')
+
+  function loadAuditLogs() {
+    setAuditLoading(true)
+    setAuditError('')
+    const params = new URLSearchParams()
+    if (auditEntity !== 'all') params.set('entity', auditEntity)
+    if (auditAction !== 'all') params.set('action', auditAction)
+    if (auditSearch.trim())   params.set('search', auditSearch.trim())
+    fetch(`/api/audit-log?${params}`)
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error || 'Failed to load activity log')
+        return data
+      })
+      .then(data => setAuditLogs(Array.isArray(data) ? data : []))
+      .catch(err => setAuditError(err.message || 'Failed to load activity log'))
+      .finally(() => setAuditLoading(false))
+  }
+
+  useEffect(() => {
+    if (tab === 'activity' && isAdmin) loadAuditLogs()
+  }, [tab, auditEntity, auditAction])
+
   function loadSettings() {
     fetch('/api/settings')
       .then(async r => {
@@ -294,7 +367,7 @@ export default function SettingsPage() {
           </div>
           {/* Nav */}
           <nav className="p-2">
-            {TABS.map(t => (
+            {TABS.filter(t => t.key !== 'activity' || isAdmin).map(t => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
@@ -323,17 +396,19 @@ export default function SettingsPage() {
             </h1>
             <p className="text-xs text-[#6b7280] mt-0.5">System configuration</p>
           </div>
-          <button
-            onClick={save}
-            disabled={saving || loading}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all disabled:opacity-60 ${
-              saved ? 'bg-[#38d9a9] text-[#0d0f14]' : 'bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white'
-            }`}
-          >
-            {saved    ? <><CheckCircle size={13} /> Saved</>
-           : saving   ? <><RotateCcw size={13} className="animate-spin" /> Saving…</>
-           : <><Save size={13} /> Save changes</>}
-          </button>
+          {tab !== 'activity' && (
+            <button
+              onClick={save}
+              disabled={saving || loading}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all disabled:opacity-60 ${
+                saved ? 'bg-[#38d9a9] text-[#0d0f14]' : 'bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white'
+              }`}
+            >
+              {saved    ? <><CheckCircle size={13} /> Saved</>
+             : saving   ? <><RotateCcw size={13} className="animate-spin" /> Saving…</>
+             : <><Save size={13} /> Save changes</>}
+            </button>
+          )}
         </div>
 
         {/* ══════════ BUSINESS ══════════ */}
@@ -1007,6 +1082,79 @@ export default function SettingsPage() {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* ══════════ ACTIVITY LOG ══════════ */}
+        {tab === 'activity' && isAdmin && (
+          <div className="space-y-4">
+            <div className={cardCls}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  type="text"
+                  placeholder="Search by user or detail…"
+                  value={auditSearch}
+                  onChange={e => setAuditSearch(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && loadAuditLogs()}
+                  className={inputCls + ' flex-1 min-w-[200px]'}
+                />
+                <select value={auditEntity} onChange={e => setAuditEntity(e.target.value)} className={inputCls + ' w-auto'}>
+                  {AUDIT_ENTITIES.map(e => <option key={e.key} value={e.key}>{e.label}</option>)}
+                </select>
+                <select value={auditAction} onChange={e => setAuditAction(e.target.value)} className={inputCls + ' w-auto'}>
+                  <option value="all">All actions</option>
+                  <option value="create">Created</option>
+                  <option value="update">Updated</option>
+                  <option value="delete">Deleted</option>
+                </select>
+                <button
+                  onClick={loadAuditLogs}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
+            {auditError && <div className="text-xs text-[#f87171] px-1">{auditError}</div>}
+
+            <div className={cardCls + ' p-0 overflow-hidden'}>
+              {auditLoading ? (
+                <div className="text-center py-10 text-[#6b7280] text-xs">Loading…</div>
+              ) : auditLogs.length === 0 ? (
+                <div className="text-center py-10 text-[#6b7280] text-xs">No activity recorded yet.</div>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#1e2330]">
+                      {['When', 'User', 'Action', 'Entity', 'Details'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.map(l => (
+                      <tr key={l.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                        <td className="px-3 py-2.5 text-[#9ca3af] whitespace-nowrap">
+                          {new Date(l.createdAt).toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold text-[#e8eaf0] whitespace-nowrap">{l.userName}</td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
+                            style={{ backgroundColor: `${AUDIT_ACTION_COLOR[l.action] ?? '#6b7280'}20`, color: AUDIT_ACTION_COLOR[l.action] ?? '#9ca3af' }}
+                          >
+                            {l.action}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-[#9ca3af] capitalize">{l.entity}</td>
+                        <td className="px-3 py-2.5 text-[#e8eaf0]">{auditSummary(l)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         )}
 

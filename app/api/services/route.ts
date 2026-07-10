@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -80,6 +81,9 @@ export async function DELETE(request: Request) {
     }
 
     const { count } = await prisma.service.deleteMany({ where: { id: { in: ids } } })
+
+    logAudit(authUser, 'delete', 'service', null, { bulk: true, count, ids })
+
     return NextResponse.json({ deleted: count })
   } catch (error) {
     console.error('Error bulk deleting services:', error)
@@ -129,6 +133,13 @@ export async function POST(request: Request) {
         }))
       })
     }
+
+    logAudit(user, 'create', 'service', service.id, {
+      serviceNumber: service.serviceNumber,
+      type: service.type,
+      serviceDate: service.serviceDate,
+      total: service.total,
+    })
 
     return NextResponse.json(service)
   } catch (error) {

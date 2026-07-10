@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(
   request: Request,
@@ -94,6 +95,12 @@ export async function PATCH(
     }
 
     const invoice = await prisma.invoice.update({ where: { id }, data: updateData })
+
+    logAudit(authUser, 'update', 'invoice', invoice.id, {
+      invoiceNumber: invoice.invoiceNumber,
+      changes: updateData,
+    })
+
     return NextResponse.json(invoice)
   } catch (error) {
     console.error('Error updating invoice:', error)
@@ -133,6 +140,12 @@ export async function DELETE(
 
     // Borra el invoice (cascade borra items y payments)
     await prisma.invoice.delete({ where: { id } })
+
+    logAudit(authUser, 'delete', 'invoice', id, {
+      invoiceNumber: invoice.invoiceNumber,
+      total: invoice.total,
+      status: invoice.status,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

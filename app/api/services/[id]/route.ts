@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
+import { logAudit } from '@/lib/audit'
 
 async function assertUserCanAccess(serviceId: string, userId: string) {
   const visibility = await getVisibleServiceDates(userId)
@@ -69,6 +70,7 @@ export async function PATCH(
         if (rawBody[field] !== undefined) allowed[field] = rawBody[field]
       }
       const service = await prisma.service.update({ where: { id }, data: allowed })
+      logAudit(authUser, 'update', 'service', id, { serviceNumber: service.serviceNumber, changes: allowed })
       return NextResponse.json(stripPriceFields(service))
     }
 
@@ -93,6 +95,8 @@ export async function PATCH(
     if (body.clientId)                    data.client        = { connect: { id: body.clientId } }
 
     const service = await prisma.service.update({ where: { id }, data })
+
+    logAudit(authUser, 'update', 'service', id, { serviceNumber: service.serviceNumber, changes: data })
 
     if (body.staffIds) {
       await prisma.serviceStaff.deleteMany({ where: { serviceId: id } })
@@ -199,6 +203,12 @@ export async function DELETE(
     }
 
     await prisma.service.delete({ where: { id } })
+
+    logAudit(authUser, 'delete', 'service', id, {
+      serviceNumber: service.serviceNumber,
+      type: service.type,
+      serviceDate: service.serviceDate,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

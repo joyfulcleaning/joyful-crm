@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
@@ -136,6 +137,13 @@ export async function POST(request: Request) {
         data:  { invoicedAt: new Date() },
       })
     }
+
+    logAudit(user, 'create', 'invoice', invoice.id, {
+      invoiceNumber: invoice.invoiceNumber,
+      client: invoice.client?.name,
+      total: invoice.total,
+      status: invoice.status,
+    })
 
     return NextResponse.json(invoice)
   } catch (error: any) {

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { logAudit } from '@/lib/audit'
 
 export async function PATCH(
   request: Request,
@@ -24,6 +25,9 @@ export async function PATCH(
     if (body.notes         !== undefined) data.notes         = body.notes || null
 
     const expense = await prisma.expense.update({ where: { id }, data })
+
+    logAudit(authUser, 'update', 'expense', expense.id, { description: expense.description, changes: data })
+
     return NextResponse.json(expense)
   } catch (error) {
     console.error('PATCH /api/expenses/[id]:', error)
@@ -40,7 +44,14 @@ export async function DELETE(
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await context.params
-    await prisma.expense.delete({ where: { id } })
+    const expense = await prisma.expense.delete({ where: { id } })
+
+    logAudit(authUser, 'delete', 'expense', id, {
+      description: expense.description,
+      category: expense.category,
+      amount: expense.amount,
+    })
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('DELETE /api/expenses/[id]:', error)
