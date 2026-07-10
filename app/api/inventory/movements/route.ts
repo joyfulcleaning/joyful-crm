@@ -1,12 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { maybeNotifyLowStock } from '@/lib/low-stock'
-
-// Raw SQL: the generated Prisma client predates the InventoryMovement model
-// (query engine DLL is locked by the dev server, can't regenerate).
 
 export async function GET(request: Request) {
   try {
@@ -16,20 +12,26 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const productId = searchParams.get('productId')
 
-    const where = productId ? `WHERE m."productId" = $1` : ''
-    const params = productId ? [productId] : []
-    const movements = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT m.id, m."productId", m.type, m.quantity, m.date, m.comment,
-              m."createdBy", m."createdAt",
-              p.name AS "productName", p.sku, p."unitOfMeasure"
-       FROM inventory_movements m
-       JOIN inventory_products p ON p.id = m."productId"
-       ${where}
-       ORDER BY m.date DESC, m."createdAt" DESC
-       LIMIT 300`,
-      ...params
-    )
-    return NextResponse.json(movements)
+    const movements = await prisma.inventoryMovement.findMany({
+      where: productId ? { productId } : undefined,
+      include: { product: { select: { name: true, sku: true, unitOfMeasure: true } } },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: 300,
+    })
+
+    return NextResponse.json(movements.map(m => ({
+      id: m.id,
+      productId: m.productId,
+      type: m.type,
+      quantity: m.quantity,
+      date: m.date,
+      comment: m.comment,
+      createdBy: m.createdBy,
+      createdAt: m.createdAt,
+      productName: m.product.name,
+      sku: m.product.sku,
+      unitOfMeasure: m.product.unitOfMeasure,
+    })))
   } catch (error) {
     console.error('GET /api/inventory/movements:', error)
     return NextResponse.json({ error: 'Failed to load movements' }, { status: 500 })
@@ -56,7 +58,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
     }
 
-    // Atomic stock update: for 'out', the WHERE guard prevents going below zero
+    // Atomic stock update via raw SQL: Prisma's update API can't express a
+    // conditional WHERE on the current column value in one statement, and
+    // this guard is what prevents stock from going negative under concurrent
+    // requests. For 'out', the guard rejects the update if stock is insufficient.
     const delta = type === 'out' ? -quantity : quantity
     const updated = await prisma.$queryRawUnsafe<any[]>(
       `UPDATE inventory_products
@@ -74,19 +79,23 @@ export async function POST(request: Request) {
       )
     }
 
-    const movementId = randomUUID()
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO inventory_movements (id, "productId", type, quantity, date, comment, "createdBy")
-       VALUES ($1, $2, $3, $4, $5::timestamp, $6, $7)`,
-      movementId, productId, type, quantity, `${dateStr}T12:00:00`, comment || null, authUser.name
-    )
+    const movement = await prisma.inventoryMovement.create({
+      data: {
+        productId,
+        type,
+        quantity,
+        date: new Date(`${dateStr}T12:00:00`),
+        comment: comment || null,
+        createdBy: authUser.name,
+      },
+    })
 
     // Low-stock alert if this usage crossed below the minimum
     if (type === 'out') {
       await maybeNotifyLowStock(updated[0], updated[0].currentStock + quantity).catch(() => {})
     }
 
-    return NextResponse.json({ product: updated[0], movementId })
+    return NextResponse.json({ product: updated[0], movementId: movement.id })
   } catch (error) {
     console.error('POST /api/inventory/movements:', error)
     return NextResponse.json({ error: 'Failed to register movement' }, { status: 500 })

@@ -47,6 +47,9 @@ export async function GET(request: Request) {
             state: true,
             zip: true,
             managementId: true,
+            paymentTermsDays: true,
+            defaultTaxRate: true,
+            defaultPaymentMethod: true,
           },
         },
         invoiceItems: {
@@ -58,35 +61,13 @@ export async function GET(request: Request) {
       orderBy: [{ serviceDate: 'asc' }, { serviceNumber: 'asc' }],
     })
 
-    // Fetch client billing defaults separately to avoid issues with Prisma client cache
-    const clientIds = [...new Set(services.map((s: any) => s.clientId))]
-    let clientsWithDefaults: any[] = []
-    if (clientIds.length > 0) {
-      // id is TEXT in PostgreSQL (Prisma String → text), no ::uuid cast needed
-      const placeholders = clientIds.map((_: any, i: number) => `$${i + 1}`).join(', ')
-      clientsWithDefaults = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT id, "paymentTermsDays", "defaultTaxRate", "defaultPaymentMethod" FROM clients WHERE id IN (${placeholders})`,
-        ...clientIds
-      ).catch((e: any) => { console.error('[clients-by-period] billing defaults query failed:', e); return [] })
-    }
-    const defaultsMap = new Map(clientsWithDefaults.map((c: any) => [c.id, c]))
-
     // Group services by client
     const clientMap = new Map<string, { client: any; services: any[] }>()
 
     for (const service of services) {
       const clientId = service.clientId
       if (!clientMap.has(clientId)) {
-        const defaults = defaultsMap.get(clientId) || {}
-        clientMap.set(clientId, {
-          client: {
-            ...service.client,
-            paymentTermsDays: defaults.paymentTermsDays ?? null,
-            defaultTaxRate: defaults.defaultTaxRate ?? null,
-            defaultPaymentMethod: defaults.defaultPaymentMethod ?? null,
-          },
-          services: []
-        })
+        clientMap.set(clientId, { client: service.client, services: [] })
       }
       clientMap.get(clientId)!.services.push(service)
     }
