@@ -4,6 +4,27 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
 import { logAudit } from '@/lib/audit'
+import { notifyEvent } from '@/lib/notify-admin'
+
+// Fires the "Service completed" notification when a PATCH transitions the
+// service into completed (from any other status). Fire-and-forget.
+function notifyCompleted(service: { serviceNumber: number | null; unit: string | null; roomSize: string | null }, clientName: string, byName: string) {
+  const label = [service.unit ?? service.roomSize, clientName].filter(Boolean).join(' · ')
+  notifyEvent('completed', {
+    pushTitle: 'Service completed',
+    pushBody:  `#${service.serviceNumber} — ${label}, completed by ${byName}`,
+    pushData:  { type: 'serviceCompleted' },
+    emailSubject: `Service completed — #${service.serviceNumber}`,
+    emailHtml: `
+      <p>A service was just marked as completed.</p>
+      <ul>
+        <li><strong>Service:</strong> #${service.serviceNumber}</li>
+        <li><strong>Client / Unit:</strong> ${label || '—'}</li>
+        <li><strong>Completed by:</strong> ${byName}</li>
+      </ul>
+    `,
+  }).catch(err => console.error('Error notifying service completed:', err))
+}
 
 async function assertUserCanAccess(serviceId: string, userId: string) {
   const visibility = await getVisibleServiceDates(userId)
@@ -69,9 +90,20 @@ export async function PATCH(
       for (const field of USER_EDITABLE_FIELDS) {
         if (rawBody[field] !== undefined) allowed[field] = rawBody[field]
       }
-      const service = await prisma.service.update({ where: { id }, data: allowed })
+      const before = allowed.status === 'completed'
+        ? await prisma.service.findUnique({ where: { id }, select: { status: true } })
+        : null
+      const service = await prisma.service.update({
+        where: { id },
+        data: allowed,
+        include: { client: { select: { name: true } } },
+      })
       logAudit(authUser, 'update', 'service', id, { serviceNumber: service.serviceNumber, changes: allowed })
-      return NextResponse.json(stripPriceFields(service))
+      if (allowed.status === 'completed' && before?.status !== 'completed') {
+        notifyCompleted(service, service.client?.name ?? '', authUser.name)
+      }
+      const { client: _client, ...serviceOnly } = service
+      return NextResponse.json(stripPriceFields(serviceOnly))
     }
 
     const body = rawBody
@@ -94,9 +126,20 @@ export async function PATCH(
     if (body.staffNotes    !== undefined) data.staffNotes    = body.staffNotes
     if (body.clientId)                    data.client        = { connect: { id: body.clientId } }
 
-    const service = await prisma.service.update({ where: { id }, data })
+    const before = data.status === 'completed'
+      ? await prisma.service.findUnique({ where: { id }, select: { status: true } })
+      : null
+    const service = await prisma.service.update({
+      where: { id },
+      data,
+      include: { client: { select: { name: true } } },
+    })
 
     logAudit(authUser, 'update', 'service', id, { serviceNumber: service.serviceNumber, changes: data })
+
+    if (data.status === 'completed' && before?.status !== 'completed') {
+      notifyCompleted(service, service.client?.name ?? '', authUser.name)
+    }
 
     if (body.staffIds) {
       await prisma.serviceStaff.deleteMany({ where: { serviceId: id } })

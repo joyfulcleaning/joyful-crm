@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
+import { notifyEvent } from '@/lib/notify-admin'
 
 export async function GET(request: Request) {
   try {
@@ -58,6 +59,22 @@ export async function POST(request: Request) {
     })
 
     logAudit(authUser, 'create', 'client', client.id, { name: client.name, type: client.type })
+
+    notifyEvent('newClient', {
+      pushTitle: 'New client registered',
+      pushBody:  `${client.name} (${client.type}) — added by ${authUser.name}`,
+      pushData:  { type: 'newClient', clientId: client.id },
+      emailSubject: `New client registered — ${client.name}`,
+      emailHtml: `
+        <p>A new client was added to the system.</p>
+        <ul>
+          <li><strong>Name:</strong> ${client.name}</li>
+          <li><strong>Type:</strong> ${client.type}</li>
+          <li><strong>Address:</strong> ${client.address ?? '—'}${client.city ? `, ${client.city}` : ''}</li>
+          <li><strong>Added by:</strong> ${authUser.name}</li>
+        </ul>
+      `,
+    }).catch(err => console.error('Error notifying new client:', err))
 
     return NextResponse.json(client)
   } catch {

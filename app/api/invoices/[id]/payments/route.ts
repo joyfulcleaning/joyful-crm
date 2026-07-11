@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { businessToday } from '@/lib/business-date'
 import { logAudit } from '@/lib/audit'
+import { notifyEvent } from '@/lib/notify-admin'
 
 export async function GET(
   request: Request,
@@ -102,6 +103,29 @@ export async function POST(
       amount: payment.amount,
       method: payment.method,
     })
+
+    // Notify admins when this payment settles the invoice in full. The
+    // webhook flow (recordAutomaticPayment) already does this for Stripe/
+    // Square; this covers manually recorded payments (cash, Zelle, etc.).
+    if (balanceDue === 0 && invoice.status !== 'paid') {
+      const money = paymentAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+      const clientName = updatedInvoice.client?.name ?? 'client'
+      notifyEvent('paid', {
+        pushTitle: 'Invoice paid',
+        pushBody:  `${money} (${body.method}) — Invoice ${invoice.invoiceNumber} (${clientName}), recorded by ${user.name}`,
+        pushData:  { type: 'invoicePaid', invoiceId: id },
+        emailSubject: `Invoice paid — ${invoice.invoiceNumber}`,
+        emailHtml: `
+          <p>An invoice was just paid in full.</p>
+          <ul>
+            <li><strong>Invoice:</strong> ${invoice.invoiceNumber}</li>
+            <li><strong>Client:</strong> ${clientName}</li>
+            <li><strong>Payment:</strong> ${money} (${body.method})</li>
+            <li><strong>Recorded by:</strong> ${user.name}</li>
+          </ul>
+        `,
+      }).catch(err => console.error('Error notifying invoice paid:', err))
+    }
 
     return NextResponse.json({ payment, invoice: updatedInvoice })
   } catch (error) {

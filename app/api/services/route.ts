@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
 import { logAudit } from '@/lib/audit'
+import { notifyEvent } from '@/lib/notify-admin'
 
 export async function GET(request: Request) {
   try {
@@ -140,6 +141,30 @@ export async function POST(request: Request) {
       serviceDate: service.serviceDate,
       total: service.total,
     })
+
+    // Notify only for the series root — recurring series create one child per
+    // occurrence through this same endpoint and would otherwise fire dozens
+    // of notifications for a single scheduling action.
+    if (!body.parentServiceId) {
+      prisma.client.findUnique({ where: { id: body.clientId }, select: { name: true } })
+        .then(client => notifyEvent('newSvc', {
+          pushTitle: 'New service scheduled',
+          pushBody:  `#${service.serviceNumber} — ${[service.unit, client?.name].filter(Boolean).join(' · ')} on ${new Date(service.serviceDate).toISOString().slice(0, 10)}`,
+          pushData:  { type: 'newService', serviceId: service.id },
+          emailSubject: `New service scheduled — #${service.serviceNumber}`,
+          emailHtml: `
+            <p>A new service was scheduled.</p>
+            <ul>
+              <li><strong>Service:</strong> #${service.serviceNumber} (${service.type})</li>
+              <li><strong>Client:</strong> ${client?.name ?? '—'}</li>
+              <li><strong>Unit:</strong> ${service.unit ?? '—'}</li>
+              <li><strong>Date:</strong> ${new Date(service.serviceDate).toISOString().slice(0, 10)}</li>
+              <li><strong>Created by:</strong> ${user.name}</li>
+            </ul>
+          `,
+        }))
+        .catch(err => console.error('Error notifying new service:', err))
+    }
 
     return NextResponse.json(service)
   } catch (error) {

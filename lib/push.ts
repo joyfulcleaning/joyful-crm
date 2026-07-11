@@ -23,11 +23,32 @@ export async function sendPushToRoles(eventKey: string, title: string, body: str
     })
     if (tokens.length === 0) return
 
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(tokens.map(t => ({ to: t.token, title, body, data: data || {} }))),
-    })
+    // Expo caps each request at 100 messages; batch and collect per-message
+    // tickets so tokens Expo reports as dead get pruned instead of silently
+    // eating every future notification for that device.
+    const stale: string[] = []
+    for (let i = 0; i < tokens.length; i += 100) {
+      const chunk = tokens.slice(i, i + 100)
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(chunk.map(t => ({ to: t.token, title, body, data: data || {} }))),
+      })
+      const json = await res.json().catch(() => null)
+      const tickets = json?.data
+      if (Array.isArray(tickets)) {
+        tickets.forEach((ticket: any, j: number) => {
+          if (ticket?.status === 'error' && ticket?.details?.error === 'DeviceNotRegistered') {
+            stale.push(chunk[j].token)
+          } else if (ticket?.status === 'error') {
+            console.error(`Push ticket error for event "${eventKey}":`, ticket?.message || ticket)
+          }
+        })
+      }
+    }
+    if (stale.length > 0) {
+      await prisma.pushToken.deleteMany({ where: { token: { in: stale } } })
+    }
   } catch (err) {
     console.error(`Error sending push for event "${eventKey}":`, err)
   }
