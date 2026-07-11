@@ -32,7 +32,19 @@ export async function sendPushToRoles(eventKey: string, title: string, body: str
       const res = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(chunk.map(t => ({ to: t.token, title, body, data: data || {} }))),
+        body: JSON.stringify(chunk.map(t => ({
+          to: t.token,
+          title,
+          body,
+          data: data || {},
+          // iOS plays the default sound when the ringer is on and vibrates in
+          // silent mode; without `sound` the notification arrives muted.
+          sound: 'default',
+          // Android: heads-up delivery through the high-importance channel
+          // the app creates on startup (sound + vibration enabled).
+          priority: 'high',
+          channelId: 'alerts',
+        }))),
       })
       const json = await res.json().catch(() => null)
       const tickets = json?.data

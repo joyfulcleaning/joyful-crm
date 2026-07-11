@@ -21,6 +21,9 @@ async function main() {
       title: '🔔 Prueba de notificaciones',
       body: 'Test del sistema de push — puedes ignorar este mensaje.',
       data: { type: 'test' },
+      sound: 'default',
+      priority: 'high',
+      channelId: 'alerts',
     }))),
   })
   const json: any = await res.json()
