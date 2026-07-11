@@ -4,10 +4,12 @@ import { useSession, signOut } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n, Lang } from '@/lib/i18n'
 
 export default function Topbar() {
   const { data: session } = useSession()
   const user = session?.user as any
+  const { lang, t, setLang } = useI18n()
   const [light, setLight] = useState(false)
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function Topbar() {
       {/* Left */}
       <div className="flex items-center gap-2">
         <span className={cn('text-sm', light ? 'text-[#5b5374]' : 'text-gray-400')}>
-          Welcome back,{' '}
+          {t.topbar.welcomeBack}{' '}
           <span className={cn('font-medium', light ? 'text-[#1F1A3D]' : 'text-white')}>
             {session?.user?.name?.split(' ')[0]}
           </span>
@@ -35,13 +37,33 @@ export default function Topbar() {
       </div>
       {/* Right */}
       <div className="flex items-center gap-3">
+        {/* Language toggle */}
+        <div className={cn(
+          'flex items-center rounded-full border p-0.5 gap-0.5',
+          light ? 'border-[#D3D7E0] bg-white/60' : 'border-gray-700 bg-gray-800/60'
+        )}>
+          {(['en', 'es'] as Lang[]).map(l => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              className={cn(
+                'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase transition-colors',
+                lang === l
+                  ? 'bg-[#3D3A9F] text-white'
+                  : light ? 'text-[#5b5374] hover:text-[#1F1A3D]' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
         {/* Role badge */}
         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
           user?.role === 'admin'
             ? 'bg-[rgba(61,58,159,0.1)] text-[#3D3A9F] border border-[rgba(61,58,159,0.2)]'
             : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
         }`}>
-          {user?.role === 'admin' ? '👑 Admin' : '👷 Staff'}
+          {user?.role === 'admin' ? t.topbar.admin : t.topbar.staff}
         </span>
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-[rgba(61,58,159,0.15)] border border-[rgba(61,58,159,0.25)] flex items-center justify-center">
@@ -58,7 +80,7 @@ export default function Topbar() {
               ? 'text-[#5b5374] hover:text-[#1F1A3D] hover:bg-[rgba(74,63,176,0.08)]'
               : 'text-gray-400 hover:text-white hover:bg-gray-800'
           )}
-          title="Sign out"
+          title={t.topbar.signOut}
         >
           <LogOut size={16} />
         </button>

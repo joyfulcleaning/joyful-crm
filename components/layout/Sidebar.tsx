@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useI18n, Dict } from '@/lib/i18n'
 import {
   LayoutDashboard,
   Calendar,
@@ -18,22 +19,23 @@ import {
   Bot,
 } from 'lucide-react'
 
-const navItems = [
-  { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard'   },
-  { href: '/ai-requests',  icon: Bot,             label: 'AI Requests' },
-  { href: '/calendar',     icon: Calendar,        label: 'Calendar'    },
-  { href: '/map',          icon: Map,             label: 'Map'         },
-  { href: '/services',    icon: Briefcase,       label: 'Services'   },
-  { href: '/clients',     icon: Users,           label: 'Clients'    },
-  { href: '/staff',       icon: UserCheck,       label: 'Staff'      },
-  { href: '/finances',    icon: DollarSign,      label: 'Finances'   },
-  { href: '/analytics',   icon: BarChart3,       label: 'Analytics'  },
-  { href: '/export',      icon: Download,        label: 'Export'     },
-  { href: '/settings',    icon: Settings,        label: 'Settings'   },
+const navItems: { href: string; icon: any; labelKey: keyof Dict['nav'] }[] = [
+  { href: '/dashboard',    icon: LayoutDashboard, labelKey: 'dashboard'  },
+  { href: '/ai-requests',  icon: Bot,             labelKey: 'aiRequests' },
+  { href: '/calendar',     icon: Calendar,        labelKey: 'calendar'   },
+  { href: '/map',          icon: Map,             labelKey: 'map'        },
+  { href: '/services',    icon: Briefcase,       labelKey: 'services'  },
+  { href: '/clients',     icon: Users,           labelKey: 'clients'   },
+  { href: '/staff',       icon: UserCheck,       labelKey: 'staff'     },
+  { href: '/finances',    icon: DollarSign,      labelKey: 'finances'  },
+  { href: '/analytics',   icon: BarChart3,       labelKey: 'analytics' },
+  { href: '/export',      icon: Download,        labelKey: 'export'    },
+  { href: '/settings',    icon: Settings,        labelKey: 'settings'  },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { t } = useI18n()
   const [light, setLight] = useState(false)
   const [aiPending, setAiPending] = useState(0)
 
@@ -99,7 +101,7 @@ export default function Sidebar() {
               )}
             >
               <item.icon size={16} />
-              <span className="flex-1">{item.label}</span>
+              <span className="flex-1">{t.nav[item.labelKey]}</span>
               {item.href === '/ai-requests' && aiPending > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#f59e0b] text-white leading-none">
                   {aiPending}

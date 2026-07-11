@@ -2,6 +2,7 @@
 
 import { Briefcase, CheckCircle, Clock, Users } from 'lucide-react'
 import CountUp from '@/components/ui/CountUp'
+import { useI18n, Dict } from '@/lib/i18n'
 
 interface Props {
   totalServices:    number
@@ -10,38 +11,38 @@ interface Props {
   totalClients:     number
 }
 
-const STATS = (p: Props) => [
+const STATS = (p: Props, t: Dict) => [
   {
-    label:   'Total Services',
+    label:   t.dashboard.totalServices,
     value:   p.totalServices,
-    formula: 'all statuses combined',
+    formula: t.dashboard.allStatuses,
     icon: Briefcase,
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/20',
   },
   {
-    label:   'Completed',
+    label:   t.dashboard.completed,
     value:   p.completedServices,
-    formula: `${p.totalServices ? Math.round(p.completedServices / p.totalServices * 100) : 0}% of total services`,
+    formula: t.dashboard.pctOfTotal(p.totalServices ? Math.round(p.completedServices / p.totalServices * 100) : 0),
     icon: CheckCircle,
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
     border: 'border-emerald-500/20',
   },
   {
-    label:   'Pending',
+    label:   t.dashboard.pending,
     value:   p.pendingServices,
-    formula: `${p.totalServices ? Math.round(p.pendingServices / p.totalServices * 100) : 0}% of total services`,
+    formula: t.dashboard.pctOfTotal(p.totalServices ? Math.round(p.pendingServices / p.totalServices * 100) : 0),
     icon: Clock,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/20',
   },
   {
-    label:   'Active Clients',
+    label:   t.dashboard.activeClients,
     value:   p.totalClients,
-    formula: 'all registered clients',
+    formula: t.dashboard.allClients,
     icon: Users,
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
@@ -50,7 +51,8 @@ const STATS = (p: Props) => [
 ]
 
 export default function DashboardStats(props: Props) {
-  const stats = STATS(props)
+  const { t } = useI18n()
+  const stats = STATS(props, t)
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, i) => (

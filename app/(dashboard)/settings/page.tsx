@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Save, RotateCcw, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { applyTheme } from '@/lib/theme'
+import { useI18n, Lang } from '@/lib/i18n'
 import ErrorBanner from '@/components/ErrorBanner'
 import { StripeIcon, SquareIcon } from '@/components/icons/PaymentIcons'
 
@@ -173,6 +174,7 @@ function auditSummary(log: any): string {
 // ── Page ──────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: session } = useSession()
+  const { lang, setLang, t } = useI18n()
   const isAdmin = (session?.user as any)?.role === 'admin'
   const [tab,     setTab]     = useState('business')
   const [cfg,     setCfg]     = useState<Record<string, string>>(DEFAULTS)
@@ -995,11 +997,20 @@ export default function SettingsPage() {
               <div className={sectionTitle}>Language & Region</div>
               <div className="grid grid-cols-2 gap-4 max-w-lg">
                 <div>
-                  <label className={labelCls}>Interface Language</label>
-                  <select value={val('app.language', 'en')} onChange={e => set('app.language', e.target.value)} className={inputCls}>
+                  <label className={labelCls}>{t.settings.language}</label>
+                  <select
+                    value={lang}
+                    onChange={e => {
+                      const l = e.target.value as Lang
+                      setLang(l)
+                      set('app.language', l)
+                    }}
+                    className={inputCls}
+                  >
                     <option value="en">🇺🇸 English</option>
                     <option value="es">🇪🇸 Español</option>
                   </select>
+                  <div className="text-[9px] text-[#6b7280] mt-1">{t.settings.languageHint}</div>
                 </div>
                 <div>
                   <label className={labelCls}>Timezone</label>
@@ -1076,9 +1087,9 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-bold text-[#e8eaf0]">Full Internationalization (i18n)</div>
-                  <div className="text-[10px] text-[#6b7280] mt-0.5">Complete EN/ES translation with next-intl — all modules</div>
+                  <div className="text-[10px] text-[#6b7280] mt-0.5">EN/ES live in navigation, top bar and dashboard — remaining modules being translated progressively</div>
                 </div>
-                <span className="text-[9px] bg-[rgba(79,142,247,0.1)] text-[#4f8ef7] border border-[rgba(79,142,247,0.2)] px-2 py-0.5 rounded-full font-semibold">Sprint 3</span>
+                <span className="text-[9px] bg-[rgba(56,217,169,0.1)] text-[#38d9a9] border border-[rgba(56,217,169,0.2)] px-2 py-0.5 rounded-full font-semibold">In Progress</span>
               </div>
             </div>
 
