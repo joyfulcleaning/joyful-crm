@@ -25,7 +25,7 @@ export async function PATCH(
       where: { id },
       data: {
         name: body.name,
-        email: body.email,
+        email: typeof body.email === 'string' ? body.email.trim().toLowerCase() : body.email,
         phone: body.phone ?? null,
         role: body.role,
         status: body.status,
