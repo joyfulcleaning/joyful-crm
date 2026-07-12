@@ -95,6 +95,12 @@ export default function FinancesPage() {
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  // ── Summary: pending invoices table sort ──
+  type SumSortKey = 'invoiceNumber' | 'client' | 'total' | 'balanceDue' | 'dueDate' | 'status'
+  const [sumSort, setSumSort] = useState<{ key: SumSortKey; dir: 1 | -1 }>({ key: 'balanceDue', dir: -1 })
+  const toggleSumSort = (key: SumSortKey) =>
+    setSumSort(prev => prev.key === key ? { key, dir: (prev.dir * -1) as 1 | -1 } : { key, dir: key === 'client' || key === 'status' ? 1 : -1 })
+
   // ── Modals ──
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -1823,26 +1829,69 @@ export default function FinancesPage() {
             </div>
           </div>
 
+          {(() => {
+            // Every unpaid status counts as pending here (draft, sent,
+            // overdue, ...) — anything except paid/cancelled.
+            const STATUS_RANK: Record<string, number> = { overdue: 0, sent: 1, partial: 2, draft: 3 }
+            const pendingInvoices = invoices
+              .filter((inv: any) => inv.status !== 'paid' && inv.status !== 'cancelled')
+              .sort((a: any, b: any) => {
+                const { key, dir } = sumSort
+                let base = 0
+                if (key === 'invoiceNumber')    base = String(a.invoiceNumber ?? '').localeCompare(String(b.invoiceNumber ?? ''))
+                else if (key === 'client')      base = (a.client?.name ?? '').localeCompare(b.client?.name ?? '')
+                else if (key === 'total')       base = Number(a.total) - Number(b.total)
+                else if (key === 'balanceDue')  base = Number(a.balanceDue ?? a.total) - Number(b.balanceDue ?? b.total)
+                else if (key === 'dueDate')     base = String(a.dueDate ?? '9999').localeCompare(String(b.dueDate ?? '9999'))
+                else if (key === 'status')      base = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9)
+                return base * dir
+              })
+            const HEADERS: { label: string; key?: SumSortKey }[] = [
+              { label: 'Invoice #',   key: 'invoiceNumber' },
+              { label: 'Client',      key: 'client' },
+              { label: 'Total',       key: 'total' },
+              { label: 'Balance Due', key: 'balanceDue' },
+              { label: 'Due Date',    key: 'dueDate' },
+              { label: 'Status',      key: 'status' },
+              { label: '' },
+            ]
+            return (
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
-              <div className="text-xs font-bold text-[#e8eaf0]">Recent Invoices</div>
+              <div className="text-xs font-bold text-[#e8eaf0] flex items-center gap-2">
+                Pending Invoices
+                {pendingInvoices.length > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">{pendingInvoices.length}</span>
+                )}
+              </div>
               <button onClick={() => setActiveTab('invoices')} className="text-[10px] text-[#4f8ef7] hover:underline">View all</button>
             </div>
-            {invoices.length === 0 ? (
-              <div className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</div>
+            {pendingInvoices.length === 0 ? (
+              <div className="text-center py-8 text-[#6b7280] text-xs">No pending invoices — everything is paid. 🎉</div>
             ) : (
               <table className="w-full">
                 <thead>
                   <tr className="bg-[#1e2330]">
-                    {['Invoice #', 'Client', 'Total', 'Balance Due', 'Status', ''].map(h => (
-                      <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-4 py-2.5">{h}</th>
+                    {HEADERS.map(h => (
+                      <th key={h.label} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-4 py-2.5">
+                        {h.key ? (
+                          <button
+                            onClick={() => toggleSumSort(h.key!)}
+                            className={`flex items-center gap-1 uppercase tracking-wider hover:text-[#e8eaf0] transition-colors ${sumSort.key === h.key ? 'text-[#4f8ef7]' : ''}`}
+                          >
+                            {h.label}
+                            <span className="text-[8px]">{sumSort.key === h.key ? (sumSort.dir === 1 ? '▲' : '▼') : '↕'}</span>
+                          </button>
+                        ) : h.label}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.slice(0, 5).map((inv: any) => {
+                  {pendingInvoices.slice(0, 8).map((inv: any) => {
                     const color      = INVOICE_COLORS[inv.status] || '#6b7280'
                     const balanceDue = Number(inv.balanceDue ?? inv.total)
+                    const overdue    = inv.dueDate && inv.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10)
                     return (
                       <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                         <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
@@ -1850,6 +1899,9 @@ export default function FinancesPage() {
                         <td className="px-4 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">{fmt(Number(inv.total))}</td>
                         <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>
                           {fmt(balanceDue)}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono" style={{ color: overdue ? '#f87171' : '#9ca3af' }}>
+                          {inv.dueDate ? inv.dueDate.slice(0, 10) : '—'}
                         </td>
                         <td className="px-4 py-2.5">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
@@ -1870,6 +1922,8 @@ export default function FinancesPage() {
               </table>
             )}
           </div>
+            )
+          })()}
         </div>
       )}
 
