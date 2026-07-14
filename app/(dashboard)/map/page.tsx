@@ -271,7 +271,15 @@ export default function MapPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Map */}
         <div className="flex-1 relative">
-          <MapComponent services={geoServices} selected={selected} onSelect={setSelected} businessPhoneLocation={businessPhoneLocation} />
+          <MapComponent
+            services={geoServices}
+            selected={selected}
+            onSelect={setSelected}
+            businessPhoneLocation={businessPhoneLocation ? {
+              ...businessPhoneLocation,
+              dwellText: businessPhoneLocation.arrivedAt ? fmtDwell(businessPhoneLocation.arrivedAt, t) : null,
+            } : null}
+          />
           {geocoding && (
             <div className="absolute bottom-4 left-4 z-[1000] flex items-center gap-2 bg-[#161922] border border-[#2a2f3d] rounded-lg px-3 py-2 shadow-lg">
               <Loader2 size={12} className="animate-spin text-[#4f8ef7]" />

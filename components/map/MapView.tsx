@@ -31,7 +31,9 @@ const TYPE_ICONS: Record<string, string> = {
 const DEFAULT_CENTER: [number, number] = [35.0527, -78.8784]
 
 interface Popup {
-  service: any
+  kind: 'service' | 'businessPhone'
+  service?: any
+  businessPhone?: { updatedAt: string | null; dwellText: string | null }
   x: number
   y: number
 }
@@ -40,7 +42,7 @@ interface Props {
   services: any[]
   selected: any | null
   onSelect: (s: any | null) => void
-  businessPhoneLocation?: { lat: number; lng: number; updatedAt: string | null } | null
+  businessPhoneLocation?: { lat: number; lng: number; updatedAt: string | null; arrivedAt: string | null; dwellText: string | null } | null
 }
 
 
@@ -49,6 +51,7 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
   const mapkitRef = useRef<any>(null)
   const annotationsRef = useRef<any[]>([])
   const businessPhoneAnnotationRef = useRef<any>(null)
+  const businessPhoneLocationRef = useRef<Props['businessPhoneLocation']>(businessPhoneLocation)
   const selectedRef = useRef<any>(selected)
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -57,6 +60,7 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
   const [loadFailed, setLoadFailed] = useState(false)
 
   selectedRef.current = selected
+  businessPhoneLocationRef.current = businessPhoneLocation
 
   const closePopup = useCallback(() => {
     setPopup(null)
@@ -68,7 +72,23 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
     const pagePoint = map.convertCoordinateToPointOnPage(coordinate)
     const rect = wrapperRef.current.getBoundingClientRect()
     setPopup({
+      kind: 'service',
       service: s,
+      x: pagePoint.x - rect.left - window.scrollX,
+      y: pagePoint.y - rect.top - window.scrollY,
+    })
+  }, [])
+
+  const showPopupForBusinessPhone = useCallback((coordinate: any) => {
+    const map = mapRef.current
+    if (!map || !wrapperRef.current) return
+    const loc = businessPhoneLocationRef.current
+    if (!loc) return
+    const pagePoint = map.convertCoordinateToPointOnPage(coordinate)
+    const rect = wrapperRef.current.getBoundingClientRect()
+    setPopup({
+      kind: 'businessPhone',
+      businessPhone: { updatedAt: loc.updatedAt, dwellText: loc.dwellText },
       x: pagePoint.x - rect.left - window.scrollX,
       y: pagePoint.y - rect.top - window.scrollY,
     })
@@ -98,9 +118,12 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
       const map = mapRef.current
       const rect = wrapperRef.current?.getBoundingClientRect()
       if (!map || !rect) return null
+      const candidates = businessPhoneAnnotationRef.current
+        ? [...annotationsRef.current, businessPhoneAnnotationRef.current]
+        : annotationsRef.current
       let closest: any = null
       let closestDist = Infinity
-      for (const ann of annotationsRef.current) {
+      for (const ann of candidates) {
         const pagePoint = map.convertCoordinateToPointOnPage(ann.coordinate)
         const px = pagePoint.x - rect.left - window.scrollX
         const py = pagePoint.y - rect.top - window.scrollY - 16 // pin anchor is at its bottom tip; bias toward the visible glyph
@@ -111,10 +134,13 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
     }
     // Reverts the previously-hovered pin's "selected" (grown/animated) look
     // back to whatever it should be based on the real click-selection —
-    // MapKit's own selected marker animation is reused for hover too.
+    // MapKit's own selected marker animation is reused for hover too. The
+    // business phone pin has no click-selection concept, so it just always
+    // reverts to its normal size.
     function resetHoverVisual() {
       if (hoveredAnnotation) {
-        hoveredAnnotation.selected = selectedRef.current?.id === hoveredAnnotation.__service?.id
+        hoveredAnnotation.selected = hoveredAnnotation.__kind === 'service'
+          && selectedRef.current?.id === hoveredAnnotation.__service?.id
         hoveredAnnotation = null
       }
     }
@@ -131,7 +157,11 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
       if (ann) {
         ann.selected = true
         hoveredAnnotation = ann
-        showPopupForService(ann.__service, ann.coordinate)
+        if (ann.__kind === 'businessPhone') {
+          showPopupForBusinessPhone(ann.coordinate)
+        } else {
+          showPopupForService(ann.__service, ann.coordinate)
+        }
       } else {
         setPopup(null)
       }
@@ -168,7 +198,7 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
       wrapper.removeEventListener('mouseleave', handleMouseLeaveWrapper)
       if (mapRef.current) { mapRef.current.destroy(); mapRef.current = null }
     }
-  }, [showPopupForService])
+  }, [showPopupForService, showPopupForBusinessPhone])
 
   useEffect(() => {
     const map = mapRef.current
@@ -202,6 +232,7 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
       // 'select' handler below — annotations are plain objects, so this
       // is just a convenient way to get back to the service that owns one.
       annotation.__service = s
+      annotation.__kind = 'service'
 
       annotation.addEventListener('select', () => {
         onSelect(s)
@@ -220,8 +251,10 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
   }, [services, selected, showPopupForService])
 
   // Live marker for the single shared business phone (not a service pin —
-  // no hover card, just a native MapKit callout on click). Moves the same
-  // annotation on updates instead of recreating it, so it doesn't flicker.
+  // uses the same custom hover/click card as service pins, driven by
+  // nearestPin() above, instead of MapKit's native callout). Moves the
+  // same annotation on updates instead of recreating it, so it doesn't
+  // flicker.
   useEffect(() => {
     const map = mapRef.current
     const mapkit = mapkitRef.current
@@ -236,24 +269,22 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
     }
 
     const coordinate = new mapkit.Coordinate(businessPhoneLocation.lat, businessPhoneLocation.lng)
-    const subtitle = businessPhoneLocation.updatedAt
-      ? new Date(businessPhoneLocation.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-      : undefined
 
     if (businessPhoneAnnotationRef.current) {
       businessPhoneAnnotationRef.current.coordinate = coordinate
-      businessPhoneAnnotationRef.current.subtitle = subtitle
     } else {
       const annotation = new mapkit.MarkerAnnotation(coordinate, {
         color: '#a78bfa',
         glyphText: '📱',
-        title: 'Business Phone',
-        subtitle,
+        titleVisibility: mapkit.FeatureVisibility.Hidden,
+        subtitleVisibility: mapkit.FeatureVisibility.Hidden,
       })
+      annotation.__kind = 'businessPhone'
+      annotation.addEventListener('select', () => showPopupForBusinessPhone(coordinate))
       map.addAnnotation(annotation)
       businessPhoneAnnotationRef.current = annotation
     }
-  }, [businessPhoneLocation])
+  }, [businessPhoneLocation, showPopupForBusinessPhone])
 
   function openNavigation(s: any) {
     if (s.address) {
@@ -348,6 +379,24 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
               <X size={12} />
             </button>
 
+            {popup.kind === 'businessPhone' ? (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">📱</span>
+                  <div className="text-[15px] font-bold text-[#e8eaf0] leading-tight">Business Phone</div>
+                </div>
+                <div className="bg-[#1e2330] rounded-xl p-3 mt-2">
+                  <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">Here for</div>
+                  <div className="text-sm font-bold text-[#a78bfa]">{popup.businessPhone?.dwellText || '—'}</div>
+                </div>
+                <div className="text-[10px] text-[#6b7280] mt-2.5">
+                  {popup.businessPhone?.updatedAt
+                    ? `Last updated ${new Date(popup.businessPhone.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                    : 'No updates yet'}
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="p-4 pb-3">
               <div className="text-[11px] font-bold text-[#4f8ef7] mb-0.5">
                 #{popup.service.serviceNumber}
@@ -434,6 +483,8 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
                 Navegar
               </button>
             </div>
+            </>
+            )}
           </div>
         )}
       </div>
