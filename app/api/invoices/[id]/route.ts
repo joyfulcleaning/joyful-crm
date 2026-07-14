@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
+import { notifyEvent } from '@/lib/notify-admin'
 
 export async function GET(
   request: Request,
@@ -81,8 +82,13 @@ export async function PATCH(
     }
 
     // When marking as paid: stamp paidAt (use provided date or keep existing or now)
+    let wasAlreadyPaid = false
     if (body.status === 'paid') {
-      const current = await prisma.invoice.findUnique({ where: { id }, select: { total: true, paidAt: true } })
+      const current = await prisma.invoice.findUnique({
+        where: { id },
+        select: { total: true, paidAt: true, status: true, invoiceNumber: true, client: { select: { name: true } } },
+      })
+      wasAlreadyPaid = current?.status === 'paid'
       updateData.paidAt      = body.paidAt
         ? new Date(body.paidAt + 'T12:00:00')
         : (current?.paidAt ?? new Date())
@@ -94,12 +100,40 @@ export async function PATCH(
       updateData.paidAt = null
     }
 
-    const invoice = await prisma.invoice.update({ where: { id }, data: updateData })
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: updateData,
+      include: { client: { select: { name: true } } },
+    })
 
     logAudit(authUser, 'update', 'invoice', invoice.id, {
       invoiceNumber: invoice.invoiceNumber,
       changes: updateData,
     })
+
+    // Notify admins when a status change (e.g. "Mark as Paid" / the quick
+    // status dropdown) settles the invoice — the Record Payment flow and
+    // the Stripe/Square webhook already notify for their own paths; this
+    // covers the direct status-edit path, which previously notified no one.
+    if (body.status === 'paid' && !wasAlreadyPaid) {
+      const money = Number(invoice.amountPaid ?? invoice.total).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+      const clientName = invoice.client?.name ?? 'client'
+      notifyEvent('paid', {
+        pushTitle: 'Invoice paid',
+        pushBody:  `${money} — Invoice ${invoice.invoiceNumber} (${clientName}), marked paid by ${authUser.name}`,
+        pushData:  { type: 'invoicePaid', invoiceId: invoice.id },
+        emailSubject: `Invoice paid — ${invoice.invoiceNumber}`,
+        emailHtml: `
+          <p>An invoice was just marked paid.</p>
+          <ul>
+            <li><strong>Invoice:</strong> ${invoice.invoiceNumber}</li>
+            <li><strong>Client:</strong> ${clientName}</li>
+            <li><strong>Amount:</strong> ${money}</li>
+            <li><strong>Marked paid by:</strong> ${authUser.name}</li>
+          </ul>
+        `,
+      }).catch(err => console.error('Error notifying invoice paid:', err))
+    }
 
     return NextResponse.json(invoice)
   } catch (error) {
