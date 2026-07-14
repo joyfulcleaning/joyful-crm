@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { X, Navigation } from 'lucide-react'
+import { loadMapKit } from '@/lib/mapkit-client'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b',
@@ -29,25 +28,6 @@ const TYPE_ICONS: Record<string, string> = {
   'Airbnb Clean': '🏠',
 }
 
-function createPin(color: string, selected: boolean) {
-  const w = selected ? 40 : 32
-  const h = selected ? 52 : 42
-  return L.divIcon({
-    html: `
-      <div style="width:${w}px;height:${h}px;filter:drop-shadow(0 4px 8px ${color}90)">
-        <svg width="${w}" height="${h}" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16 1C7.716 1 1 7.716 1 16c0 10.8 15 25 15 25S31 26.8 31 16C31 7.716 24.284 1 16 1z"
-            fill="${color}" stroke="white" stroke-width="${selected ? 2.5 : 2}"/>
-          <text x="16" y="17" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="sans-serif">🏠</text>
-        </svg>
-      </div>
-    `,
-    className: '',
-    iconSize: [w, h],
-    iconAnchor: [w / 2, h],
-  })
-}
-
 const DEFAULT_CENTER: [number, number] = [35.0527, -78.8784]
 
 interface Popup {
@@ -60,86 +40,220 @@ interface Props {
   services: any[]
   selected: any | null
   onSelect: (s: any | null) => void
+  businessPhoneLocation?: { lat: number; lng: number; updatedAt: string | null } | null
 }
 
-export default function MapView({ services, selected, onSelect }: Props) {
-  const mapRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<L.Marker[]>([])
+
+export default function MapView({ services, selected, onSelect, businessPhoneLocation }: Props) {
+  const mapRef = useRef<any>(null)
+  const mapkitRef = useRef<any>(null)
+  const annotationsRef = useRef<any[]>([])
+  const businessPhoneAnnotationRef = useRef<any>(null)
+  const selectedRef = useRef<any>(selected)
   const containerRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const [popup, setPopup] = useState<Popup | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  selectedRef.current = selected
 
   const closePopup = useCallback(() => {
     setPopup(null)
   }, [])
 
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
-
-    const map = L.map(containerRef.current, {
-      center: DEFAULT_CENTER,
-      zoom: 12,
-      zoomControl: true,
+  const showPopupForService = useCallback((s: any, coordinate: any) => {
+    const map = mapRef.current
+    if (!map || !wrapperRef.current) return
+    const pagePoint = map.convertCoordinateToPointOnPage(coordinate)
+    const rect = wrapperRef.current.getBoundingClientRect()
+    setPopup({
+      service: s,
+      x: pagePoint.x - rect.left - window.scrollX,
+      y: pagePoint.y - rect.top - window.scrollY,
     })
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '',
-    }).addTo(map)
-
-    const tiles = containerRef.current.querySelector('.leaflet-tile-pane') as HTMLElement
-    if (tiles) {
-      tiles.style.filter = 'brightness(0.75) saturate(0.6) hue-rotate(180deg) invert(1)'
-    }
-
-    map.on('click', () => setPopup(null))
-
-    mapRef.current = map
-
-    return () => {
-      map.remove()
-      mapRef.current = null
-    }
   }, [])
 
   useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+    if (!containerRef.current || !wrapperRef.current || mapRef.current) return
+    let cancelled = false
+    // Listeners go on the outer wrapper, not the map div — the popup card
+    // is a sibling of the map div (both children of the wrapper), so
+    // tracking only the map div would fire "mouseleave" the instant the
+    // cursor moves onto the card itself, closing it before it could ever
+    // be read or clicked.
+    const wrapper = wrapperRef.current
 
-    markersRef.current.forEach(m => m.remove())
-    markersRef.current = []
+    // DOM hit-testing (via composedPath, needed since MapKit renders inside
+    // Shadow DOM) breaks once a pin grows on hover/selection: the enlarged
+    // pin visually covers nearby clustered pins, so the browser keeps
+    // reporting the big pin as the hover target even once the cursor is
+    // over a neighbor. Instead we find the pin nearest to the cursor by
+    // actual screen distance, which isn't affected by which pin is drawn
+    // on top of which.
+    const HOVER_RADIUS_PX = 26
+    let hoveredAnnotation: any = null
+
+    function nearestPin(mx: number, my: number) {
+      const map = mapRef.current
+      const rect = wrapperRef.current?.getBoundingClientRect()
+      if (!map || !rect) return null
+      let closest: any = null
+      let closestDist = Infinity
+      for (const ann of annotationsRef.current) {
+        const pagePoint = map.convertCoordinateToPointOnPage(ann.coordinate)
+        const px = pagePoint.x - rect.left - window.scrollX
+        const py = pagePoint.y - rect.top - window.scrollY - 16 // pin anchor is at its bottom tip; bias toward the visible glyph
+        const dist = Math.hypot(mx - px, my - py)
+        if (dist < closestDist) { closestDist = dist; closest = ann }
+      }
+      return closestDist <= HOVER_RADIUS_PX ? closest : null
+    }
+    // Reverts the previously-hovered pin's "selected" (grown/animated) look
+    // back to whatever it should be based on the real click-selection —
+    // MapKit's own selected marker animation is reused for hover too.
+    function resetHoverVisual() {
+      if (hoveredAnnotation) {
+        hoveredAnnotation.selected = selectedRef.current?.id === hoveredAnnotation.__service?.id
+        hoveredAnnotation = null
+      }
+    }
+    function handleMouseMove(e: MouseEvent) {
+      // Moving onto the card itself (e.g. to click "View Detail") should
+      // neither close it nor fight over which pin is "nearest".
+      if (e.target instanceof Node && cardRef.current?.contains(e.target)) return
+
+      const rect = wrapperRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const ann = nearestPin(e.clientX - rect.left, e.clientY - rect.top)
+      if (ann === hoveredAnnotation) return
+      resetHoverVisual()
+      if (ann) {
+        ann.selected = true
+        hoveredAnnotation = ann
+        showPopupForService(ann.__service, ann.coordinate)
+      } else {
+        setPopup(null)
+      }
+    }
+    function handleMouseLeaveWrapper() {
+      resetHoverVisual()
+      setPopup(null)
+    }
+    wrapper.addEventListener('mousemove', handleMouseMove)
+    wrapper.addEventListener('mouseleave', handleMouseLeaveWrapper)
+
+    loadMapKit()
+      .then(mapkit => {
+        if (cancelled || !containerRef.current) return
+        mapkitRef.current = mapkit
+
+        const map = new mapkit.Map(containerRef.current, {
+          center: new mapkit.Coordinate(DEFAULT_CENTER[0], DEFAULT_CENTER[1]),
+          colorScheme: mapkit.Map.ColorSchemes.Dark,
+          showsMapTypeControl: true,
+          showsZoomControl: true,
+          showsScale: mapkit.FeatureVisibility.Hidden,
+        })
+
+        map.addEventListener('single-tap', () => setPopup(null))
+
+        mapRef.current = map
+      })
+      .catch(() => { if (!cancelled) setLoadFailed(true) })
+
+    return () => {
+      cancelled = true
+      wrapper.removeEventListener('mousemove', handleMouseMove)
+      wrapper.removeEventListener('mouseleave', handleMouseLeaveWrapper)
+      if (mapRef.current) { mapRef.current.destroy(); mapRef.current = null }
+    }
+  }, [showPopupForService])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const mapkit = mapkitRef.current
+    if (!map || !mapkit) return
+
+    annotationsRef.current.forEach(a => map.removeAnnotation(a))
+    annotationsRef.current = []
     setPopup(null)
 
     if (services.length === 0) return
 
-    const bounds: [number, number][] = []
+    const newAnnotations: any[] = []
 
     services.forEach(s => {
       if (!s.lat || !s.lng) return
 
-      const lat = s.lat
-      const lng = s.lng
-      bounds.push([lat, lng])
-
+      const coordinate = new mapkit.Coordinate(s.lat, s.lng)
       const color = STATUS_COLORS[s.status] || '#6b7280'
       const isSelected = selected?.id === s.id
-      const marker = L.marker([lat, lng], { icon: createPin(color, isSelected) })
 
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e)
-        onSelect(s)
-        if (containerRef.current) {
-          const pt = map.latLngToContainerPoint([lat, lng])
-          setPopup({ service: s, x: pt.x, y: pt.y })
-        }
+      const annotation = new mapkit.MarkerAnnotation(coordinate, {
+        color,
+        glyphText: '🏠',
+        selected: isSelected,
+        titleVisibility: mapkit.FeatureVisibility.Hidden,
+        subtitleVisibility: mapkit.FeatureVisibility.Hidden,
       })
 
-      marker.addTo(map)
-      markersRef.current.push(marker)
+      // Stashed for the delegated hover handlers above and for the
+      // 'select' handler below — annotations are plain objects, so this
+      // is just a convenient way to get back to the service that owns one.
+      annotation.__service = s
+
+      annotation.addEventListener('select', () => {
+        onSelect(s)
+        showPopupForService(s, coordinate)
+      })
+
+      map.addAnnotation(annotation)
+      newAnnotations.push(annotation)
     })
 
-    if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [60, 60] })
+    annotationsRef.current = newAnnotations
+
+    if (newAnnotations.length > 0) {
+      map.showItems(newAnnotations, { animate: false, padding: new mapkit.Padding(60, 60, 60, 60) })
     }
-  }, [services, selected])
+  }, [services, selected, showPopupForService])
+
+  // Live marker for the single shared business phone (not a service pin —
+  // no hover card, just a native MapKit callout on click). Moves the same
+  // annotation on updates instead of recreating it, so it doesn't flicker.
+  useEffect(() => {
+    const map = mapRef.current
+    const mapkit = mapkitRef.current
+    if (!map || !mapkit) return
+
+    if (!businessPhoneLocation) {
+      if (businessPhoneAnnotationRef.current) {
+        map.removeAnnotation(businessPhoneAnnotationRef.current)
+        businessPhoneAnnotationRef.current = null
+      }
+      return
+    }
+
+    const coordinate = new mapkit.Coordinate(businessPhoneLocation.lat, businessPhoneLocation.lng)
+    const subtitle = businessPhoneLocation.updatedAt
+      ? new Date(businessPhoneLocation.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+      : undefined
+
+    if (businessPhoneAnnotationRef.current) {
+      businessPhoneAnnotationRef.current.coordinate = coordinate
+      businessPhoneAnnotationRef.current.subtitle = subtitle
+    } else {
+      const annotation = new mapkit.MarkerAnnotation(coordinate, {
+        color: '#a78bfa',
+        glyphText: '📱',
+        title: 'Business Phone',
+        subtitle,
+      })
+      map.addAnnotation(annotation)
+      businessPhoneAnnotationRef.current = annotation
+    }
+  }, [businessPhoneLocation])
 
   function openNavigation(s: any) {
     if (s.address) {
@@ -153,35 +267,78 @@ export default function MapView({ services, selected, onSelect }: Props) {
   function getPopupStyle(x: number, y: number): React.CSSProperties {
     const cardW = 300
     const cardH = 330
+    const gap = 16
+    // Pin coordinate is its bottom tip; the visible glyph sits above/around
+    // that point and grows on hover/selection — clear that footprint so the
+    // pin stays visible, but prefer sitting beside it rather than pushing
+    // the card far away.
+    const pinHalfWidth = 24
     const containerW = containerRef.current?.clientWidth ?? 800
+    const containerH = containerRef.current?.clientHeight ?? 600
 
-    let left = x - cardW / 2
-    let top = y - cardH - 16
+    const spaceRight = containerW - (x + pinHalfWidth)
+    const spaceLeft = x - pinHalfWidth
+
+    // When placing beside the pin, don't just center vertically on it —
+    // check there's actually room both above and below first, otherwise
+    // hug whichever side (above/below the pin's y) has more space so the
+    // full card height fits instead of getting clamped/cut off.
+    function verticallyFit(): number {
+      const spaceAbove = y
+      const spaceBelow = containerH - y
+      if (spaceAbove >= cardH / 2 && spaceBelow >= cardH / 2) return y - cardH / 2
+      return spaceAbove >= spaceBelow ? y - cardH : y
+    }
+
+    let left: number
+    let top: number
+
+    if (spaceRight >= cardW + gap) {
+      left = x + pinHalfWidth + gap
+      top = verticallyFit()
+    } else if (spaceLeft >= cardW + gap) {
+      left = x - pinHalfWidth - gap - cardW
+      top = verticallyFit()
+    } else {
+      // Not enough room on either side — fall back to above/below, whichever fits.
+      left = x - cardW / 2
+      const spaceAbove = y - gap
+      top = spaceAbove >= cardH ? y - cardH - gap : y + gap
+    }
 
     if (left < 8) left = 8
     if (left + cardW > containerW - 8) left = containerW - cardW - 8
-    if (top < 8) top = y + 28
+    if (top < 8) top = 8
+    if (top + cardH > containerH - 8) top = containerH - cardH - 8
 
     return { position: 'absolute', left, top, width: cardW, zIndex: 1000 }
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-[#111827] text-[#f87171] text-sm">
+        No se pudo cargar Apple Maps.
+      </div>
+    )
   }
 
   return (
     <>
       <style>{`
-        .leaflet-container { background: #111827; }
-        .leaflet-control-zoom { border: 1px solid #2a2f3d !important; }
-        .leaflet-control-zoom a { background: #161922 !important; color: #e8eaf0 !important; border-color: #2a2f3d !important; }
-        .leaflet-control-zoom a:hover { background: #1e2330 !important; }
-        .leaflet-attribution-flag { display: none !important; }
-        .leaflet-control-attribution { display: none !important; }
+        .mk-map-view { background: #111827; }
+        @keyframes mk-popup-in {
+          from { opacity: 0; transform: translateY(6px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .mk-popup-card { animation: mk-popup-in 160ms ease-out; transform-origin: bottom center; }
       `}</style>
 
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '500px' }} />
+      <div ref={wrapperRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div ref={containerRef} className="mk-map-view" style={{ width: '100%', height: '100%', minHeight: '500px' }} />
 
         {popup && (
-          <div style={getPopupStyle(popup.x, popup.y)}
-            className="bg-[#161922] border border-[#2a2f3d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.75)]"
+          <div ref={cardRef} style={getPopupStyle(popup.x, popup.y)}
+            className="mk-popup-card bg-[#161922] border border-[#2a2f3d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.75)]"
           >
             {/* Close */}
             <button

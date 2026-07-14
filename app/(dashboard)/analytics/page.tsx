@@ -10,6 +10,7 @@ import {
 import { Bar, Line } from 'react-chartjs-2'
 import { TrendingDown, DollarSign, Briefcase, Activity } from 'lucide-react'
 import CountUp from '@/components/ui/CountUp'
+import { useI18n } from '@/lib/i18n'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler, Title, Tooltip, Legend)
 
@@ -71,10 +72,11 @@ function SVGDoughnut({
   labels: string[]; values: number[]; colors: string[]
   showLegend?: boolean; legendColor?: string
 }) {
+  const { t } = useI18n()
   const total = values.reduce((a, b) => a + b, 0)
   if (total === 0) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <span style={{ fontSize: 11, color: '#6b7280' }}>No data</span>
+      <span style={{ fontSize: 11, color: '#6b7280' }}>{t.analyticsPage.noData}</span>
     </div>
   )
   let angle = -90
@@ -123,6 +125,7 @@ function SVGDoughnut({
 }
 
 export default function AnalyticsPage() {
+  const { t } = useI18n()
   const [days,       setDays]       = useState(30)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
@@ -184,13 +187,21 @@ export default function AnalyticsPage() {
   const val = data?.valuation ?? {}
 
   const marginColor = (kpi.netMargin || 0) >= 70 ? green : (kpi.netMargin || 0) >= 40 ? '#f59e0b' : '#f87171'
-  const marginLabel = (kpi.netMargin || 0) >= 70 ? 'Excellent' : (kpi.netMargin || 0) >= 40 ? 'Good' : 'Needs Focus'
+  const marginLabel = (kpi.netMargin || 0) >= 70 ? t.analyticsPage.excellent : (kpi.netMargin || 0) >= 40 ? t.analyticsPage.good : t.analyticsPage.needsFocus
+
+  const rangeLabels: Record<string, string> = {
+    '7D': t.analyticsPage.range7d,
+    '30D': t.analyticsPage.range30d,
+    '90D': t.analyticsPage.range90d,
+    '1Y': t.analyticsPage.range1y,
+    'Custom': t.analyticsPage.rangeCustom,
+  }
 
   // ── Chart data ──
   const staffData = useMemo(() => data ? {
     labels: data.byStaff.length ? data.byStaff.map((s: any) => s.name.split(' ')[0]) : ['—'],
     datasets: [{
-      label: 'Services',
+      label: t.analyticsPage.servicesLabel,
       data: data.byStaff.length ? data.byStaff.map((s: any) => s.count) : [0],
       backgroundColor: 'rgba(79,142,247,0.7)', borderColor: '#4f8ef7', borderWidth: 1, borderRadius: 4,
     }],
@@ -219,7 +230,7 @@ export default function AnalyticsPage() {
   const weekData = useMemo(() => data ? {
     labels: data.weeklyVolume.map((v: any) => v.day),
     datasets: [{
-      label: 'Services',
+      label: t.analyticsPage.servicesLabel,
       data: data.weeklyVolume.map((v: any) => v.count),
       backgroundColor: 'rgba(167,139,250,0.7)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4,
     }],
@@ -250,8 +261,8 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">Analytics</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Business performance &amp; insights</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.analytics}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.analyticsPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 bg-[#161922] border border-[#2a2f3d] rounded-lg p-1">
@@ -263,7 +274,7 @@ export default function AnalyticsPage() {
                   days === r.days ? 'bg-[#4f8ef7] text-white' : 'text-[#6b7280] hover:text-[#e8eaf0]'
                 }`}
               >
-                {r.label}
+                {rangeLabels[r.label]}
               </button>
             ))}
           </div>
@@ -275,7 +286,7 @@ export default function AnalyticsPage() {
                 onChange={e => setCustomFrom(e.target.value)}
                 className="px-2.5 py-1.5 bg-[#161922] border border-[#2a2f3d] rounded-lg text-[11px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors"
               />
-              <span className="text-[#6b7280] text-xs">to</span>
+              <span className="text-[#6b7280] text-xs">{t.analyticsPage.to}</span>
               <input
                 type="date"
                 value={customTo}
@@ -288,31 +299,31 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? <Skeleton /> : !data ? (
-        <div className="text-center py-16 text-[#6b7280] text-sm">Failed to load analytics data.</div>
+        <div className="text-center py-16 text-[#6b7280] text-sm">{t.analyticsPage.failedToLoad}</div>
       ) : (
         <>
           {/* ── KPI Cards ── */}
           <div className="grid grid-cols-4 gap-3">
             {[
               {
-                label: 'Total Revenue', value: kpi.totalRevenue ?? 0, format: fmt,
+                label: t.analyticsPage.totalRevenue, value: kpi.totalRevenue ?? 0, format: fmt,
                 icon: DollarSign, color: green, border: 'border-t-[#38d9a9]',
-                sub: `${kpi.servicesCount ?? 0} services this period`,
+                sub: t.analyticsPage.servicesThisPeriod(kpi.servicesCount ?? 0),
               },
               {
-                label: 'Total Expenses', value: kpi.totalExpenses ?? 0, format: fmt,
+                label: t.analyticsPage.totalExpenses, value: kpi.totalExpenses ?? 0, format: fmt,
                 icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
-                sub: `${pct(kpi.totalRevenue ? (kpi.totalExpenses / kpi.totalRevenue) * 100 : 0)} of revenue`,
+                sub: t.analyticsPage.ofRevenue(pct(kpi.totalRevenue ? (kpi.totalExpenses / kpi.totalRevenue) * 100 : 0)),
               },
               {
-                label: 'Net Balance', value: kpi.netBalance ?? 0, format: fmt,
+                label: t.analyticsPage.netBalance, value: kpi.netBalance ?? 0, format: fmt,
                 icon: Activity, color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
-                sub: `Margin: ${pct(kpi.netMargin ?? 0)}`,
+                sub: t.analyticsPage.marginColon(pct(kpi.netMargin ?? 0)),
               },
               {
-                label: 'Services Done', value: kpi.completedServices ?? 0, format: undefined,
+                label: t.analyticsPage.servicesDone, value: kpi.completedServices ?? 0, format: undefined,
                 icon: Briefcase, color: '#a78bfa', border: 'border-t-[#a78bfa]',
-                sub: `of ${kpi.servicesCount ?? 0} total`,
+                sub: t.analyticsPage.ofTotalCount(kpi.servicesCount ?? 0),
               },
             ].map((card, i) => (
               <div key={card.label}
@@ -332,20 +343,20 @@ export default function AnalyticsPage() {
           {/* ── Row 1: Line + Service Type Donut ── */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2 bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Revenue vs Expenses</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.revenueVsExpenses}</div>
               <div style={{ height: 220 }}>
                 {themeReady && data?.timeSeries?.labels?.length > 0 && (() => {
                   const pts = data.timeSeries.labels.length > 26 ? 0 : 3
                   const yTickCb = (v: any) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
                   const lineDatasets = [
                     {
-                      label: 'Revenue', data: data.timeSeries.revenue,
+                      label: t.analyticsPage.revenue, data: data.timeSeries.revenue,
                       borderColor: green, backgroundColor: greenBg, borderWidth: 2.5,
                       fill: true, tension: 0.4, pointRadius: pts, pointHoverRadius: 5,
                       pointBackgroundColor: green, pointBorderColor: chartBg, pointBorderWidth: 2,
                     },
                     {
-                      label: 'Expenses', data: data.timeSeries.expenses,
+                      label: t.analyticsPage.expenses, data: data.timeSeries.expenses,
                       borderColor: '#f87171', backgroundColor: 'transparent', borderWidth: 2,
                       borderDash: [5, 3], fill: false, tension: 0.4, pointRadius: pts, pointHoverRadius: 5,
                       pointBackgroundColor: '#f87171', pointBorderColor: chartBg, pointBorderWidth: 2,
@@ -374,9 +385,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Service Types</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.serviceTypes}</div>
               {data.servicesByType.length === 0 ? (
-                <div className="flex items-center justify-center h-48 text-xs text-[#6b7280]">No data</div>
+                <div className="flex items-center justify-center h-48 text-xs text-[#6b7280]">{t.analyticsPage.noData}</div>
               ) : (
                 <div style={{ height: 200 }}>
                   {themeReady && (
@@ -396,9 +407,9 @@ export default function AnalyticsPage() {
           {/* ── Row 2: By Staff + Weekly Volume ── */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Services by Staff</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.servicesByStaff}</div>
               {data.byStaff.length === 0 ? (
-                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">No staff data</div>
+                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">{t.analyticsPage.noStaffData}</div>
               ) : (
                 <div style={{ position: 'relative', height: 180 }}>
                   <div style={{ position: 'absolute', inset: 0 }}>
@@ -411,7 +422,7 @@ export default function AnalyticsPage() {
               )}
             </div>
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Weekly Volume</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.weeklyVolume}</div>
               <div style={{ position: 'relative', height: 180 }}>
                 <div style={{ position: 'absolute', inset: 0 }}>
                   <Bar data={weekBgData as any} options={weekBgOptions as any} />
@@ -427,12 +438,12 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-3 gap-4">
             {/* Invoice Status */}
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Invoice Status</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.invoiceStatus}</div>
               <div style={{ height: 110 }} className="mb-3">
                 {themeReady && (
                   <SVGDoughnut
                     key={`inv-${light}-${days}-${data.invoiceStatus.paid + data.invoiceStatus.sent}`}
-                    labels={['Paid', 'Pending', 'Overdue', 'Draft']}
+                    labels={[t.analyticsPage.paid, t.analyticsPage.pending, t.analyticsPage.overdue, t.analyticsPage.draft]}
                     values={[data.invoiceStatus.paid, data.invoiceStatus.sent, data.invoiceStatus.overdue, data.invoiceStatus.draft]}
                     colors={[green, '#4f8ef7', '#f87171', '#6b7280']}
                     showLegend={false}
@@ -440,10 +451,10 @@ export default function AnalyticsPage() {
                 )}
               </div>
               {[
-                { label: 'Paid', count: data.invoiceStatus.paid, color: green },
-                { label: 'Pending', count: data.invoiceStatus.sent, color: '#4f8ef7' },
-                { label: 'Overdue', count: data.invoiceStatus.overdue, color: '#f87171' },
-                { label: 'Draft', count: data.invoiceStatus.draft, color: '#6b7280' },
+                { label: t.analyticsPage.paid, count: data.invoiceStatus.paid, color: green },
+                { label: t.analyticsPage.pending, count: data.invoiceStatus.sent, color: '#4f8ef7' },
+                { label: t.analyticsPage.overdue, count: data.invoiceStatus.overdue, color: '#f87171' },
+                { label: t.analyticsPage.draft, count: data.invoiceStatus.draft, color: '#6b7280' },
               ].map(item => {
                 const total = (data.invoiceStatus.paid + data.invoiceStatus.sent + data.invoiceStatus.overdue + data.invoiceStatus.draft) || 1
                 return (
@@ -460,9 +471,9 @@ export default function AnalyticsPage() {
 
             {/* Top Clients */}
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Top Clients</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.topClients}</div>
               {data.topClients.length === 0 ? (
-                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">No data</div>
+                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">{t.analyticsPage.noData}</div>
               ) : (
                 <div className="space-y-2.5">
                   {data.topClients.map((c: any, i: number) => (
@@ -486,9 +497,9 @@ export default function AnalyticsPage() {
 
             {/* Expense Breakdown */}
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-              <div className="text-xs font-bold text-[#e8eaf0] mb-3">Expenses Breakdown</div>
+              <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.expensesBreakdown}</div>
               {data.expensesByCategory.length === 0 ? (
-                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">No data</div>
+                <div className="flex items-center justify-center h-44 text-xs text-[#6b7280]">{t.analyticsPage.noData}</div>
               ) : (
                 <div className="space-y-2.5">
                   {data.expensesByCategory.slice(0, 6).map((e: any, i: number) => (
@@ -510,30 +521,30 @@ export default function AnalyticsPage() {
 
           {/* ── Financial Reconciliation ── */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-5">
-            <div className="text-xs font-bold text-[#e8eaf0] mb-4">Financial Reconciliation</div>
+            <div className="text-xs font-bold text-[#e8eaf0] mb-4">{t.analyticsPage.financialReconciliation}</div>
             <div className="grid grid-cols-4 gap-5 mb-4">
               {[
                 {
-                  label: 'Total Invoiced', value: rec.totalInvoiced ?? 0,
-                  note: '100% — full period invoicing', color: '#4f8ef7',
+                  label: t.analyticsPage.totalInvoiced, value: rec.totalInvoiced ?? 0,
+                  note: t.analyticsPage.fullPeriodInvoicing, color: '#4f8ef7',
                   pct: 100, gradient: false,
                 },
                 {
-                  label: 'Collected / Paid', value: rec.totalCollected ?? 0,
-                  note: `${pct(rec.collectionRate ?? 0)} collection rate`, color: green,
+                  label: t.analyticsPage.collectedPaid, value: rec.totalCollected ?? 0,
+                  note: t.analyticsPage.collectionRateNote(pct(rec.collectionRate ?? 0)), color: green,
                   pct: rec.totalInvoiced ? ((rec.totalCollected ?? 0) / rec.totalInvoiced) * 100 : 0,
                   gradient: false,
                 },
                 {
-                  label: 'Total Expenses', value: rec.totalExpenses ?? 0,
-                  note: `${pct(rec.totalInvoiced ? ((rec.totalExpenses ?? 0) / rec.totalInvoiced) * 100 : 0)} of invoiced`,
+                  label: t.analyticsPage.totalExpenses, value: rec.totalExpenses ?? 0,
+                  note: t.analyticsPage.ofInvoiced(pct(rec.totalInvoiced ? ((rec.totalExpenses ?? 0) / rec.totalInvoiced) * 100 : 0)),
                   color: '#f87171',
                   pct: rec.totalInvoiced ? ((rec.totalExpenses ?? 0) / rec.totalInvoiced) * 100 : 0,
                   gradient: false,
                 },
                 {
-                  label: 'Net Balance', value: (rec.totalCollected ?? 0) - (rec.totalExpenses ?? 0),
-                  note: `${pct(rec.margin ?? 0)} net margin`, color: green,
+                  label: t.analyticsPage.netBalance, value: (rec.totalCollected ?? 0) - (rec.totalExpenses ?? 0),
+                  note: t.analyticsPage.netMarginNote(pct(rec.margin ?? 0)), color: green,
                   pct: rec.totalInvoiced ? (((rec.totalCollected ?? 0) - (rec.totalExpenses ?? 0)) / rec.totalInvoiced) * 100 : 0,
                   gradient: true,
                 },
@@ -555,11 +566,11 @@ export default function AnalyticsPage() {
             </div>
             <div className="border-t border-[#2a2f3d] pt-3 grid grid-cols-5 gap-3">
               {[
-                { label: 'Pending', value: fmt(rec.pending ?? 0), color: '#f59e0b' },
-                { label: 'Overdue', value: fmt(rec.overdue ?? 0), color: '#f87171' },
-                { label: 'Total Unpaid', value: fmt(rec.totalUnpaid ?? 0), color: '#e8eaf0' },
-                { label: 'Net Margin', value: pct(rec.margin ?? 0), color: marginColor },
-                { label: 'Collection Rate', value: pct(rec.collectionRate ?? 0), color: (rec.collectionRate ?? 0) >= 90 ? green : (rec.collectionRate ?? 0) >= 70 ? '#f59e0b' : '#f87171' },
+                { label: t.analyticsPage.pending, value: fmt(rec.pending ?? 0), color: '#f59e0b' },
+                { label: t.analyticsPage.overdue, value: fmt(rec.overdue ?? 0), color: '#f87171' },
+                { label: t.analyticsPage.totalUnpaid, value: fmt(rec.totalUnpaid ?? 0), color: '#e8eaf0' },
+                { label: t.analyticsPage.netMargin, value: pct(rec.margin ?? 0), color: marginColor },
+                { label: t.analyticsPage.collectionRate, value: pct(rec.collectionRate ?? 0), color: (rec.collectionRate ?? 0) >= 90 ? green : (rec.collectionRate ?? 0) >= 70 ? '#f59e0b' : '#f87171' },
               ].map(item => (
                 <div key={item.label} className="text-center bg-[#0d0f14] rounded-lg py-2 px-3">
                   <div className="text-[9px] text-[#6b7280] uppercase tracking-wide mb-1">{item.label}</div>
@@ -571,15 +582,15 @@ export default function AnalyticsPage() {
 
           {/* ── Period Summary ── */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-            <div className="text-xs font-bold text-[#e8eaf0] mb-3">Period Summary</div>
+            <div className="text-xs font-bold text-[#e8eaf0] mb-3">{t.analyticsPage.periodSummary}</div>
             <div className="grid grid-cols-6 gap-3">
               {[
-                { label: 'Total Services', value: String(kpi.servicesCount ?? 0), color: '#4f8ef7' },
-                { label: 'Completed', value: String(kpi.completedServices ?? 0), color: green },
-                { label: 'Avg / Service', value: kpi.servicesCount ? fmt(kpi.totalRevenue / kpi.servicesCount) : '$0', color: '#a78bfa' },
-                { label: 'Active Clients', value: String(kpi.activeClients ?? 0), color: '#f59e0b' },
-                { label: 'Invoices Paid', value: String(data.invoiceStatus.paid), color: green },
-                { label: 'Net Margin', value: pct(kpi.netMargin ?? 0), color: marginColor },
+                { label: t.dashboard.totalServices, value: String(kpi.servicesCount ?? 0), color: '#4f8ef7' },
+                { label: t.dashboard.completed, value: String(kpi.completedServices ?? 0), color: green },
+                { label: t.analyticsPage.avgPerService, value: kpi.servicesCount ? fmt(kpi.totalRevenue / kpi.servicesCount) : '$0', color: '#a78bfa' },
+                { label: t.dashboard.activeClients, value: String(kpi.activeClients ?? 0), color: '#f59e0b' },
+                { label: t.analyticsPage.invoicesPaid, value: String(data.invoiceStatus.paid), color: green },
+                { label: t.analyticsPage.netMargin, value: pct(kpi.netMargin ?? 0), color: marginColor },
               ].map(stat => (
                 <div key={stat.label} className="text-center p-3 bg-[#0d0f14] rounded-lg">
                   <div className="text-[9px] text-[#6b7280] uppercase tracking-wider mb-1.5">{stat.label}</div>
@@ -593,26 +604,26 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-4 gap-3">
             {[
               {
-                icon: '📈', title: 'Revenue Trend', accent: green,
+                icon: '📈', title: t.analyticsPage.revenueTrendTitle, accent: green,
                 body: kpi.totalRevenue > 0
-                  ? `Generated ${fmt(kpi.totalRevenue)} across ${kpi.servicesCount} services in the last ${days} days.`
-                  : 'No revenue data recorded for this period yet.',
+                  ? t.analyticsPage.revenueTrendBody(fmt(kpi.totalRevenue), kpi.servicesCount, days)
+                  : t.analyticsPage.noRevenueData,
               },
               {
-                icon: '💰', title: 'Expense Ratio', accent: '#f59e0b',
+                icon: '💰', title: t.analyticsPage.expenseRatioTitle, accent: '#f59e0b',
                 body: kpi.totalRevenue > 0
-                  ? `Expenses are ${pct((kpi.totalExpenses / kpi.totalRevenue) * 100)} of revenue. ${kpi.netMargin >= 70 ? 'Excellent cost control.' : kpi.netMargin >= 40 ? 'Good efficiency.' : 'Review high-cost areas.'}`
-                  : 'Add expense records to track your cost ratio.',
+                  ? `${t.analyticsPage.expensesAreOfRevenue(pct((kpi.totalExpenses / kpi.totalRevenue) * 100))} ${kpi.netMargin >= 70 ? t.analyticsPage.excellentCostControl : kpi.netMargin >= 40 ? t.analyticsPage.goodEfficiency : t.analyticsPage.reviewHighCostAreas}`
+                  : t.analyticsPage.addExpenseRecords,
               },
               {
-                icon: '👥', title: 'Client Activity', accent: '#a78bfa',
+                icon: '👥', title: t.analyticsPage.clientActivityTitle, accent: '#a78bfa',
                 body: kpi.activeClients > 0
-                  ? `${kpi.activeClients} active clients on record. ${data.topClients.length > 0 ? `Top earner: ${data.topClients[0].name} (${fmt(data.topClients[0].total)}).` : ''}`
-                  : 'Add clients and services to see activity insights.',
+                  ? `${t.analyticsPage.activeClientsOnRecord(kpi.activeClients)} ${data.topClients.length > 0 ? t.analyticsPage.topEarner(data.topClients[0].name, fmt(data.topClients[0].total)) : ''}`
+                  : t.analyticsPage.addClientsServices,
               },
               {
-                icon: '🎯', title: 'Margin Health', accent: marginColor,
-                body: `Net margin at ${pct(kpi.netMargin ?? 0)} — ${marginLabel}. ${(kpi.netMargin ?? 0) >= 70 ? 'Business is highly profitable.' : (kpi.netMargin ?? 0) >= 40 ? 'There is room for improvement.' : 'Focus on reducing operating costs.'}`,
+                icon: '🎯', title: t.analyticsPage.marginHealthTitle, accent: marginColor,
+                body: `${t.analyticsPage.netMarginAt(pct(kpi.netMargin ?? 0), marginLabel)} ${(kpi.netMargin ?? 0) >= 70 ? t.analyticsPage.highlyProfitable : (kpi.netMargin ?? 0) >= 40 ? t.analyticsPage.roomForImprovement : t.analyticsPage.focusReducingCosts}`,
               },
             ].map(card => (
               <div key={card.title} className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4"
@@ -628,11 +639,11 @@ export default function AnalyticsPage() {
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-5">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <div className="text-xs font-bold text-[#e8eaf0]">Business Valuation Report</div>
-                <div className="text-[10px] text-[#6b7280] mt-0.5">Estimated from last 12 months of financial performance</div>
+                <div className="text-xs font-bold text-[#e8eaf0]">{t.analyticsPage.businessValuationReport}</div>
+                <div className="text-[10px] text-[#6b7280] mt-0.5">{t.analyticsPage.estimatedFromLast12Months}</div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-[#6b7280]">Estimated Range</div>
+                <div className="text-[10px] text-[#6b7280]">{t.analyticsPage.estimatedRange}</div>
                 <div className="text-lg font-bold text-[#e8eaf0]" style={{ fontFamily: 'var(--font-display)' }}>
                   {fmtK(val.low ?? 0)} — {fmtK(val.high ?? 0)}
                 </div>
@@ -648,13 +659,13 @@ export default function AnalyticsPage() {
                   <div
                     className="absolute top-0 w-3.5 h-3.5 bg-white border-2 border-[#38d9a9] rounded-full shadow-lg"
                     style={{ left: '50%', transform: 'translateX(-50%) translateY(-12.5%)' }}
-                    title={`Midpoint: ${fmtK(val.midpoint ?? 0)}`}
+                    title={t.analyticsPage.midpoint(fmtK(val.midpoint ?? 0))}
                   />
                 </div>
                 <div className="flex justify-between text-[9px] text-[#6b7280] mt-1.5">
-                  <span>Low: {fmtK(val.low ?? 0)}</span>
-                  <span className="font-semibold text-[#38d9a9]">Midpoint: {fmtK(val.midpoint ?? 0)}</span>
-                  <span>High: {fmtK(val.high ?? 0)}</span>
+                  <span>{t.analyticsPage.low(fmtK(val.low ?? 0))}</span>
+                  <span className="font-semibold text-[#38d9a9]">{t.analyticsPage.midpoint(fmtK(val.midpoint ?? 0))}</span>
+                  <span>{t.analyticsPage.high(fmtK(val.high ?? 0))}</span>
                 </div>
               </div>
             )}
@@ -663,10 +674,10 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-5 gap-4 mb-4">
               <div className="col-span-3 grid grid-cols-2 gap-3">
                 {[
-                  { method: 'Revenue Multiple', range: [val.revMultLow, val.revMultHigh], note: '0.8× – 1.5× annual revenue', color: '#4f8ef7' },
-                  { method: 'EBITDA Multiple', range: [val.ebitdaLow, val.ebitdaHigh], note: '2× – 3× net profit', color: '#a78bfa' },
-                  { method: 'SDE Method', range: [val.sdeLow, val.sdeHigh], note: '1.5× – 3× seller earnings', color: green },
-                  { method: 'Asset-Based', range: [val.assetBased, val.assetBased], note: 'Assets + goodwill estimate', color: '#f59e0b' },
+                  { method: t.analyticsPage.revenueMultiple, range: [val.revMultLow, val.revMultHigh], note: t.analyticsPage.revenueMultipleNote, color: '#4f8ef7' },
+                  { method: t.analyticsPage.ebitdaMultiple, range: [val.ebitdaLow, val.ebitdaHigh], note: t.analyticsPage.ebitdaMultipleNote, color: '#a78bfa' },
+                  { method: t.analyticsPage.sdeMethod, range: [val.sdeLow, val.sdeHigh], note: t.analyticsPage.sdeMethodNote, color: green },
+                  { method: t.analyticsPage.assetBased, range: [val.assetBased, val.assetBased], note: t.analyticsPage.assetBasedNote, color: '#f59e0b' },
                 ].map(m => (
                   <div key={m.method} className="bg-[#0d0f14] rounded-lg p-3">
                     <div className="text-[10px] font-bold mb-1" style={{ color: m.color }}>{m.method}</div>
@@ -678,13 +689,13 @@ export default function AnalyticsPage() {
                 ))}
               </div>
               <div className="col-span-2 bg-[#0d0f14] rounded-lg p-3">
-                <div className="text-[10px] font-bold text-[#e8eaf0] mb-2">Key Inputs (12 mo.)</div>
+                <div className="text-[10px] font-bold text-[#e8eaf0] mb-2">{t.analyticsPage.keyInputs12mo}</div>
                 {[
-                  { label: 'Annual Revenue', value: fmt(val.annualRevenue ?? 0), color: green },
-                  { label: 'Annual Expenses', value: fmt(val.annualExpenses ?? 0), color: '#f87171' },
-                  { label: 'Net Profit (EBITDA)', value: fmt(val.annualNet ?? 0), color: '#4f8ef7' },
-                  { label: 'Total Asset Value', value: fmt(val.totalAssetValue ?? 0), color: '#f59e0b' },
-                  { label: 'Goodwill Estimate', value: fmt(val.goodwill ?? 0), color: '#a78bfa' },
+                  { label: t.analyticsPage.annualRevenue, value: fmt(val.annualRevenue ?? 0), color: green },
+                  { label: t.analyticsPage.annualExpenses, value: fmt(val.annualExpenses ?? 0), color: '#f87171' },
+                  { label: t.analyticsPage.netProfitEbitda, value: fmt(val.annualNet ?? 0), color: '#4f8ef7' },
+                  { label: t.analyticsPage.totalAssetValue, value: fmt(val.totalAssetValue ?? 0), color: '#f59e0b' },
+                  { label: t.analyticsPage.goodwillEstimate, value: fmt(val.goodwill ?? 0), color: '#a78bfa' },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between items-center py-1 border-b border-[#2a2f3d] last:border-0">
                     <span className="text-[10px] text-[#6b7280]">{row.label}</span>
@@ -698,19 +709,19 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[
                 {
-                  icon: '✅', title: 'Positive Factors', color: green,
+                  icon: '✅', title: t.analyticsPage.positiveFactors, color: green,
                   bg: greenBg, border: light ? 'rgba(62,155,117,0.20)' : 'rgba(56,217,169,0.15)',
-                  items: ['Recurring client base', 'Strong net margin', 'Low overhead costs', 'Diverse service offerings'],
+                  items: t.analyticsPage.positiveFactorsItems,
                 },
                 {
-                  icon: '⚠️', title: 'Watch Factors', color: '#f59e0b',
+                  icon: '⚠️', title: t.analyticsPage.watchFactors, color: '#f59e0b',
                   bg: 'rgba(245,158,11,0.05)', border: 'rgba(245,158,11,0.15)',
-                  items: ['Seasonal demand patterns', 'Staff dependency risk', 'Local market competition', 'Single-market exposure'],
+                  items: t.analyticsPage.watchFactorsItems,
                 },
                 {
-                  icon: '🚀', title: 'Growth Potential', color: '#4f8ef7',
+                  icon: '🚀', title: t.analyticsPage.growthPotential, color: '#4f8ef7',
                   bg: 'rgba(79,142,247,0.05)', border: 'rgba(79,142,247,0.15)',
-                  items: ['Expand service territory', 'Add premium service tiers', 'Build digital presence', 'Explore franchise model'],
+                  items: t.analyticsPage.growthPotentialItems,
                 },
               ].map(group => (
                 <div key={group.title} className="rounded-lg p-3"
@@ -731,14 +742,13 @@ export default function AnalyticsPage() {
             {/* Recommended */}
             <div className="bg-[#0d0f14] rounded-lg p-4 flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-[#6b7280] mb-0.5">Recommended Listing Price</div>
+                <div className="text-[10px] text-[#6b7280] mb-0.5">{t.analyticsPage.recommendedListingPrice}</div>
                 <div className="text-3xl font-bold text-[#38d9a9]" style={{ fontFamily: 'var(--font-display)' }}>
                   {fmtK(val.recommended ?? 0)}
                 </div>
               </div>
               <div className="text-[9px] text-[#6b7280] max-w-xs text-right leading-relaxed">
-                This estimate is based on your financial performance data and standard valuation multiples.
-                Consult a certified business broker or CPA for a formal valuation before listing.
+                {t.analyticsPage.valuationDisclaimer}
               </div>
             </div>
           </div>

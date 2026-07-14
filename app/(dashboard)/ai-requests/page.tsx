@@ -5,14 +5,7 @@ import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import AiRequestModal from '@/components/modals/AiRequestModal'
 import ErrorBanner from '@/components/ErrorBanner'
-
-const TYPE_LABELS: Record<string, string> = {
-  schedule_service: 'Schedule Service',
-  reschedule_or_cancel_service: 'Reschedule/Cancel',
-  create_sqft_estimate: 'SQFT Estimate',
-  schedule_estimate_visit: 'Estimate Visit',
-  needs_followup: 'Needs Follow-up',
-}
+import { useI18n } from '@/lib/i18n'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b',
@@ -35,16 +28,31 @@ export default function AiRequestsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<any>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const { t } = useI18n()
+
+  const TYPE_LABELS: Record<string, string> = {
+    schedule_service: t.aiRequestsPage.typeScheduleService,
+    reschedule_or_cancel_service: t.aiRequestsPage.typeRescheduleOrCancel,
+    create_sqft_estimate: t.aiRequestsPage.typeSqftEstimate,
+    schedule_estimate_visit: t.aiRequestsPage.typeEstimateVisit,
+    needs_followup: t.aiRequestsPage.typeNeedsFollowup,
+  }
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending: t.aiRequestsPage.filterPending,
+    approved: t.aiRequestsPage.filterApproved,
+    rejected: t.aiRequestsPage.filterRejected,
+  }
 
   async function load() {
     try {
       const res = await fetch('/api/ai-requests')
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar las solicitudes AI.')
+      if (!res.ok) throw new Error(data?.error || t.aiRequestsPage.loadError)
       setRequests(Array.isArray(data) ? data : [])
       setLoadError(null)
     } catch (err: any) {
-      setLoadError(err.message || 'No se pudieron cargar las solicitudes AI.')
+      setLoadError(err.message || t.aiRequestsPage.loadError)
     } finally {
       setLoading(false)
     }
@@ -64,19 +72,19 @@ export default function AiRequestsPage() {
       setRequests(prev => prev.map(r => r.id === id ? updated : r))
       setSelected(null)
     } else {
-      alert(updated.error || 'Failed to update request')
+      alert(updated.error || t.aiRequestsPage.updateFailed)
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this AI request? This cannot be undone.')) return
+    if (!confirm(t.aiRequestsPage.deleteConfirm)) return
     const res = await fetch(`/api/ai-requests/${id}`, { method: 'DELETE' })
     if (res.ok) {
       setRequests(prev => prev.filter(r => r.id !== id))
       setSelected((sel: any) => sel?.id === id ? null : sel)
     } else {
       const data = await res.json().catch(() => ({}))
-      alert(data.error || 'Failed to delete request')
+      alert(data.error || t.aiRequestsPage.deleteFailed)
     }
   }
 
@@ -90,17 +98,17 @@ export default function AiRequestsPage() {
       {loadError && <ErrorBanner message={loadError} onRetry={load} />}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">AI Requests</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Full history of requests from the AI phone assistant, newest first</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.aiRequests}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.aiRequestsPage.subtitle}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2">
         {[
-          { key: 'all' as const, label: 'Total', value: requests.length, color: '#6b7280' },
-          { key: 'pending' as const, label: 'Pending', value: pendingCount, color: '#f59e0b' },
-          { key: 'approved' as const, label: 'Approved', value: approvedCount, color: '#26BD97' },
-          { key: 'rejected' as const, label: 'Rejected', value: rejectedCount, color: '#f87171' },
+          { key: 'all' as const, label: t.aiRequestsPage.filterAll, value: requests.length, color: '#6b7280' },
+          { key: 'pending' as const, label: t.aiRequestsPage.filterPending, value: pendingCount, color: '#f59e0b' },
+          { key: 'approved' as const, label: t.aiRequestsPage.filterApproved, value: approvedCount, color: '#26BD97' },
+          { key: 'rejected' as const, label: t.aiRequestsPage.filterRejected, value: rejectedCount, color: '#f87171' },
         ].map(card => (
           <button
             key={card.key}
@@ -121,19 +129,19 @@ export default function AiRequestsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#2a2f3d]">
-              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">Date</th>
-              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">Type</th>
-              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">Customer</th>
-              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280]">Summary</th>
-              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">Status</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">{t.dashboard.colDate}</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">{t.dashboard.colType}</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">{t.aiRequestsPage.colCustomer}</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280]">{t.aiRequestsPage.colSummary}</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 text-[#6b7280] whitespace-nowrap">{t.dashboard.colStatus}</th>
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">Loading...</td></tr>
+              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">{t.aiRequestsPage.loading}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">No requests {filter === 'all' ? 'yet' : `with status "${filter}"`}.</td></tr>
+              <tr><td colSpan={6} className="text-center py-10 text-[#6b7280] text-xs">{filter === 'all' ? t.aiRequestsPage.noRequestsYet : t.aiRequestsPage.noRequestsWithStatus(STATUS_LABELS[filter] || filter)}</td></tr>
             ) : filtered.map(r => {
               const color = STATUS_COLORS[r.status] || '#6b7280'
               const isPending = r.status === 'pending'
@@ -154,20 +162,20 @@ export default function AiRequestsPage() {
                   <td className="px-3 py-2.5 text-xs text-[#6b7280] max-w-xs truncate">{r.summary}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>
-                      {r.status}
+                      {STATUS_LABELS[r.status] || r.status}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="flex items-center gap-2.5">
                       <button
-                        title="View"
+                        title={t.aiRequestsPage.viewAction}
                         onClick={e => { e.stopPropagation(); setSelected(r) }}
                         className="text-[#6b7280] hover:text-[#4f8ef7] transition-colors"
                       >
                         <Eye size={14} />
                       </button>
                       <button
-                        title={isPending ? 'Edit' : 'Only pending requests can be edited'}
+                        title={isPending ? t.aiRequestsPage.editAction : t.aiRequestsPage.editDisabledHint}
                         disabled={!isPending}
                         onClick={e => { e.stopPropagation(); if (isPending) setSelected(r) }}
                         className={isPending ? 'text-[#6b7280] hover:text-[#26BD97] transition-colors' : 'text-[#3a3f4d] cursor-not-allowed'}
@@ -175,7 +183,7 @@ export default function AiRequestsPage() {
                         <Pencil size={14} />
                       </button>
                       <button
-                        title="Delete"
+                        title={t.aiRequestsPage.deleteAction}
                         onClick={e => { e.stopPropagation(); handleDelete(r.id) }}
                         className="text-[#6b7280] hover:text-[#f87171] transition-colors"
                       >

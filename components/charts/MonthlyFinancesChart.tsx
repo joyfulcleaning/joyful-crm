@@ -8,6 +8,7 @@ import {
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { ChevronDown } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -21,6 +22,7 @@ const CUR_YEAR = new Date().getFullYear()
 const YEARS    = Array.from({ length: CUR_YEAR - 2024 }, (_, i) => 2025 + i)
 
 export default function MonthlyFinancesChart() {
+  const { t } = useI18n()
   const [light, setLight]       = useState(false)
   const [year, setYear]         = useState(CUR_YEAR)
   const [data, setData]         = useState<MonthData[]>([])
@@ -70,14 +72,14 @@ export default function MonthlyFinancesChart() {
     labels: data.map(d => d.month),
     datasets: [
       {
-        label: 'Invoices Paid',
+        label: t.charts.monthlyFinances.invoicesPaid,
         data: data.map(d => d.invoicedPaid),
         backgroundColor: paidColor,
         borderRadius: 4,
         borderSkipped: false,
       },
       {
-        label: 'Expenses',
+        label: t.charts.monthlyFinances.expenses,
         data: data.map(d => d.expenses),
         backgroundColor: expColor,
         borderRadius: 4,
@@ -107,9 +109,9 @@ export default function MonthlyFinancesChart() {
             const net     = data[i]?.netIncome    ?? 0
             if (ctx.datasetIndex === 0) {
               return [
-                `  Invoices paid: ${fmt(paid)}`,
-                `  Expenses:      ${fmt(exp)}`,
-                `  Net income:    ${fmt(net)}`,
+                t.charts.monthlyFinances.tooltipInvoicesPaid(fmt(paid)),
+                t.charts.monthlyFinances.tooltipExpenses(fmt(exp)),
+                t.charts.monthlyFinances.tooltipNetIncome(fmt(net)),
               ]
             }
             return []
@@ -139,19 +141,19 @@ export default function MonthlyFinancesChart() {
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-rest,none)] p-5">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="text-sm font-bold text-[var(--text)]">Monthly Finances</div>
-          <div className="text-xs text-[var(--muted)] mt-0.5">Collected − Expenses = Net Income · per month · {year}</div>
+          <div className="text-sm font-bold text-[var(--text)]">{t.charts.monthlyFinances.title}</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">{t.charts.monthlyFinances.subtitle(year)}</div>
         </div>
         <div className="flex items-center gap-3">
           {/* Legend */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: paidColor }} />
-              <span className="text-xs text-[var(--muted)]">Invoices Paid</span>
+              <span className="text-xs text-[var(--muted)]">{t.charts.monthlyFinances.invoicesPaid}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: expColor }} />
-              <span className="text-xs text-[var(--muted)]">Expenses</span>
+              <span className="text-xs text-[var(--muted)]">{t.charts.monthlyFinances.expenses}</span>
             </div>
           </div>
           {/* Year selector */}
@@ -185,9 +187,9 @@ export default function MonthlyFinancesChart() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">{t.charts.monthlyFinances.loading}</div>
       ) : !hasData ? (
-        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">No data for {year}</div>
+        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">{t.charts.monthlyFinances.noData(year)}</div>
       ) : (
         <div style={{ height: 200 }}>
           <Bar key={data.length} data={chartData} options={{ ...options, animation: { duration: 900, easing: 'easeOutQuart', delay: 100 } } as any} />

@@ -8,9 +8,11 @@ import ManagementModal, { PRICE_FIELDS, PRIVATE_CUSTOMER_FIELDS } from '@/compon
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import ErrorBanner from '@/components/ErrorBanner'
 import { fetchJsonOrThrow } from '@/lib/fetchJson'
+import { useI18n } from '@/lib/i18n'
 
 // ─── Clients Tab ──────────────────────────────────────────────────────────────
 function ClientsTab() {
+  const { t } = useI18n()
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -28,7 +30,7 @@ function ClientsTab() {
         setLoading(false)
         setSelectedClient((prev: any) => prev ? (data.find((c: any) => c.id === prev.id) ?? prev) : null)
       })
-      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los clientes.'); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || t.clientsPage.loadClientsError); setLoading(false) })
   }
 
   useEffect(() => { loadClients() }, [])
@@ -60,7 +62,7 @@ function ClientsTab() {
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
             <input
               type="text"
-              placeholder="Search client..."
+              placeholder={t.clientsPage.searchPlaceholder}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-8 pr-7 py-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] w-48"
@@ -77,18 +79,18 @@ function ClientsTab() {
           onClick={() => setModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:opacity-90 text-white text-sm font-semibold rounded-lg transition-all">
           <Plus size={15} />
-          New Client
+          {t.clientsPage.newClient}
         </button>
       </div>
 
       {/* Filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
         {[
-          { key: 'all', label: 'All' },
-          { key: 'residential', label: 'Residential' },
-          { key: 'commercial', label: 'Commercial' },
-          { key: 'active', label: 'Active' },
-          { key: 'inactive', label: 'Inactive' },
+          { key: 'all', label: t.clientsPage.filterAll },
+          { key: 'residential', label: t.clientsPage.filterResidential },
+          { key: 'commercial', label: t.clientsPage.filterCommercial },
+          { key: 'active', label: t.clientsPage.filterActive },
+          { key: 'inactive', label: t.clientsPage.filterInactive },
         ].map(f => (
           <button
             key={f.key}
@@ -106,7 +108,7 @@ function ClientsTab() {
 
       {/* Cards */}
       {loading ? (
-        <div className="text-center py-10 text-[var(--muted)] text-xs">Loading...</div>
+        <div className="text-center py-10 text-[var(--muted)] text-xs">{t.clientsPage.loading}</div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
           {filtered.map((c: any) => {
@@ -175,13 +177,13 @@ function ClientsTab() {
             <div className="w-8 h-8 rounded-full bg-[rgba(74,63,176,0.1)] flex items-center justify-center">
               <Plus size={16} className="text-[var(--accent)]" />
             </div>
-            <span className="text-xs font-semibold text-[var(--muted)]">New Client</span>
+            <span className="text-xs font-semibold text-[var(--muted)]">{t.clientsPage.newClient}</span>
           </div>
         </div>
       )}
 
       {!loading && (
-        <div className="text-xs text-[var(--muted)]">Showing {filtered.length} of {clients.length} clients</div>
+        <div className="text-xs text-[var(--muted)]">{t.clientsPage.showingCount(filtered.length, clients.length)}</div>
       )}
 
       <ClientModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={loadClients} />
@@ -197,6 +199,7 @@ function ClientsTab() {
 
 // ─── Management Tab ───────────────────────────────────────────────────────────
 function ManagementTab() {
+  const { t } = useI18n()
   const [managements, setManagements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -208,7 +211,7 @@ function ManagementTab() {
   function loadManagements() {
     fetchJsonOrThrow('/api/management')
       .then(data => { setManagements(Array.isArray(data) ? data : []); setLoadError(null); setLoading(false) })
-      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los managements.'); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || t.clientsPage.loadManagementError); setLoading(false) })
   }
 
   useEffect(() => { loadManagements() }, [])
@@ -230,17 +233,17 @@ function ManagementTab() {
           onClick={() => { setEditing(null); setModalOpen(true) }}
           className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:opacity-90 text-white text-sm font-semibold rounded-lg transition-all">
           <Plus size={15} />
-          New Management
+          {t.clientsPage.newManagement}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-[var(--muted)] text-xs">Loading...</div>
+        <div className="text-center py-10 text-[var(--muted)] text-xs">{t.clientsPage.loading}</div>
       ) : managements.length === 0 ? (
         <div className="text-center py-16 text-[var(--muted)]">
           <Layers size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-semibold">No management companies yet</p>
-          <p className="text-xs mt-1">Create one para definir condiciones de precio</p>
+          <p className="text-sm font-semibold">{t.clientsPage.noManagementsTitle}</p>
+          <p className="text-xs mt-1">{t.clientsPage.noManagementsHint}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -260,14 +263,14 @@ function ManagementTab() {
                       <div className="text-sm font-bold text-[var(--text)]">{mgmt.name}</div>
                       <div className="flex items-center gap-3 mt-0.5">
                         <span className="text-[10px] text-[var(--muted)]">
-                          {active.length} condición{active.length !== 1 ? 'es' : ''} activa{active.length !== 1 ? 's' : ''}
+                          {t.clientsPage.activeConditionsCount(active.length)}
                         </span>
                         {mgmt._count?.clients > 0 && (
                           <>
                             <span className="text-[var(--border)]">·</span>
                             <span className="flex items-center gap-1 text-[10px] text-[var(--muted)]">
                               <Users size={9} />
-                              {mgmt._count.clients} cliente{mgmt._count.clients !== 1 ? 's' : ''}
+                              {t.clientsPage.clientsCount(mgmt._count.clients)}
                             </span>
                           </>
                         )}
@@ -279,7 +282,7 @@ function ManagementTab() {
                       onClick={() => { setEditing(mgmt); setModalOpen(true) }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-all"
                     >
-                      <Pencil size={12} /> Edit
+                      <Pencil size={12} /> {t.clientsPage.edit}
                     </button>
                     <button
                       onClick={() => setDeleteTarget(mgmt)}
@@ -327,9 +330,9 @@ function ManagementTab() {
       />
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Management"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? Clients linked to it will lose the management reference.`}
-        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
+        title={t.clientsPage.deleteManagementTitle}
+        message={t.clientsPage.deleteManagementMessage(deleteTarget?.name)}
+        confirmLabel={deleting ? t.clientsPage.deleting : t.clientsPage.delete}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         danger
@@ -340,6 +343,7 @@ function ManagementTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  const { t } = useI18n()
   const [tab, setTab] = useState<'clients' | 'management'>('clients')
 
   return (
@@ -347,8 +351,8 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[var(--text)]">Clients</h1>
-          <p className="text-xs text-[var(--muted)] mt-0.5">Client CRM</p>
+          <h1 className="text-lg font-bold text-[var(--text)]">{t.nav.clients}</h1>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{t.clientsPage.subtitle}</p>
         </div>
         {/* Tab switcher */}
         <div className="flex items-center bg-[var(--surface2)] border border-[var(--border)] rounded-xl p-1 gap-1">
@@ -360,7 +364,7 @@ export default function ClientsPage() {
                 : 'text-[var(--muted)] hover:text-[var(--text)]'
             }`}
           >
-            <Home size={12} /> Clients
+            <Home size={12} /> {t.nav.clients}
           </button>
           <button
             onClick={() => setTab('management')}
@@ -370,7 +374,7 @@ export default function ClientsPage() {
                 : 'text-[var(--muted)] hover:text-[var(--text)]'
             }`}
           >
-            <Layers size={12} /> Management
+            <Layers size={12} /> {t.clientsPage.managementTab}
           </button>
         </div>
       </div>

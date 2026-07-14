@@ -8,6 +8,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { ChevronDown } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, Filler)
 
@@ -21,16 +22,17 @@ function weekOriginFor(y: number): Date {
   return new Date(jan1.getTime() - jan1.getUTCDay() * 86400000)
 }
 
-function weekRange(origin: Date, idx: number): string {
+function weekRange(origin: Date, idx: number, locale: string = 'en-US'): string {
   const s = new Date(origin.getTime() + idx * 7 * 86400000)
   const e = new Date(s.getTime() + 6 * 86400000)
-  const sm = s.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
-  const em = e.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+  const sm = s.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' })
+  const em = e.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' })
   const sd = s.getUTCDate(), ed = e.getUTCDate()
   return sm === em ? `${sm} ${sd}–${ed}` : `${sm} ${sd} – ${em} ${ed}`
 }
 
 export default function WeeklyServicesChart() {
+  const { t } = useI18n()
   const [light, setLight]       = useState(false)
   const [year, setYear]         = useState(CUR_YEAR)
   const [data, setData]         = useState<WeekData[]>([])
@@ -83,7 +85,7 @@ export default function WeeklyServicesChart() {
   const chartData = {
     labels,
     datasets: [{
-      label: 'Services',
+      label: t.charts.weeklyServices.datasetLabel,
       data: data.map(d => d.count),
       borderColor: blue,
       backgroundColor: blueBg,
@@ -104,9 +106,9 @@ export default function WeeklyServicesChart() {
     callbacks: {
       title: (items: any[]) => {
         const i = items[0].dataIndex
-        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
+        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i, t.locale)}`
       },
-      label: (ctx: any) => `  Services: ${ctx.raw}`,
+      label: (ctx: any) => t.charts.weeklyServices.tooltipServices(ctx.raw),
     },
   }
 
@@ -139,20 +141,20 @@ export default function WeeklyServicesChart() {
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow-rest,none)]">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text)]">Weekly Services</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">Count of services · per week · {year}</p>
+          <h2 className="text-sm font-semibold text-[var(--text)]">{t.charts.weeklyServices.title}</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{t.charts.weeklyServices.subtitle(year)}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Avg per day badge */}
           <div className="text-right">
-            <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider">Avg / day · last 12 wks</div>
+            <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider">{t.charts.weeklyServices.avgPerDay}</div>
             <div className="text-lg font-bold leading-tight" style={{ color: blue, fontFamily: 'var(--font-display)' }}>
               {avgPerDay.toFixed(1)}
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: blue }} />
-            <span className="text-xs text-[var(--muted)]">Services</span>
+            <span className="text-xs text-[var(--muted)]">{t.charts.weeklyServices.datasetLabel}</span>
           </div>
           {/* Year selector */}
           <div ref={menuRef} className="relative">
@@ -185,9 +187,9 @@ export default function WeeklyServicesChart() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">Loading…</div>
+        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">{t.charts.weeklyServices.loading}</div>
       ) : !hasData ? (
-        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">No data for {year}</div>
+        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">{t.charts.weeklyServices.noData(year)}</div>
       ) : (
         <div key={data.length} style={{ position: 'relative', height: 156 }}>
           <div style={{ position: 'absolute', inset: 0 }}>

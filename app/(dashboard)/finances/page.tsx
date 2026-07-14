@@ -15,6 +15,7 @@ import { useSyncPoll } from '@/lib/useSyncPoll'
 import ServiceModal, { TIME_SLOTS } from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ErrorBanner from '@/components/ErrorBanner'
+import { useI18n } from '@/lib/i18n'
 
 const INV_COL_DEFS = [
   { id: 'id',      label: 'ID',       defaultOn: true  },
@@ -87,6 +88,8 @@ const inputCls = "w-full px-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-
 const labelCls = "text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5"
 
 export default function FinancesPage() {
+  const { t } = useI18n()
+  const paymentTermLabel = (label: string) => t.financesPage.paymentTerms[label] || label
   const [activeTab, setActiveTab] = useState('summary')
   const [invoices, setInvoices] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -324,8 +327,8 @@ export default function FinancesPage() {
   }
 
   async function handleSaveMovement() {
-    if (!movForm.productId) { setMovError('Select a product'); return }
-    if (!movForm.quantity || parseInt(movForm.quantity) <= 0) { setMovError('Enter a valid quantity'); return }
+    if (!movForm.productId) { setMovError(t.financesPage.errors.selectProduct); return }
+    if (!movForm.quantity || parseInt(movForm.quantity) <= 0) { setMovError(t.financesPage.errors.enterValidQuantity); return }
     setMovSaving(true)
     setMovError('')
     try {
@@ -335,12 +338,12 @@ export default function FinancesPage() {
         body: JSON.stringify(movForm),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Failed to register movement')
+      if (!res.ok) throw new Error(data?.error || t.financesPage.errors.failedRegisterMovement)
       setInventory(prev => prev.map(p => p.id === data.product.id ? data.product : p))
       setMovModalOpen(false)
       loadMovements()
     } catch (err: any) {
-      setMovError(err.message || 'Failed to register movement')
+      setMovError(err.message || t.financesPage.errors.failedRegisterMovement)
     } finally {
       setMovSaving(false)
     }
@@ -408,13 +411,14 @@ export default function FinancesPage() {
       setAssets(Array.isArray(ass) ? ass : [])
       setCompletedServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'completed') : [])
       setPendingServices(Array.isArray(svcs) ? svcs.filter((s: any) => s.status === 'pending') : [])
-      setLoadError(failed.length > 0 ? `No se pudo cargar: ${failed.join(', ')}.` : null)
+      setLoadError(failed.length > 0 ? t.financesPage.errors.couldNotLoad(failed.join(', ')) : null)
       setLoading(false)
     })
     fetch('/api/inventory/movements')
       .then(async res => { const d = await res.json(); if (res.ok && Array.isArray(d)) setInvMovements(d) })
       .catch(() => {})
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -437,7 +441,7 @@ export default function FinancesPage() {
 
   useEffect(() => {
     if (!invPaymentTerm) return
-    const term = PAYMENT_TERMS.find(t => t.label === invPaymentTerm)
+    const term = PAYMENT_TERMS.find(pt => pt.label === invPaymentTerm)
     if (!term) return
     const base = invForm.issuedAt || new Date().toLocaleDateString('en-CA')
     const date = new Date(base + 'T12:00:00Z')
@@ -490,7 +494,7 @@ export default function FinancesPage() {
       })
       if (!res.ok) {
         const err = await res.json()
-        setEstSaveError(err.error || 'Failed to save')
+        setEstSaveError(err.error || t.financesPage.errors.failedSave)
         return
       }
       const saved = await res.json()
@@ -502,7 +506,7 @@ export default function FinancesPage() {
       setEstEditId(null)
       resetEstForm()
     } catch {
-      setEstSaveError('Network error')
+      setEstSaveError(t.financesPage.errors.networkError)
     } finally {
       setEstSaving(false)
     }
@@ -552,7 +556,7 @@ export default function FinancesPage() {
   }
 
   async function handleDeleteEstimate(id: string) {
-    if (!confirm('Delete this estimate?')) return
+    if (!confirm(t.financesPage.errors.deleteEstimateConfirm)) return
     await fetch(`/api/estimates/${id}`, { method: 'DELETE' })
     setEstimates(prev => prev.filter(e => e.id !== id))
   }
@@ -641,7 +645,7 @@ export default function FinancesPage() {
       const data = await res.json()
       if (!res.ok) {
         setConfirmOpen(false)
-        alert(data.error || 'Failed to delete invoice')
+        alert(data.error || t.financesPage.errors.failedDeleteInvoice)
         return
       }
       // Remove from local invoice state
@@ -672,7 +676,7 @@ export default function FinancesPage() {
       setConfirmOpen(false)
       setConfirmTarget(null)
     } catch {
-      alert('Failed to delete invoice')
+      alert(t.financesPage.errors.failedDeleteInvoice)
     } finally {
       setDeleting(false)
     }
@@ -749,7 +753,7 @@ export default function FinancesPage() {
 
   async function handleAddExpense() {
     if (!addExpForm.description || !addExpForm.amount || !addExpForm.expenseDate) {
-      setAddExpError('Description, amount, and date are required.')
+      setAddExpError(t.financesPage.errors.descAmountDateRequired)
       return
     }
     setAddExpSaving(true)
@@ -770,7 +774,7 @@ export default function FinancesPage() {
         paymentMethod: 'cash', supplier: '', receiptUrl: '', notes: '',
       })
     } catch {
-      setAddExpError('Failed to save expense.')
+      setAddExpError(t.financesPage.errors.failedSaveExpense)
     } finally {
       setAddExpSaving(false)
     }
@@ -806,21 +810,21 @@ export default function FinancesPage() {
       setEditExpOpen(false)
       setEditExpTarget(null)
     } catch {
-      alert('Failed to update expense.')
+      alert(t.financesPage.errors.failedUpdateExpense)
     } finally {
       setEditExpSaving(false)
     }
   }
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm('Delete this expense?')) return
+    if (!confirm(t.financesPage.errors.deleteExpenseConfirm)) return
     const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' })
     if (res.ok) setExpenses(prev => prev.filter(e => e.id !== id))
   }
 
   async function handleAddRecurring() {
     if (!addRecForm.name || !addRecForm.amount || !addRecForm.startDate) {
-      setAddRecError('Name, amount, and start date are required.')
+      setAddRecError(t.financesPage.errors.nameAmountStartDateRequired)
       return
     }
     setAddRecSaving(true)
@@ -842,7 +846,7 @@ export default function FinancesPage() {
         startDate: new Date().toISOString().split('T')[0], notes: '',
       })
     } catch {
-      setAddRecError('Failed to save recurring expense.')
+      setAddRecError(t.financesPage.errors.failedSaveRecurring)
     } finally {
       setAddRecSaving(false)
     }
@@ -859,10 +863,10 @@ export default function FinancesPage() {
         ])
         setExpenses(Array.isArray(exp) ? exp : [])
       }
-      setSyncRecurringMsg(data.registered > 0 ? `${data.registered} expense(s) registered` : 'All up to date')
+      setSyncRecurringMsg(data.registered > 0 ? t.financesPage.expenses.expensesRegistered(data.registered) : t.financesPage.expenses.allUpToDate)
       setTimeout(() => setSyncRecurringMsg(''), 4000)
     } catch {
-      setSyncRecurringMsg('Sync failed')
+      setSyncRecurringMsg(t.financesPage.errors.syncFailed)
       setTimeout(() => setSyncRecurringMsg(''), 3000)
     } finally {
       setSyncingRecurring(false)
@@ -912,14 +916,14 @@ export default function FinancesPage() {
       setEditRecOpen(false)
       setEditRecTarget(null)
     } catch {
-      alert('Failed to update recurring expense.')
+      alert(t.financesPage.errors.failedUpdateRecurring)
     } finally {
       setEditRecSaving(false)
     }
   }
 
   async function handleDeactivateRecurring(id: string) {
-    if (!confirm('Deactivate this recurring expense?')) return
+    if (!confirm(t.financesPage.errors.deactivateRecurringConfirm)) return
     const res = await fetch(`/api/recurring-expenses/${id}`, { method: 'DELETE' })
     if (res.ok) setRecurring(prev => prev.filter(r => r.id !== id))
   }
@@ -927,7 +931,7 @@ export default function FinancesPage() {
   // ── Inventory handlers ──
   async function handleAddProduct() {
     if (!addProdForm.name || !addProdForm.unitCost) {
-      setAddProdError('Name and unit cost are required.')
+      setAddProdError(t.financesPage.errors.nameUnitCostRequired)
       return
     }
     setAddProdSaving(true)
@@ -939,12 +943,12 @@ export default function FinancesPage() {
         body: JSON.stringify(addProdForm),
       })
       const data = await res.json()
-      if (!res.ok) { setAddProdError(data.error || 'Failed to save product.'); return }
+      if (!res.ok) { setAddProdError(data.error || t.financesPage.errors.failedSaveProduct); return }
       setInventory(prev => [data, ...prev])
       setAddProdOpen(false)
       setAddProdForm({ sku: '', name: '', category: 'Chemicals', unitOfMeasure: 'Unit', unitCost: '', currentStock: '0', minimumStock: '0', supplier: '', notes: '' })
     } catch {
-      setAddProdError('Failed to save product.')
+      setAddProdError(t.financesPage.errors.failedSaveProduct)
     } finally {
       setAddProdSaving(false)
     }
@@ -981,14 +985,14 @@ export default function FinancesPage() {
       setEditProdOpen(false)
       setEditProdTarget(null)
     } catch {
-      alert('Failed to update product.')
+      alert(t.financesPage.errors.failedUpdateProduct)
     } finally {
       setEditProdSaving(false)
     }
   }
 
   async function handleDeleteProduct(id: string) {
-    if (!confirm('Delete this product from inventory?')) return
+    if (!confirm(t.financesPage.errors.deleteProductConfirm)) return
     const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' })
     if (res.ok) setInventory(prev => prev.filter(p => p.id !== id))
   }
@@ -996,7 +1000,7 @@ export default function FinancesPage() {
   // ── Asset handlers ──
   async function handleAddAsset() {
     if (!addAssetForm.name || !addAssetForm.purchaseValue || !addAssetForm.purchaseDate) {
-      setAddAssetError('Name, purchase date and purchase value are required.')
+      setAddAssetError(t.financesPage.errors.nameDateValueRequired)
       return
     }
     setAddAssetSaving(true)
@@ -1012,7 +1016,7 @@ export default function FinancesPage() {
         body: JSON.stringify(payload),
       })
       const data = await res.json()
-      if (!res.ok) { setAddAssetError(data.error || 'Failed to save asset.'); return }
+      if (!res.ok) { setAddAssetError(data.error || t.financesPage.errors.failedSaveAsset); return }
       setAssets(prev => [data, ...prev])
       setAddAssetOpen(false)
       setAddAssetForm({
@@ -1021,7 +1025,7 @@ export default function FinancesPage() {
         serialNumber: '', status: 'active', notes: '',
       })
     } catch {
-      setAddAssetError('Failed to save asset.')
+      setAddAssetError(t.financesPage.errors.failedSaveAsset)
     } finally {
       setAddAssetSaving(false)
     }
@@ -1058,14 +1062,14 @@ export default function FinancesPage() {
       setEditAssetOpen(false)
       setEditAssetTarget(null)
     } catch {
-      alert('Failed to update asset.')
+      alert(t.financesPage.errors.failedUpdateAsset)
     } finally {
       setEditAssetSaving(false)
     }
   }
 
   async function handleDeleteAsset(id: string) {
-    if (!confirm('Delete this asset?')) return
+    if (!confirm(t.financesPage.errors.deleteAssetConfirm)) return
     const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' })
     if (res.ok) setAssets(prev => prev.filter(a => a.id !== id))
   }
@@ -1079,7 +1083,7 @@ export default function FinancesPage() {
   }
 
   async function handleSearch() {
-    if (!invForm.clientId) { setInvError('Please select a client.'); return }
+    if (!invForm.clientId) { setInvError(t.financesPage.errors.pleaseSelectClient); return }
     setInvError('')
     setSearching(true)
     try {
@@ -1092,7 +1096,7 @@ export default function FinancesPage() {
       setSelected(new Set(filtered.filter((s: any) => !s.invoicedAt).map((s: any) => s.id)))
       setSearched(true)
     } catch (e) {
-      setInvError('Failed to search services.')
+      setInvError(t.financesPage.errors.failedSearchServices)
     } finally {
       setSearching(false)
     }
@@ -1151,7 +1155,7 @@ export default function FinancesPage() {
   }
   function getInvCellContent(colId: string, s: any, isInvoiced: boolean): React.ReactNode {
     switch (colId) {
-      case 'id':      return <>{`#${s.serviceNumber}`}{isInvoiced && <span className="ml-1 text-[9px] text-[#f59e0b]">invoiced</span>}</>
+      case 'id':      return <>{`#${s.serviceNumber}`}{isInvoiced && <span className="ml-1 text-[9px] text-[#f59e0b]">{t.financesPage.invoices.invoicedTag}</span>}</>
       case 'date':    return s.serviceDate ? formatDate(s.serviceDate) : '—'
       case 'type':    return s.type
       case 'unit':    return s.unit || '—'
@@ -1231,7 +1235,7 @@ export default function FinancesPage() {
   }
 
   async function handleGenerate() {
-    if (selectedServices.length === 0) { setInvError('Select at least one service.'); return }
+    if (selectedServices.length === 0) { setInvError(t.financesPage.errors.selectAtLeastOneService); return }
     setGenerating(true)
     setInvError('')
     try {
@@ -1263,7 +1267,7 @@ export default function FinancesPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to generate invoice.')
+        throw new Error(err.error || t.financesPage.errors.failedGenerateInvoice)
       }
       const created = await res.json()
       loadData()
@@ -1273,7 +1277,7 @@ export default function FinancesPage() {
       setPostGenInvoice(created)
       setPostGenOpen(true)
     } catch (e: any) {
-      setInvError(e?.message || 'Failed to generate invoice.')
+      setInvError(e?.message || t.financesPage.errors.failedGenerateInvoice)
     } finally {
       setGenerating(false)
     }
@@ -1380,7 +1384,7 @@ export default function FinancesPage() {
     const selectedIds = invClientSelected[clientId] || new Set<string>()
     const selectedSvcs = services.filter((s: any) => selectedIds.has(s.id))
     if (selectedSvcs.length === 0) {
-      setInvClientErrors(prev => ({ ...prev, [clientId]: 'Selecciona al menos un servicio.' }))
+      setInvClientErrors(prev => ({ ...prev, [clientId]: t.financesPage.errors.selectAtLeastOneService }))
       return
     }
     setInvClientErrors(prev => ({ ...prev, [clientId]: '' }))
@@ -1419,7 +1423,7 @@ export default function FinancesPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to generate invoice.')
+        throw new Error(err.error || t.financesPage.errors.failedGenerateInvoice)
       }
       const created = await res.json()
       setInvGeneratingFor(null)
@@ -1429,7 +1433,7 @@ export default function FinancesPage() {
       applyAutoInvoiceNum([...invoices, created])
       await handleBatchSearch()
     } catch (e: any) {
-      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to generate invoice.' }))
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || t.financesPage.errors.failedGenerateInvoice }))
     } finally {
       setInvClientGenerating(prev => ({ ...prev, [clientId]: false }))
     }
@@ -1445,13 +1449,13 @@ export default function FinancesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: form.status, notes: form.notes, dueDate: form.dueDate || null })
       })
-      if (!res.ok) throw new Error('Failed to update')
+      if (!res.ok) throw new Error(t.financesPage.errors.failedUpdate)
       const updated = await res.json()
       setInvClientCreatedInvoices(prev => ({ ...prev, [clientId]: updated }))
       setInvClientEditing(prev => ({ ...prev, [clientId]: false }))
       loadData()
     } catch (e: any) {
-      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to update invoice.' }))
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || t.financesPage.errors.failedUpdateInvoice }))
     }
   }
 
@@ -1459,7 +1463,7 @@ export default function FinancesPage() {
     const selectedIds = invClientSelected[clientId] || new Set<string>()
     const selectedSvcs = services.filter((s: any) => selectedIds.has(s.id))
     if (selectedSvcs.length === 0) {
-      setInvClientErrors(prev => ({ ...prev, [clientId]: 'Select at least one service.' }))
+      setInvClientErrors(prev => ({ ...prev, [clientId]: t.financesPage.errors.selectAtLeastOneService }))
       return
     }
     setInvClientErrors(prev => ({ ...prev, [clientId]: '' }))
@@ -1505,7 +1509,7 @@ export default function FinancesPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to generate invoice.')
+        throw new Error(err.error || t.financesPage.errors.failedGenerateInvoice)
       }
       const created = await res.json()
       setInvClientCreatedInvoices(prev => ({ ...prev, [clientId]: created }))
@@ -1514,7 +1518,7 @@ export default function FinancesPage() {
       applyAutoInvoiceNum([...invoices, created])
       await handleBatchSearch()
     } catch (e: any) {
-      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || 'Failed to generate invoice.' }))
+      setInvClientErrors(prev => ({ ...prev, [clientId]: e?.message || t.financesPage.errors.failedGenerateInvoice }))
     } finally {
       setInvClientGenerating(prev => ({ ...prev, [clientId]: false }))
     }
@@ -1607,12 +1611,12 @@ export default function FinancesPage() {
   const histHasFilter  = histFilter !== 'all' || histClientFilter !== 'all' || !!histDateFrom || !!histDateTo || !!histSearch
 
   const tabs = [
-    { key: 'summary',   label: '📊 Summary'   },
-    { key: 'invoices',  label: '🧾 Invoices'  },
-    { key: 'estimates', label: '📋 Estimates' },
-    { key: 'expenses',  label: '📦 Expenses'  },
-    { key: 'inventory', label: '🗂 Inventory' },
-    { key: 'assets',    label: '🏢 Assets'    },
+    { key: 'summary',   label: `📊 ${t.financesPage.tabs.summary}`   },
+    { key: 'invoices',  label: `🧾 ${t.financesPage.tabs.invoices}`  },
+    { key: 'estimates', label: `📋 ${t.financesPage.tabs.estimates}` },
+    { key: 'expenses',  label: `📦 ${t.financesPage.tabs.expenses}`  },
+    { key: 'inventory', label: `🗂 ${t.financesPage.tabs.inventory}` },
+    { key: 'assets',    label: `🏢 ${t.financesPage.tabs.assets}`    },
   ]
 
   // ── Estimate helpers ──
@@ -1684,8 +1688,8 @@ export default function FinancesPage() {
       {loadError && <ErrorBanner message={loadError} onRetry={loadData} />}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">Finances</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Financial management & reporting</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.finances}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.financesPage.subtitle}</p>
         </div>
       </div>
 
@@ -1706,7 +1710,7 @@ export default function FinancesPage() {
 
           {/* Date range filter */}
           <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider shrink-0">Period</span>
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider shrink-0">{t.financesPage.summary.period}</span>
             <input
               type="date"
               value={summaryDateFrom}
@@ -1725,32 +1729,32 @@ export default function FinancesPage() {
                 onClick={() => { setSummaryDateFrom(''); setSummaryDateTo('') }}
                 className="flex items-center gap-1 text-[10px] text-[#6b7280] hover:text-[#e8eaf0] transition-colors ml-1"
               >
-                <X size={11} /> Clear
+                <X size={11} /> {t.financesPage.common.clear}
               </button>
             )}
             {(summaryDateFrom || summaryDateTo) && (
               <span className="text-[10px] text-[#4f8ef7] ml-1">
                 {summaryDateFrom && summaryDateTo
-                  ? `${formatDate(summaryDateFrom)} – ${formatDate(summaryDateTo)}`
+                  ? t.financesPage.common.dateRangeFromTo(formatDate(summaryDateFrom), formatDate(summaryDateTo))
                   : summaryDateFrom
-                    ? `From ${formatDate(summaryDateFrom)}`
-                    : `Until ${formatDate(summaryDateTo)}`}
+                    ? t.financesPage.common.fromDate(formatDate(summaryDateFrom))
+                    : t.financesPage.common.untilDate(formatDate(summaryDateTo))}
               </span>
             )}
           </div>
 
           <div className="grid grid-cols-5 gap-3">
             {[
-              { label: 'Completed Services', value: completedTotal, icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
-                sub: [{ k: 'Invoiced', v: fmt(completedTotal - notInvoicedCompleted), sep: '+' }, { k: 'Not yet', v: fmt(notInvoicedCompleted), sep: '' }] },
-              { label: 'Total Invoiced',     value: totalInvoiced,  icon: DollarSign,   color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
-                sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '+' }, { k: 'Pending', v: fmt(pendingToPay), sep: '' }] },
-              { label: 'Pending to Pay',     value: pendingToPay,   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
-                sub: [{ k: 'Sent', v: fmt(sentBalance), sep: '+' }, { k: 'Overdue', v: fmt(overdueBalance), sep: '' }] },
-              { label: 'Expenses',           value: totalExpenses,  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
-                sub: [{ k: `${sumExpenses.length} items`, v: '', sep: '·' }, { k: 'Recurring/mo', v: fmt(recurringTotal), sep: '' }] },
-              { label: 'Net Income',         value: netIncome,      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
-                sub: [{ k: 'Collected', v: fmt(totalCollected), sep: '−' }, { k: 'Expenses', v: fmt(totalExpenses), sep: '' }] },
+              { label: t.financesPage.summary.completedServices, value: completedTotal, icon: CheckCircle,  color: '#26BD97', border: 'border-t-[#26BD97]',
+                sub: [{ k: t.financesPage.summary.invoicedLabel, v: fmt(completedTotal - notInvoicedCompleted), sep: '+' }, { k: t.financesPage.summary.notYet, v: fmt(notInvoicedCompleted), sep: '' }] },
+              { label: t.financesPage.summary.totalInvoiced,     value: totalInvoiced,  icon: DollarSign,   color: '#4f8ef7', border: 'border-t-[#4f8ef7]',
+                sub: [{ k: t.financesPage.summary.collectedLabel, v: fmt(totalCollected), sep: '+' }, { k: t.financesPage.summary.pendingLabel, v: fmt(pendingToPay), sep: '' }] },
+              { label: t.financesPage.summary.pendingToPay,     value: pendingToPay,   icon: TrendingUp,   color: '#f59e0b', border: 'border-t-[#f59e0b]',
+                sub: [{ k: t.financesPage.summary.sentLabel, v: fmt(sentBalance), sep: '+' }, { k: t.financesPage.summary.overdueLabel, v: fmt(overdueBalance), sep: '' }] },
+              { label: t.financesPage.summary.expenses,           value: totalExpenses,  icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]',
+                sub: [{ k: t.financesPage.summary.itemsCount(sumExpenses.length), v: '', sep: '·' }, { k: t.financesPage.summary.recurringPerMonth, v: fmt(recurringTotal), sep: '' }] },
+              { label: t.financesPage.summary.netIncome,         value: netIncome,      icon: TrendingUp,   color: '#a78bfa', border: 'border-t-[#a78bfa]',
+                sub: [{ k: t.financesPage.summary.collectedLabel, v: fmt(totalCollected), sep: '−' }, { k: t.financesPage.summary.expensesLabel, v: fmt(totalExpenses), sep: '' }] },
             ].map(card => (
               <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}>
                 <card.icon size={20} className="absolute right-3 top-3 opacity-20" style={{ color: card.color }} />
@@ -1775,56 +1779,56 @@ export default function FinancesPage() {
             {/* Card: Not Invoiced */}
             <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#fb923c] rounded-xl p-4 relative overflow-hidden">
               <ReceiptText size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#fb923c' }} />
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Not Invoiced</div>
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.summary.notInvoiced}</div>
               <div className="text-2xl font-bold mt-2" style={{ color: '#fb923c', fontFamily: 'var(--font-display)' }}>
                 <CountUp value={notInvoicedCompleted + notInvoicedPending} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
-                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedCompleted)}</span></span>
+                <span>{t.financesPage.summary.completedColon} <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedCompleted)}</span></span>
                 <span className="text-[#4b5563] font-bold">+</span>
-                <span>Pending: <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedPending)}</span></span>
+                <span>{t.financesPage.summary.pendingColon} <span className="text-[#e8eaf0] font-semibold">{fmt(notInvoicedPending)}</span></span>
               </div>
             </div>
 
             {/* Card: Completed vs Invoiced */}
             <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#818cf8] rounded-xl p-4 relative overflow-hidden">
               <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#818cf8' }} />
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Completed vs Invoiced</div>
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.summary.completedVsInvoiced}</div>
               <div className="text-2xl font-bold mt-2" style={{ color: serviceVsInvoiceDiff >= 0 ? '#38d9a9' : '#f87171', fontFamily: 'var(--font-display)' }}>
                 {serviceVsInvoiceDiff >= 0 ? '+' : ''}<CountUp value={serviceVsInvoiceDiff} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
-                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
+                <span>{t.financesPage.summary.completedColon} <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
                 <span className="text-[#4b5563] font-bold">−</span>
-                <span>Invoiced: <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
+                <span>{t.financesPage.summary.invoicedColon} <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
               </div>
             </div>
 
             {/* Card: Total Collected */}
             <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#38d9a9] rounded-xl p-4 relative overflow-hidden">
               <DollarSign size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#38d9a9' }} />
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Total Collected</div>
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.summary.totalCollected}</div>
               <div className="text-2xl font-bold mt-2" style={{ color: '#38d9a9', fontFamily: 'var(--font-display)' }}>
                 <CountUp value={totalCollected} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
-                <span>Invoiced: <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
+                <span>{t.financesPage.summary.invoicedColon} <span className="text-[#e8eaf0] font-semibold">{fmt(totalInvoiced)}</span></span>
                 <span className="text-[#4b5563] font-bold">−</span>
-                <span>Pending: <span className="text-[#e8eaf0] font-semibold">{fmt(pendingToPay)}</span></span>
+                <span>{t.financesPage.summary.pendingColon} <span className="text-[#e8eaf0] font-semibold">{fmt(pendingToPay)}</span></span>
               </div>
             </div>
 
             {/* Card: Service Net */}
             <div className="bg-[#161922] border border-[#2a2f3d] border-t-2 border-t-[#2dd4bf] rounded-xl p-4 relative overflow-hidden">
               <TrendingUp size={20} className="absolute right-3 top-3 opacity-20" style={{ color: '#2dd4bf' }} />
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Service Net</div>
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.summary.serviceNet}</div>
               <div className="text-2xl font-bold mt-2" style={{ color: completedNet >= 0 ? '#2dd4bf' : '#f87171', fontFamily: 'var(--font-display)' }}>
                 {completedNet >= 0 ? '+' : ''}<CountUp value={completedNet} format={fmt} />
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6b7280]">
-                <span>Completed: <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
+                <span>{t.financesPage.summary.completedColon} <span className="text-[#e8eaf0] font-semibold">{fmt(completedTotal)}</span></span>
                 <span className="text-[#4b5563] font-bold">−</span>
-                <span>Expenses: <span className="text-[#e8eaf0] font-semibold">{fmt(totalExpenses)}</span></span>
+                <span>{t.financesPage.summary.expensesColon} <span className="text-[#e8eaf0] font-semibold">{fmt(totalExpenses)}</span></span>
               </div>
             </div>
           </div>
@@ -1847,27 +1851,27 @@ export default function FinancesPage() {
                 return base * dir
               })
             const HEADERS: { label: string; key?: SumSortKey }[] = [
-              { label: 'Invoice #',   key: 'invoiceNumber' },
-              { label: 'Client',      key: 'client' },
-              { label: 'Total',       key: 'total' },
-              { label: 'Balance Due', key: 'balanceDue' },
-              { label: 'Due Date',    key: 'dueDate' },
-              { label: 'Status',      key: 'status' },
+              { label: t.financesPage.summary.colInvoiceNum,  key: 'invoiceNumber' },
+              { label: t.financesPage.summary.colClient,      key: 'client' },
+              { label: t.financesPage.summary.colTotal,       key: 'total' },
+              { label: t.financesPage.summary.colBalanceDue,  key: 'balanceDue' },
+              { label: t.financesPage.summary.colDueDate,     key: 'dueDate' },
+              { label: t.financesPage.summary.colStatus,      key: 'status' },
               { label: '' },
             ]
             return (
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
               <div className="text-xs font-bold text-[#e8eaf0] flex items-center gap-2">
-                Pending Invoices
+                {t.financesPage.summary.pendingInvoices}
                 {pendingInvoices.length > 0 && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">{pendingInvoices.length}</span>
                 )}
               </div>
-              <button onClick={() => setActiveTab('invoices')} className="text-[10px] text-[#4f8ef7] hover:underline">View all</button>
+              <button onClick={() => setActiveTab('invoices')} className="text-[10px] text-[#4f8ef7] hover:underline">{t.financesPage.summary.viewAll}</button>
             </div>
             {pendingInvoices.length === 0 ? (
-              <div className="text-center py-8 text-[#6b7280] text-xs">No pending invoices — everything is paid. 🎉</div>
+              <div className="text-center py-8 text-[#6b7280] text-xs">{t.financesPage.summary.noPendingInvoices}</div>
             ) : (
               <table className="w-full">
                 <thead>
@@ -1905,7 +1909,7 @@ export default function FinancesPage() {
                         </td>
                         <td className="px-4 py-2.5">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                            style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
+                            style={{ backgroundColor: `${color}20`, color }}>{t.financesPage.invoiceStatus[inv.status] || inv.status}</span>
                         </td>
                         <td className="px-4 py-2.5 flex gap-2">
                           <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true) }}
@@ -1933,13 +1937,13 @@ export default function FinancesPage() {
 
           {/* Sub-tabs */}
           <div className="flex gap-2 border-b border-[#2a2f3d] pb-0">
-            {[{v:'generar' as const, l:'⚡ Generate Invoices'}, {v:'historial' as const, l:'📋 History'}].map(t => (
-              <button key={t.v} onClick={() => setInvSubTab(t.v)}
+            {[{v:'generar' as const, l: t.financesPage.invoices.subTabGenerate}, {v:'historial' as const, l: t.financesPage.invoices.subTabHistory}].map(st => (
+              <button key={st.v} onClick={() => setInvSubTab(st.v)}
                 className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all -mb-px ${
-                  invSubTab === t.v
+                  invSubTab === st.v
                     ? 'border-[#4f8ef7] text-[#4f8ef7]'
                     : 'border-transparent text-[#6b7280] hover:text-[#e8eaf0]'
-                }`}>{t.l}</button>
+                }`}>{st.l}</button>
             ))}
           </div>
 
@@ -1951,20 +1955,20 @@ export default function FinancesPage() {
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
                 <div className="flex items-end gap-3 flex-wrap">
                   <div>
-                    <label className={labelCls}>From</label>
+                    <label className={labelCls}>{t.financesPage.common.from}</label>
                     <input type="date" value={invBatchFrom} onChange={e => setInvBatchFrom(e.target.value)} className={inputCls + ' w-36'} />
                   </div>
                   <div>
-                    <label className={labelCls}>To</label>
+                    <label className={labelCls}>{t.financesPage.common.to}</label>
                     <input type="date" value={invBatchTo} onChange={e => setInvBatchTo(e.target.value)} className={inputCls + ' w-36'} />
                   </div>
                   <div>
-                    <label className={labelCls}>Service Status</label>
+                    <label className={labelCls}>{t.financesPage.invoices.serviceStatus}</label>
                     <select value={invBatchStatus} onChange={e => setInvBatchStatus(e.target.value)} className={inputCls + ' w-36'}>
-                      <option value="all">All</option>
-                      <option value="completed">Completed</option>
-                      <option value="pending">Pending</option>
-                      <option value="in_progress">In Progress</option>
+                      <option value="all">{t.financesPage.common.all}</option>
+                      <option value="completed">{t.status.completed}</option>
+                      <option value="pending">{t.status.pending}</option>
+                      <option value="in_progress">{t.status.in_progress}</option>
                     </select>
                   </div>
                   <button
@@ -1973,11 +1977,11 @@ export default function FinancesPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-50"
                   >
                     <Search size={13} />
-                    {invBatchSearching ? 'Searching...' : 'Search Clients'}
+                    {invBatchSearching ? t.financesPage.common.searching : t.financesPage.invoices.searchClients}
                   </button>
                   {invBatchClients.length > 0 && (
                     <span className="text-[10px] text-[#6b7280] ml-auto">
-                      {invBatchClients.length} client{invBatchClients.length !== 1 ? 's' : ''} · {invBatchClients.reduce((s, c) => s + c.uninvoicedCount, 0)} uninvoiced
+                      {t.financesPage.invoices.clientsUninvoicedSummary(invBatchClients.length, invBatchClients.reduce((s, c) => s + c.uninvoicedCount, 0))}
                     </span>
                   )}
                   {/* Column picker — global for all client service tables */}
@@ -1986,11 +1990,11 @@ export default function FinancesPage() {
                       onClick={() => setBatchColsOpen(v => !v)}
                       className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-semibold text-[#6b7280] hover:text-[#e8eaf0] border border-[#2a2f3d] hover:border-[#4f8ef7] rounded-lg transition-all"
                     >
-                      ⚙ Columns
+                      ⚙ {t.financesPage.common.columns}
                     </button>
                     {batchColsOpen && (
                       <div className="absolute right-0 top-9 z-50 bg-[#1e2330] border border-[#2a2f3d] rounded-xl shadow-2xl p-3 space-y-1 min-w-[150px]">
-                        <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
+                        <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">{t.financesPage.common.visibleColumns}</div>
                         {BATCH_SVC_COL_DEFS.map(col => (
                           <label key={col.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded px-1 py-0.5">
                             <input
@@ -2004,7 +2008,7 @@ export default function FinancesPage() {
                               })}
                               className="accent-[#4f8ef7]"
                             />
-                            <span className="text-[10px] text-[#9ca3af]">{col.label}</span>
+                            <span className="text-[10px] text-[#9ca3af]">{t.financesPage.cols[col.id] || col.label}</span>
                           </label>
                         ))}
                       </div>
@@ -2017,13 +2021,13 @@ export default function FinancesPage() {
               {!invBatchSearching && invBatchClients.length === 0 && invBatchFrom && (
                 <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl flex flex-col items-center justify-center py-20 text-center">
                   <div className="text-5xl opacity-20 mb-4">🧾</div>
-                  <div className="text-sm text-[#6b7280]">No clients found with services in that range.</div>
+                  <div className="text-sm text-[#6b7280]">{t.financesPage.invoices.noClientsInRange}</div>
                 </div>
               )}
               {!invBatchSearching && invBatchClients.length === 0 && !invBatchFrom && (
                 <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl flex flex-col items-center justify-center py-20 text-center">
                   <div className="text-5xl opacity-20 mb-4">📅</div>
-                  <div className="text-sm text-[#6b7280]">Select a date range and click Search Clients</div>
+                  <div className="text-sm text-[#6b7280]">{t.financesPage.invoices.selectRangeAndSearch}</div>
                 </div>
               )}
 
@@ -2062,23 +2066,23 @@ export default function FinancesPage() {
                           {isWorked && <span className="text-[#38d9a9] text-xs">✓</span>}
                           <span className="text-sm font-bold text-[#e8eaf0] truncate">{client.name}</span>
                           <span className="text-[10px] text-[#6b7280] flex-shrink-0">
-                            {totalCount} service{totalCount !== 1 ? 's' : ''}
-                            {uninvoicedCount > 0 && <> · <span className="text-[#f59e0b]">{uninvoicedCount} uninvoiced</span></>}
-                            {uninvoicedCount === 0 && totalCount > 0 && <> · <span className="text-[#38d9a9]">all invoiced</span></>}
+                            {t.financesPage.invoices.serviceCount(totalCount)}
+                            {uninvoicedCount > 0 && <> · <span className="text-[#f59e0b]">{t.financesPage.invoices.uninvoicedCount(uninvoicedCount)}</span></>}
+                            {uninvoicedCount === 0 && totalCount > 0 && <> · <span className="text-[#38d9a9]">{t.financesPage.invoices.allInvoiced}</span></>}
                           </span>
                         </div>
                         {(client.defaultPaymentMethod || client.paymentTermsDays != null) && (
                           <div className="flex items-center gap-2 mt-0.5">
                             {client.paymentTermsDays != null && (
                               <span className="text-[9px] text-[#6b7280]">
-                                {PAYMENT_TERMS.find(t => t.days === client.paymentTermsDays)?.label ?? `Net ${client.paymentTermsDays}`}
+                                {(() => { const pterm = PAYMENT_TERMS.find(pt => pt.days === client.paymentTermsDays); return pterm ? paymentTermLabel(pterm.label) : t.financesPage.common.netDays(client.paymentTermsDays) })()}
                               </span>
                             )}
                             {client.defaultPaymentMethod && (
-                              <span className="text-[9px] text-[#6b7280] capitalize">{client.defaultPaymentMethod.replace('_', ' ')}</span>
+                              <span className="text-[9px] text-[#6b7280] capitalize">{t.financesPage.paymentMethods[client.defaultPaymentMethod] || client.defaultPaymentMethod.replace('_', ' ')}</span>
                             )}
                             {client.defaultTaxRate != null && Number(client.defaultTaxRate) > 0 && (
-                              <span className="text-[9px] text-[#6b7280]">Tax {client.defaultTaxRate}%</span>
+                              <span className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.taxPct(client.defaultTaxRate)}</span>
                             )}
                           </div>
                         )}
@@ -2092,7 +2096,7 @@ export default function FinancesPage() {
                               : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:border-[#38d9a9] hover:text-[#38d9a9]'
                           }`}
                         >
-                          {isWorked ? '✓ Worked' : 'Mark as Worked'}
+                          {isWorked ? `✓ ${t.financesPage.invoices.worked}` : t.financesPage.invoices.markAsWorked}
                         </button>
                         <button
                           onClick={() => {
@@ -2106,7 +2110,7 @@ export default function FinancesPage() {
                           }}
                           className="px-3 py-1 rounded-lg text-[10px] font-semibold border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] transition-all flex items-center gap-1"
                         >
-                          {isExpanded ? '▲ Hide' : '▼ View Services'}
+                          {isExpanded ? `▲ ${t.financesPage.common.hide}` : `▼ ${t.financesPage.invoices.viewServices}`}
                         </button>
                       </div>
                     </div>
@@ -2120,20 +2124,20 @@ export default function FinancesPage() {
                               <tr className="bg-[#1e2330]">
                                 <th className="px-3 py-2 w-8" />
                                 <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">#</th>
-                                {batchSvcVisibleCols.has('date')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Date</th>}
-                                {batchSvcVisibleCols.has('time')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Time</th>}
-                                {batchSvcVisibleCols.has('type')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Type</th>}
-                                {batchSvcVisibleCols.has('address') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Address</th>}
-                                {batchSvcVisibleCols.has('unit')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Unit</th>}
-                                {batchSvcVisibleCols.has('room')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Room Size</th>}
-                                {batchSvcVisibleCols.has('key')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Key</th>}
-                                {batchSvcVisibleCols.has('base')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Base Price</th>}
-                                {batchSvcVisibleCols.has('fee')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Add. Fee</th>}
-                                {batchSvcVisibleCols.has('total')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Total</th>}
-                                {batchSvcVisibleCols.has('payment') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Payment</th>}
-                                {batchSvcVisibleCols.has('status')  && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Status</th>}
-                                {batchSvcVisibleCols.has('notes')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Notes</th>}
-                                {batchSvcVisibleCols.has('invoice') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">Invoice</th>}
+                                {batchSvcVisibleCols.has('date')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.date}</th>}
+                                {batchSvcVisibleCols.has('time')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.time}</th>}
+                                {batchSvcVisibleCols.has('type')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.type}</th>}
+                                {batchSvcVisibleCols.has('address') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.address}</th>}
+                                {batchSvcVisibleCols.has('unit')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.unit}</th>}
+                                {batchSvcVisibleCols.has('room')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.roomSize}</th>}
+                                {batchSvcVisibleCols.has('key')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.key}</th>}
+                                {batchSvcVisibleCols.has('base')    && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.basePrice}</th>}
+                                {batchSvcVisibleCols.has('fee')     && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.addFee}</th>}
+                                {batchSvcVisibleCols.has('total')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.total}</th>}
+                                {batchSvcVisibleCols.has('payment') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.payment}</th>}
+                                {batchSvcVisibleCols.has('status')  && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.status}</th>}
+                                {batchSvcVisibleCols.has('notes')   && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.notes}</th>}
+                                {batchSvcVisibleCols.has('invoice') && <th className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap">{t.financesPage.cols.invoice}</th>}
                               </tr>
                             </thead>
                             <tbody>
@@ -2149,7 +2153,7 @@ export default function FinancesPage() {
                                         type="checkbox"
                                         checked={checked}
                                         disabled={invoiced || cancelled}
-                                        title={cancelled ? 'Cancelled services cannot be invoiced' : undefined}
+                                        title={cancelled ? t.financesPage.invoices.cancelledCannotBeInvoiced : undefined}
                                         onChange={() => toggleClientService(client.id, s.id)}
                                         className="accent-[#4f8ef7] disabled:opacity-30"
                                       />
@@ -2172,13 +2176,13 @@ export default function FinancesPage() {
                                     {batchSvcVisibleCols.has('base')    && <td className="px-3 py-2 text-[10px] text-[#9ca3af] font-mono whitespace-nowrap">${Number(s.basePrice).toFixed(2)}</td>}
                                     {batchSvcVisibleCols.has('fee')     && <td className="px-3 py-2 text-[10px] text-[#f59e0b] font-mono whitespace-nowrap">{Number(s.additionalFee) > 0 ? `+$${Number(s.additionalFee).toFixed(2)}` : '—'}</td>}
                                     {batchSvcVisibleCols.has('total')   && <td className="px-3 py-2 text-[10px] font-bold text-[#38d9a9] font-mono whitespace-nowrap">${Number(s.total).toFixed(2)}</td>}
-                                    {batchSvcVisibleCols.has('payment') && <td className="px-3 py-2 text-[10px] text-[#9ca3af] capitalize">{s.paymentMethod ? s.paymentMethod.replace('_', ' ') : '—'}</td>}
+                                    {batchSvcVisibleCols.has('payment') && <td className="px-3 py-2 text-[10px] text-[#9ca3af] capitalize">{s.paymentMethod ? (t.financesPage.paymentMethods[s.paymentMethod] || s.paymentMethod.replace('_', ' ')) : '—'}</td>}
                                     {batchSvcVisibleCols.has('status')  && (
                                       <td className="px-3 py-2">
                                         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize"
                                           style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.12)' : s.status === 'pending' ? 'rgba(245,158,11,0.12)' : 'rgba(100,116,139,0.12)',
                                             color: s.status === 'completed' ? '#38d9a9' : s.status === 'pending' ? '#f59e0b' : '#9ca3af' }}>
-                                          {s.status}
+                                          {t.status[s.status] || s.status}
                                         </span>
                                       </td>
                                     )}
@@ -2201,54 +2205,54 @@ export default function FinancesPage() {
                         {/* Inline form fields — only when Preview is open */}
                         {isGenOpen && cForm && (
                           <div className="border-t border-[#2a2f3d] bg-[#0d0f14] p-4 space-y-4">
-                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Invoice Details · {client.name}</div>
+                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.invoices.invoiceDetailsFor(client.name)}</div>
                             {cError && (
                               <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-2">{cError}</div>
                             )}
                             {/* Invoice # */}
                             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-3 space-y-2">
-                              <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Invoice #</span>
+                              <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.invoices.invoiceNumHash}</span>
                               {cForm.invMode === 'manual' ? (
-                                <input value={cForm.invManualId} onChange={e => setClientFormField(client.id, 'invManualId', e.target.value)} placeholder="e.g. INV-2026-TC-008" className="w-full text-center py-1.5 px-3 bg-[#0d0f14] rounded-lg border-2 border-[#4f8ef7] text-sm font-bold text-[#4f8ef7] focus:outline-none font-mono" />
+                                <input value={cForm.invManualId} onChange={e => setClientFormField(client.id, 'invManualId', e.target.value)} placeholder={t.financesPage.invoices.manualIdPlaceholder} className="w-full text-center py-1.5 px-3 bg-[#0d0f14] rounded-lg border-2 border-[#4f8ef7] text-sm font-bold text-[#4f8ef7] focus:outline-none font-mono" />
                               ) : (
                                 <div className="text-center py-1.5 px-3 bg-[#0d0f14] rounded-lg border border-[#2a2f3d]">
                                   <span className="text-sm font-bold text-[#4f8ef7] font-mono">{invNumForClient}</span>
                                 </div>
                               )}
                               <div className="flex gap-2">
-                                {[{v:'auto', l:'⚡ Auto'}, {v:'manual', l:'✏️ Manual'}].map(m => (
+                                {[{v:'auto', l:`⚡ ${t.financesPage.common.auto}`}, {v:'manual', l:`✏️ ${t.financesPage.common.manual}`}].map(m => (
                                   <button key={m.v} onClick={() => { setClientFormField(client.id, 'invMode', m.v); if (m.v === 'auto') applyAutoInvoiceNum(invoices) }}
                                     className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-all ${cForm.invMode === m.v ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'}`}>{m.l}</button>
                                 ))}
                               </div>
                               {cForm.invMode === 'auto' && (
-                                <div><label className={labelCls}>No.</label><input value={invNum} onChange={e => setInvNum(e.target.value)} type="number" className={inputCls + ' text-center font-mono font-bold'} /></div>
+                                <div><label className={labelCls}>{t.financesPage.invoices.noLabel}</label><input value={invNum} onChange={e => setInvNum(e.target.value)} type="number" className={inputCls + ' text-center font-mono font-bold'} /></div>
                               )}
                             </div>
                             {/* Dates + Terms */}
                             <div className="grid grid-cols-2 gap-3">
-                              <div><label className={labelCls}>Issue Date</label><input type="date" value={cForm.issuedAt} onChange={e => setClientFormField(client.id, 'issuedAt', e.target.value)} className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.invoices.issueDate}</label><input type="date" value={cForm.issuedAt} onChange={e => setClientFormField(client.id, 'issuedAt', e.target.value)} className={inputCls} /></div>
                               <div>
-                                <label className={labelCls}>Payment Terms</label>
+                                <label className={labelCls}>{t.financesPage.invoices.paymentTerms}</label>
                                 <select value={cForm.paymentTermsDays} onChange={e => setClientFormField(client.id, 'paymentTermsDays', e.target.value)} className={inputCls}>
-                                  <option value="">— None —</option>
-                                  {PAYMENT_TERMS.map(t => <option key={t.days} value={t.days}>{t.label}</option>)}
+                                  <option value="">{t.financesPage.common.noneOption}</option>
+                                  {PAYMENT_TERMS.map(pt => <option key={pt.days} value={pt.days}>{paymentTermLabel(pt.label)}</option>)}
                                 </select>
                               </div>
-                              <div><label className={labelCls}>Due Date</label><input type="date" value={cForm.dueDate} onChange={e => setClientFormField(client.id, 'dueDate', e.target.value)} className={inputCls} /></div>
-                              <div><label className={labelCls}>Tax (%)</label><input type="number" value={cForm.taxRate} onChange={e => setClientFormField(client.id, 'taxRate', e.target.value)} placeholder="0" className={inputCls} /></div>
-                              <div><label className={labelCls}>Payment Method</label><SelectWithAdd value={cForm.paymentMethod} onChange={v => setClientFormField(client.id, 'paymentMethod', v)} options={PAYMENT_METHODS} storageKey="paymentMethod" placeholder="— Select —" addLabel="payment method" className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.invoices.dueDate}</label><input type="date" value={cForm.dueDate} onChange={e => setClientFormField(client.id, 'dueDate', e.target.value)} className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.invoices.taxPercent}</label><input type="number" value={cForm.taxRate} onChange={e => setClientFormField(client.id, 'taxRate', e.target.value)} placeholder="0" className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label><SelectWithAdd value={cForm.paymentMethod} onChange={v => setClientFormField(client.id, 'paymentMethod', v)} options={PAYMENT_METHODS} storageKey="paymentMethod" placeholder={t.financesPage.common.selectPlaceholder} addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} /></div>
                               <div>
-                                <label className={labelCls}>Invoice Status</label>
+                                <label className={labelCls}>{t.financesPage.invoices.invoiceStatus}</label>
                                 <select value={cForm.status} onChange={e => setClientFormField(client.id, 'status', e.target.value)} className={inputCls}>
-                                  <option value="draft">Draft</option>
-                                  <option value="sent">Sent</option>
-                                  <option value="paid">Paid</option>
-                                  <option value="overdue">Overdue</option>
+                                  <option value="draft">{t.financesPage.invoiceStatus.draft}</option>
+                                  <option value="sent">{t.financesPage.invoiceStatus.sent}</option>
+                                  <option value="paid">{t.financesPage.invoiceStatus.paid}</option>
+                                  <option value="overdue">{t.financesPage.invoiceStatus.overdue}</option>
                                 </select>
                               </div>
                             </div>
-                            <div><label className={labelCls}>Notes</label><textarea value={cForm.notes} onChange={e => setClientFormField(client.id, 'notes', e.target.value)} rows={2} placeholder="Notes..." className={inputCls + ' resize-none'} /></div>
+                            <div><label className={labelCls}>{t.financesPage.common.notes}</label><textarea value={cForm.notes} onChange={e => setClientFormField(client.id, 'notes', e.target.value)} rows={2} placeholder={t.financesPage.common.notesPlaceholder} className={inputCls + ' resize-none'} /></div>
                           </div>
                         )}
 
@@ -2256,23 +2260,23 @@ export default function FinancesPage() {
                         <div className="px-4 py-3 border-t border-[#2a2f3d] flex items-center gap-3 flex-wrap">
                           {/* Totals */}
                           <div className="flex items-center gap-3 text-center">
-                            <div><div className="text-base font-bold text-[#e8eaf0]">{cSelected.size}</div><div className="text-[9px] text-[#6b7280]">Selected</div></div>
+                            <div><div className="text-base font-bold text-[#e8eaf0]">{cSelected.size}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.selected}</div></div>
                             <div className="w-px h-5 bg-[#2a2f3d]" />
-                            <div><div className="text-base font-bold text-[#e8eaf0]">${cSub.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Subtotal</div></div>
+                            <div><div className="text-base font-bold text-[#e8eaf0]">${cSub.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.subtotal}</div></div>
                             <div className="w-px h-5 bg-[#2a2f3d]" />
-                            <div><div className="text-base font-bold text-[#f59e0b]">+${cFees.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Add. Fees</div></div>
-                            {cRate > 0 && <><div className="w-px h-5 bg-[#2a2f3d]" /><div><div className="text-base font-bold text-[#9ca3af]">${cTax.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">Tax ({cRate}%)</div></div></>}
+                            <div><div className="text-base font-bold text-[#f59e0b]">+${cFees.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.addFees}</div></div>
+                            {cRate > 0 && <><div className="w-px h-5 bg-[#2a2f3d]" /><div><div className="text-base font-bold text-[#9ca3af]">${cTax.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.taxPctParen(cRate)}</div></div></>}
                             <div className="w-px h-5 bg-[#2a2f3d]" />
-                            <div><div className="text-lg font-bold text-[#38d9a9]">${cTotal.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">TOTAL</div></div>
+                            <div><div className="text-lg font-bold text-[#38d9a9]">${cTotal.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.totalUpper}</div></div>
                           </div>
 
                           {/* Post-gen invoice actions */}
                           {!isGenOpen && createdInv && !isEditing && (
                             <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-[#2a2f3d]">
                               <span className="text-[9px] text-[#6b7280] font-mono mr-1">{createdInv.invoiceNumber}</span>
-                              <button onClick={() => { setPdfInvoice(createdInv); setPdfOpen(true) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] transition-all">👁 View</button>
-                              <button onClick={() => { setInvClientEditForms(prev => ({ ...prev, [client.id]: { status: createdInv.status, notes: createdInv.notes || '', dueDate: createdInv.dueDate ? String(createdInv.dueDate).split('T')[0] : '' } })); setInvClientEditing(prev => ({ ...prev, [client.id]: true })) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#4f8ef7] hover:border-[#4f8ef7] transition-all">✏️ Edit</button>
-                              <button onClick={() => requestDeleteInvoice(createdInv)} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#f87171] hover:border-[#f87171] transition-all">🗑 Delete</button>
+                              <button onClick={() => { setPdfInvoice(createdInv); setPdfOpen(true) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] transition-all">👁 {t.financesPage.common.view}</button>
+                              <button onClick={() => { setInvClientEditForms(prev => ({ ...prev, [client.id]: { status: createdInv.status, notes: createdInv.notes || '', dueDate: createdInv.dueDate ? String(createdInv.dueDate).split('T')[0] : '' } })); setInvClientEditing(prev => ({ ...prev, [client.id]: true })) }} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#4f8ef7] hover:border-[#4f8ef7] transition-all">✏️ {t.financesPage.common.edit}</button>
+                              <button onClick={() => requestDeleteInvoice(createdInv)} className="px-2 py-1 rounded text-[10px] border border-[#2a2f3d] text-[#f87171] hover:border-[#f87171] transition-all">🗑 {t.financesPage.common.delete}</button>
                             </div>
                           )}
 
@@ -2286,7 +2290,7 @@ export default function FinancesPage() {
                                   disabled={cSelected.size === 0}
                                   className="flex items-center gap-1.5 px-3 py-2 border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] text-xs font-semibold rounded-lg transition-all disabled:opacity-40"
                                 >
-                                  👁 Preview
+                                  👁 {t.financesPage.common.preview}
                                 </button>
                                 <button
                                   onClick={() => handleClientQuickGenerate(client.id, client, services)}
@@ -2294,13 +2298,13 @@ export default function FinancesPage() {
                                   className="flex items-center gap-1.5 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc090] text-[#0d0f14] text-xs font-bold rounded-lg transition-all disabled:opacity-40"
                                 >
                                   <Check size={13} />
-                                  {cGenerating ? 'Generating...' : 'Generate Invoice'}
+                                  {cGenerating ? t.financesPage.common.generating : t.financesPage.invoices.generateInvoice}
                                 </button>
                               </>
                             ) : (
                               <>
                                 <button onClick={() => setInvGeneratingFor(null)} className="px-3 py-2 border border-[#2a2f3d] text-[#6b7280] text-xs font-semibold rounded-lg hover:text-[#e8eaf0]">
-                                  Cancel
+                                  {t.financesPage.common.cancel}
                                 </button>
                                 <button
                                   onClick={() => handleClientGenerate(client.id, services)}
@@ -2308,7 +2312,7 @@ export default function FinancesPage() {
                                   className="flex items-center gap-1.5 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc090] text-[#0d0f14] text-xs font-bold rounded-lg transition-all disabled:opacity-50"
                                 >
                                   <Check size={13} />
-                                  {cGenerating ? 'Generating...' : 'Generate Invoice'}
+                                  {cGenerating ? t.financesPage.common.generating : t.financesPage.invoices.generateInvoice}
                                 </button>
                               </>
                             )}
@@ -2318,20 +2322,20 @@ export default function FinancesPage() {
                         {/* Inline edit form for generated invoice */}
                         {!isGenOpen && createdInv && isEditing && cEditForm && (
                           <div className="border-t border-[#2a2f3d] bg-[#0d0f14] p-3 space-y-3">
-                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Edit Invoice · {createdInv.invoiceNumber}</div>
+                            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.invoices.editInvoiceHash(createdInv.invoiceNumber)}</div>
                             <div className="grid grid-cols-3 gap-3">
                               <div>
-                                <label className={labelCls}>Status</label>
+                                <label className={labelCls}>{t.financesPage.summary.colStatus}</label>
                                 <select value={cEditForm.status} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], status: e.target.value } }))} className={inputCls}>
-                                  <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option><option value="overdue">Overdue</option>
+                                  <option value="draft">{t.financesPage.invoiceStatus.draft}</option><option value="sent">{t.financesPage.invoiceStatus.sent}</option><option value="paid">{t.financesPage.invoiceStatus.paid}</option><option value="overdue">{t.financesPage.invoiceStatus.overdue}</option>
                                 </select>
                               </div>
-                              <div><label className={labelCls}>Due Date</label><input type="date" value={cEditForm.dueDate} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], dueDate: e.target.value } }))} className={inputCls} /></div>
-                              <div><label className={labelCls}>Notes</label><input value={cEditForm.notes} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], notes: e.target.value } }))} placeholder="Notes..." className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.invoices.dueDate}</label><input type="date" value={cEditForm.dueDate} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], dueDate: e.target.value } }))} className={inputCls} /></div>
+                              <div><label className={labelCls}>{t.financesPage.common.notes}</label><input value={cEditForm.notes} onChange={e => setInvClientEditForms(prev => ({ ...prev, [client.id]: { ...prev[client.id], notes: e.target.value } }))} placeholder={t.financesPage.common.notesPlaceholder} className={inputCls} /></div>
                             </div>
                             <div className="flex gap-2 justify-end">
-                              <button onClick={() => setInvClientEditing(prev => ({ ...prev, [client.id]: false }))} className="px-3 py-1.5 border border-[#2a2f3d] text-[#6b7280] text-xs rounded-lg hover:text-[#e8eaf0]">Cancel</button>
-                              <button onClick={() => handleClientEditSave(client.id)} className="px-3 py-1.5 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg">Save</button>
+                              <button onClick={() => setInvClientEditing(prev => ({ ...prev, [client.id]: false }))} className="px-3 py-1.5 border border-[#2a2f3d] text-[#6b7280] text-xs rounded-lg hover:text-[#e8eaf0]">{t.financesPage.common.cancel}</button>
+                              <button onClick={() => handleClientEditSave(client.id)} className="px-3 py-1.5 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg">{t.financesPage.common.save}</button>
                             </div>
                           </div>
                         )}
@@ -2355,7 +2359,7 @@ export default function FinancesPage() {
                     value={searchQ}
                     onChange={e => { setSearchQ(e.target.value); setShowSearch(true) }}
                     onFocus={() => setShowSearch(true)}
-                    placeholder="Search invoice # or client name..."
+                    placeholder={t.financesPage.invoices.searchInvoicePlaceholder}
                     className="w-full pl-8 pr-7 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
                   />
                   {searching2 && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#6b7280]">...</div>}
@@ -2369,7 +2373,7 @@ export default function FinancesPage() {
                 {showSearch && searchQ.length >= 2 && (
                   <div className="mt-2 space-y-1 max-h-60 overflow-y-auto">
                     {searchResults.length === 0 && !searching2 ? (
-                      <div className="text-center py-4 text-[#6b7280] text-xs">No results for "{searchQ}"</div>
+                      <div className="text-center py-4 text-[#6b7280] text-xs">{t.financesPage.common.noResultsFor(searchQ)}</div>
                     ) : searchResults.map((inv: any) => {
                       const color = INVOICE_COLORS[inv.status] || '#6b7280'
                       const balanceDue = Number(inv.balanceDue ?? inv.total)
@@ -2378,7 +2382,7 @@ export default function FinancesPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-[#4f8ef7] font-mono">{inv.invoiceNumber}</span>
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{t.financesPage.invoiceStatus[inv.status] || inv.status}</span>
                             </div>
                             <div className="text-[10px] text-[#6b7280] mt-0.5">{inv.client?.name} · {formatDate(inv.issuedAt)}</div>
                           </div>
@@ -2386,7 +2390,7 @@ export default function FinancesPage() {
                             <div className="text-right">
                               <div className="text-xs font-bold font-mono text-[#38d9a9]">{fmt(Number(inv.total))}</div>
                               {balanceDue > 0 && balanceDue < Number(inv.total) && (
-                                <div className="text-[10px] font-mono text-[#f87171]">Due: {fmt(balanceDue)}</div>
+                                <div className="text-[10px] font-mono text-[#f87171]">{t.financesPage.common.dueColon} {fmt(balanceDue)}</div>
                               )}
                             </div>
                             <div className="flex gap-1.5">
@@ -2405,9 +2409,9 @@ export default function FinancesPage() {
               {/* Invoice History */}
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-xs font-bold text-[#e8eaf0]">📋 Invoice History</div>
+                  <div className="text-xs font-bold text-[#e8eaf0]">📋 {t.financesPage.invoices.invoiceHistory}</div>
                   <div className="flex gap-2 flex-wrap">
-                    {[{key:'all',label:'All'},{key:'paid',label:'Paid'},{key:'pending',label:'Pending'},{key:'overdue',label:'Overdue'}].map(f => (
+                    {[{key:'all',label:t.financesPage.common.all},{key:'paid',label:t.financesPage.invoiceStatus.paid},{key:'pending',label:t.financesPage.common.pending},{key:'overdue',label:t.financesPage.invoiceStatus.overdue}].map(f => (
                       <button key={f.key} onClick={() => setHistFilter(f.key)}
                         className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-all ${histFilter === f.key ? 'bg-[rgba(79,142,247,0.12)] border-[#4f8ef7] text-[#4f8ef7]' : 'bg-transparent border-[#2a2f3d] text-[#6b7280]'}`}>{f.label}</button>
                     ))}
@@ -2416,7 +2420,7 @@ export default function FinancesPage() {
                 <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 flex-wrap bg-[var(--surface)]">
                   <div className="relative">
                     <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
-                    <input type="text" value={histSearch} onChange={e => setHistSearch(e.target.value)} placeholder="Search invoices..."
+                    <input type="text" value={histSearch} onChange={e => setHistSearch(e.target.value)} placeholder={t.financesPage.invoices.searchInvoicesPlaceholder}
                       className="pl-7 pr-6 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors w-44" />
                     {histSearch && (
                       <button type="button" onClick={() => setHistSearch('')}
@@ -2427,7 +2431,7 @@ export default function FinancesPage() {
                   </div>
                   <select value={histClientFilter} onChange={e => setHistClientFilter(e.target.value)}
                     className="px-2.5 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors">
-                    <option value="all">All clients</option>
+                    <option value="all">{t.financesPage.common.allClients}</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <div className="flex items-center gap-1.5">
@@ -2440,41 +2444,41 @@ export default function FinancesPage() {
                   {histHasFilter && (
                     <button onClick={() => { setHistFilter('all'); setHistClientFilter('all'); setHistDateFrom(''); setHistDateTo(''); setHistSearch('') }}
                       className="flex items-center gap-1 px-2 py-1.5 bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-[10px] font-semibold rounded-lg hover:bg-[rgba(248,113,113,0.2)] transition-all">
-                      <X size={10} /> Clear
+                      <X size={10} /> {t.financesPage.common.clear}
                     </button>
                   )}
                   <button onClick={() => setShowBalanceCol(v => !v)}
                     className={`flex items-center gap-1 px-2 py-1.5 border rounded-lg text-[10px] font-semibold transition-all ${showBalanceCol ? 'bg-[rgba(79,142,247,0.1)] border-[rgba(79,142,247,0.25)] text-[#4f8ef7]' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'}`}>
-                    Balance
+                    {t.financesPage.summary.colBalance}
                   </button>
-                  <span className="ml-auto text-[10px] text-[#6b7280]">{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}</span>
+                  <span className="ml-auto text-[10px] text-[#6b7280]">{t.financesPage.invoices.invoiceCount(filteredInvoices.length)}</span>
                 </div>
                 {filteredInvoices.length > 0 && (
                   <div className="px-4 py-2 border-b border-[var(--border)] flex items-center gap-5 flex-wrap bg-[var(--surface2)]">
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Total invoiced:</span><span className="text-[11px] font-bold text-[#e8eaf0] font-mono">{fmt(histTotal)}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">{t.financesPage.invoices.totalInvoicedColon}</span><span className="text-[11px] font-bold text-[#e8eaf0] font-mono">{fmt(histTotal)}</span></div>
                     <div className="w-px h-4 bg-[#2a2f3d]" />
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Collected:</span><span className="text-[11px] font-bold text-[#38d9a9] font-mono">{fmt(histPaid)}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">{t.financesPage.summary.collectedColon}</span><span className="text-[11px] font-bold text-[#38d9a9] font-mono">{fmt(histPaid)}</span></div>
                     <div className="w-px h-4 bg-[#2a2f3d]" />
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Balance due:</span><span className="text-[11px] font-bold font-mono" style={{ color: histBalance > 0 ? '#f87171' : '#38d9a9' }}>{fmt(histBalance)}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">{t.financesPage.invoices.balanceDueColon}</span><span className="text-[11px] font-bold font-mono" style={{ color: histBalance > 0 ? '#f87171' : '#38d9a9' }}>{fmt(histBalance)}</span></div>
                     <div className="w-px h-4 bg-[#2a2f3d]" />
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Pending to pay:</span><span className="text-[11px] font-bold font-mono" style={{ color: histPending > 0 ? '#f59e0b' : '#6b7280' }}>{fmt(histPending)}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">{t.financesPage.invoices.pendingToPayColon}</span><span className="text-[11px] font-bold font-mono" style={{ color: histPending > 0 ? '#f59e0b' : '#6b7280' }}>{fmt(histPending)}</span></div>
                     <div className="w-px h-4 bg-[#2a2f3d]" />
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">Overdue balance:</span><span className="text-[11px] font-bold font-mono" style={{ color: histOverdue > 0 ? '#f87171' : '#6b7280' }}>{fmt(histOverdue)}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] text-[#6b7280]">{t.financesPage.invoices.overdueBalanceColon}</span><span className="text-[11px] font-bold font-mono" style={{ color: histOverdue > 0 ? '#f87171' : '#6b7280' }}>{fmt(histOverdue)}</span></div>
                   </div>
                 )}
                 <table className="w-full">
                   <thead>
                     <tr className="bg-[#1e2330] border-b border-[#2a2f3d]">
                       {[
-                        { label: 'Invoice #', key: 'invoiceNumber' },
-                        { label: 'Client',    key: 'client' },
-                        { label: 'Period',    key: null },
-                        { label: 'Total',     key: 'total' },
-                        { label: 'Paid',      key: 'paid' },
-                        ...(showBalanceCol ? [{ label: 'Balance', key: 'balance' }] : []),
-                        { label: 'Status',    key: 'status' },
-                        { label: 'Issued',    key: 'issuedAt' },
-                        { label: 'Paid On',   key: 'paidAt' },
+                        { label: t.financesPage.summary.colInvoiceNum, key: 'invoiceNumber' },
+                        { label: t.financesPage.summary.colClient,     key: 'client' },
+                        { label: t.financesPage.invoices.colPeriod,    key: null },
+                        { label: t.financesPage.summary.colTotal,      key: 'total' },
+                        { label: t.financesPage.invoices.colPaid,      key: 'paid' },
+                        ...(showBalanceCol ? [{ label: t.financesPage.summary.colBalance, key: 'balance' }] : []),
+                        { label: t.financesPage.summary.colStatus,     key: 'status' },
+                        { label: t.financesPage.invoices.colIssued,    key: 'issuedAt' },
+                        { label: t.financesPage.invoices.colPaidOn,    key: 'paidAt' },
                         { label: '',          key: null },
                       ].map(({ label, key }) => (
                         <th key={label}
@@ -2487,7 +2491,7 @@ export default function FinancesPage() {
                   </thead>
                   <tbody>
                     {filteredInvoices.length === 0 ? (
-                      <tr><td colSpan={showBalanceCol ? 10 : 9} className="text-center py-8 text-[#6b7280] text-xs">No invoices yet.</td></tr>
+                      <tr><td colSpan={showBalanceCol ? 10 : 9} className="text-center py-8 text-[#6b7280] text-xs">{t.financesPage.invoices.noInvoicesYet}</td></tr>
                     ) : filteredInvoices.map((inv: any) => {
                       const color = INVOICE_COLORS[inv.status] || '#6b7280'
                       const amountPaid = Number(inv.amountPaid || 0)
@@ -2503,16 +2507,16 @@ export default function FinancesPage() {
                             <td className="px-4 py-2.5 text-xs font-bold font-mono" style={{ color: balanceDue <= 0 ? '#38d9a9' : '#f87171' }}>{fmt(balanceDue)}</td>
                           )}
                           <td className="px-4 py-2.5">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{inv.status}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>{t.financesPage.invoiceStatus[inv.status] || inv.status}</span>
                           </td>
                           <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.issuedAt)}</td>
                           <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: inv.paidAt ? '#38d9a9' : '#6b7280' }}>{formatDate(inv.paidAt)}</td>
                           <td className="px-4 py-2.5">
                             <div className="flex gap-1.5">
-                              <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true) }} className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]" title="Preview">👁</button>
-                              <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true) }} className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]" title="Payments">💰</button>
-                              <button onClick={() => { setSelectedInvoice(inv); setDetailOpen(true) }} className="text-[10px] text-[#4f8ef7] hover:underline px-1.5 py-1 rounded bg-[#1e2330]" title="Edit">✏️</button>
-                              <button onClick={() => requestDeleteInvoice(inv)} className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330] hover:bg-[rgba(248,113,113,0.1)]" title="Delete">🗑</button>
+                              <button onClick={() => { setPdfInvoice(inv); setPdfOpen(true) }} className="text-[10px] text-[#9ca3af] hover:text-[#e8eaf0] px-1.5 py-1 rounded bg-[#1e2330]" title={t.financesPage.common.preview}>👁</button>
+                              <button onClick={() => { setPaymentsInvoice(inv); setPaymentsOpen(true) }} className="text-[10px] text-[#38d9a9] hover:text-[#2bc090] px-1.5 py-1 rounded bg-[#1e2330]" title={t.financesPage.invoices.payments}>💰</button>
+                              <button onClick={() => { setSelectedInvoice(inv); setDetailOpen(true) }} className="text-[10px] text-[#4f8ef7] hover:underline px-1.5 py-1 rounded bg-[#1e2330]" title={t.financesPage.common.edit}>✏️</button>
+                              <button onClick={() => requestDeleteInvoice(inv)} className="text-[10px] text-[#f87171] hover:text-[#ef4444] px-1.5 py-1 rounded bg-[#1e2330] hover:bg-[rgba(248,113,113,0.1)]" title={t.financesPage.common.delete}>🗑</button>
                             </div>
                           </td>
                         </tr>
@@ -2532,7 +2536,7 @@ export default function FinancesPage() {
 
           {/* Date Range Filter */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider whitespace-nowrap">Date Range</span>
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider whitespace-nowrap">{t.financesPage.common.dateRange}</span>
             <div className="flex items-center gap-2 flex-1 flex-wrap">
               <input
                 type="date"
@@ -2551,13 +2555,13 @@ export default function FinancesPage() {
                 <button
                   onClick={() => { setExpDateFrom(''); setExpDateTo('') }}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-[10px] font-semibold rounded-lg hover:bg-[rgba(248,113,113,0.2)] transition-all">
-                  <X size={10} /> Clear
+                  <X size={10} /> {t.financesPage.common.clear}
                 </button>
               )}
             </div>
             {hasDateFilter && (
               <span className="text-[10px] text-[#4f8ef7] font-semibold">
-                {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} in range
+                {t.financesPage.expenses.expensesInRange(filteredExpenses.length)}
               </span>
             )}
           </div>
@@ -2566,22 +2570,22 @@ export default function FinancesPage() {
           <div className="grid grid-cols-4 gap-3">
             {[
               {
-                label: hasDateFilter ? 'Period Expenses' : 'Total Expenses',
+                label: hasDateFilter ? t.financesPage.expenses.periodExpenses : t.financesPage.expenses.totalExpenses,
                 value: fmt(filteredTotal),
                 icon: TrendingDown, color: '#f87171', border: 'border-t-[#f87171]', filtered: true,
               },
               {
-                label: 'Top Category',
+                label: t.financesPage.expenses.topCategory,
                 value: filteredTopCategory,
                 icon: ChevronDown, color: '#f59e0b', border: 'border-t-[#f59e0b]', filtered: true,
               },
               {
-                label: 'Recurring Total',
+                label: t.financesPage.expenses.recurringTotal,
                 value: fmt(recurringTotal),
                 icon: RefreshCw, color: '#9ca3af', border: 'border-t-[#9ca3af]', filtered: false,
               },
               {
-                label: 'With Receipt',
+                label: t.financesPage.expenses.withReceipt,
                 value: `${filteredWithReceipt} / ${filteredExpenses.length}`,
                 icon: ReceiptText, color: '#38d9a9', border: 'border-t-[#38d9a9]', filtered: true,
               },
@@ -2594,7 +2598,7 @@ export default function FinancesPage() {
                   <div className="text-[9px] text-[#6b7280] mt-1">
                     {expDateFrom && expDateTo
                       ? `${expDateFrom} → ${expDateTo}`
-                      : expDateFrom ? `From ${expDateFrom}` : `Until ${expDateTo}`}
+                      : expDateFrom ? t.financesPage.common.fromDate(expDateFrom) : t.financesPage.common.untilDate(expDateTo)}
                   </div>
                 )}
               </div>
@@ -2606,7 +2610,7 @@ export default function FinancesPage() {
             <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <RefreshCw size={13} className="text-[#4f8ef7]" />
-                <span className="text-xs font-bold text-[#e8eaf0]">Recurring Expenses</span>
+                <span className="text-xs font-bold text-[#e8eaf0]">{t.financesPage.expenses.recurringExpenses}</span>
                 <span className="text-[10px] px-1.5 py-0.5 bg-[#1e2330] border border-[#2a2f3d] rounded text-[#6b7280]">{recurring.length}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -2616,25 +2620,25 @@ export default function FinancesPage() {
                 <button
                   onClick={syncRecurringExpenses}
                   disabled={syncingRecurring}
-                  title="Register all pending recurring expenses"
+                  title={t.financesPage.expenses.registerAllPending}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(56,217,169,0.1)] border border-[#38d9a9] text-[#38d9a9] text-[10px] font-semibold rounded-lg hover:bg-[rgba(56,217,169,0.18)] transition-all disabled:opacity-50"
                 >
                   <RefreshCw size={11} className={syncingRecurring ? 'animate-spin' : ''} />
-                  {syncingRecurring ? 'Syncing…' : 'Sync Now'}
+                  {syncingRecurring ? t.financesPage.expenses.syncing : t.financesPage.expenses.syncNow}
                 </button>
                 <button onClick={() => setAddRecOpen(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(79,142,247,0.12)] border border-[#4f8ef7] text-[#4f8ef7] text-[10px] font-semibold rounded-lg hover:bg-[rgba(79,142,247,0.2)] transition-all">
-                  <Plus size={11} /> Add Recurring
+                  <Plus size={11} /> {t.financesPage.expenses.addRecurring}
                 </button>
               </div>
             </div>
             {recurring.length === 0 ? (
-              <div className="text-center py-8 text-[#6b7280] text-xs">No recurring expenses configured.</div>
+              <div className="text-center py-8 text-[#6b7280] text-xs">{t.financesPage.expenses.noRecurringConfigured}</div>
             ) : (
               <table className="w-full">
                 <thead>
                   <tr className="bg-[#1e2330]">
-                    {['Name', 'Category', 'Amount', 'Frequency', 'Payment', 'Next Due', 'Auto', ''].map(h => (
+                    {[t.financesPage.cols.name, t.financesPage.cols.category, t.financesPage.cols.amount, t.financesPage.expenses.colFrequency, t.financesPage.cols.payment, t.financesPage.expenses.colNextDue, t.financesPage.expenses.colAuto, ''].map(h => (
                       <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-4 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -2644,11 +2648,11 @@ export default function FinancesPage() {
                     <tr key={rec.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                       <td className="px-4 py-2.5 text-xs text-[#e8eaf0] font-semibold">{rec.name}</td>
                       <td className="px-4 py-2.5">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{rec.category}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{t.financesPage.expenseCategories[rec.category] || rec.category}</span>
                       </td>
                       <td className="px-4 py-2.5 text-xs font-bold text-[#f87171] font-mono">{fmt(Number(rec.amount))}</td>
-                      <td className="px-4 py-2.5 text-xs text-[#9ca3af] capitalize">{rec.frequency}</td>
-                      <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{rec.paymentMethod ? rec.paymentMethod.replace(/_/g, ' ') : '—'}</td>
+                      <td className="px-4 py-2.5 text-xs text-[#9ca3af] capitalize">{t.financesPage.frequency[rec.frequency] || rec.frequency}</td>
+                      <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{rec.paymentMethod ? (t.financesPage.paymentMethods[rec.paymentMethod] || rec.paymentMethod.replace(/_/g, ' ')) : '—'}</td>
                       <td className="px-4 py-2.5 text-xs text-[#9ca3af]">{rec.nextDueAt ? formatDate(rec.nextDueAt) : '—'}</td>
                       <td className="px-4 py-2.5">
                         <button onClick={() => toggleAutoRegister(rec)}
@@ -2675,7 +2679,7 @@ export default function FinancesPage() {
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#e8eaf0]">Expense Log</span>
+                <span className="text-xs font-bold text-[#e8eaf0]">{t.financesPage.expenses.expenseLog}</span>
                 <span className="text-[10px] px-1.5 py-0.5 bg-[#1e2330] border border-[#2a2f3d] rounded text-[#6b7280]">{filteredExpenses.length}</span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -2683,7 +2687,7 @@ export default function FinancesPage() {
                 <div className="relative">
                   <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6b7280]" />
                   <input value={expSearch} onChange={e => setExpSearch(e.target.value)}
-                    placeholder="Search..."
+                    placeholder={t.financesPage.common.searchPlaceholder}
                     className="pl-7 pr-6 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-36 transition-colors" />
                   {expSearch && (
                     <button type="button" onClick={() => setExpSearch('')}
@@ -2695,49 +2699,49 @@ export default function FinancesPage() {
                 {/* Category filter */}
                 <select value={expCatFilter} onChange={e => setExpCatFilter(e.target.value)}
                   className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#9ca3af] focus:outline-none focus:border-[#4f8ef7] transition-colors">
-                  <option value="all">All Categories</option>
-                  {EXP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="all">{t.financesPage.expenses.allCategories}</option>
+                  {EXP_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.expenseCategories[c] || c}</option>)}
                 </select>
                 {/* Receipt filter */}
                 <select value={expReceiptFilter} onChange={e => setExpReceiptFilter(e.target.value)}
                   className="px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#9ca3af] focus:outline-none focus:border-[#4f8ef7] transition-colors">
-                  <option value="all">All Receipts</option>
-                  <option value="yes">With Receipt</option>
-                  <option value="no">No Receipt</option>
+                  <option value="all">{t.financesPage.expenses.allReceipts}</option>
+                  <option value="yes">{t.financesPage.expenses.withReceiptOption}</option>
+                  <option value="no">{t.financesPage.expenses.noReceiptOption}</option>
                 </select>
                 <button onClick={() => setAddExpOpen(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f87171] hover:bg-[#ef4444] text-white text-[10px] font-semibold rounded-lg transition-all">
-                  <Plus size={11} /> Add Expense
+                  <Plus size={11} /> {t.financesPage.expenses.addExpense}
                 </button>
               </div>
             </div>
             <table className="w-full">
               <thead>
                 <tr className="bg-[#1e2330]">
-                  {['#', 'Date', 'Description', 'Category', 'Provider', 'Payment', 'Amount', 'Receipt', ''].map(h => (
+                  {['#', t.financesPage.cols.date, t.financesPage.cols.description, t.financesPage.cols.category, t.financesPage.expenses.colProvider, t.financesPage.cols.payment, t.financesPage.cols.amount, t.financesPage.expenses.colReceipt, ''].map(h => (
                     <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-4 py-2.5">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredExpenses.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-10 text-[#6b7280] text-xs">No expenses found.</td></tr>
+                  <tr><td colSpan={9} className="text-center py-10 text-[#6b7280] text-xs">{t.financesPage.expenses.noExpensesFound}</td></tr>
                 ) : filteredExpenses.map((exp: any) => (
                   <tr key={exp.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                     <td className="px-4 py-2.5 text-[10px] text-[#6b7280] font-mono">#{exp.expenseNumber}</td>
                     <td className="px-4 py-2.5 text-xs text-[#9ca3af]">{formatDate(exp.expenseDate)}</td>
                     <td className="px-4 py-2.5 text-xs text-[#e8eaf0] max-w-[180px] truncate">{exp.description}</td>
                     <td className="px-4 py-2.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{exp.category || '—'}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{t.financesPage.expenseCategories[exp.category] || exp.category || '—'}</span>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-[#6b7280]">{exp.supplier || '—'}</td>
-                    <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{exp.paymentMethod ? exp.paymentMethod.replace(/_/g, ' ') : '—'}</td>
+                    <td className="px-4 py-2.5 text-xs text-[#6b7280] capitalize">{exp.paymentMethod ? (t.financesPage.paymentMethods[exp.paymentMethod] || exp.paymentMethod.replace(/_/g, ' ')) : '—'}</td>
                     <td className="px-4 py-2.5 text-xs font-bold text-[#f87171] font-mono">-{fmt(Number(exp.amount))}</td>
                     <td className="px-4 py-2.5">
                       {exp.receiptUrl
                         ? <a href={exp.receiptUrl} target="_blank" rel="noreferrer"
                             className="text-[10px] text-[#38d9a9] hover:underline flex items-center gap-1">
-                            <ReceiptText size={11} /> View
+                            <ReceiptText size={11} /> {t.financesPage.common.view}
                           </a>
                         : <span className="text-[10px] text-[#6b7280]">—</span>
                       }
@@ -2761,7 +2765,7 @@ export default function FinancesPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md shadow-2xl">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2f3d]">
-                  <div className="text-sm font-bold text-[#e8eaf0]">Add Expense</div>
+                  <div className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.expenses.addExpense}</div>
                   <button onClick={() => { setAddExpOpen(false); setAddExpError('') }}
                     className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors"><X size={16} /></button>
                 </div>
@@ -2771,49 +2775,49 @@ export default function FinancesPage() {
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Date <span className="text-[#f87171]">*</span></label>
+                      <label className={labelCls}>{t.financesPage.cols.date} <span className="text-[#f87171]">*</span></label>
                       <input type="date" value={addExpForm.expenseDate} onChange={e => setAddExpForm(f => ({ ...f, expenseDate: e.target.value }))} className={inputCls} />
                     </div>
                     <div>
-                      <label className={labelCls}>Amount <span className="text-[#f87171]">*</span></label>
+                      <label className={labelCls}>{t.financesPage.cols.amount} <span className="text-[#f87171]">*</span></label>
                       <input type="number" step="0.01" value={addExpForm.amount} onChange={e => setAddExpForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={inputCls} />
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Description <span className="text-[#f87171]">*</span></label>
-                    <input value={addExpForm.description} onChange={e => setAddExpForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Office supplies" className={inputCls} />
+                    <label className={labelCls}>{t.financesPage.cols.description} <span className="text-[#f87171]">*</span></label>
+                    <input value={addExpForm.description} onChange={e => setAddExpForm(f => ({ ...f, description: e.target.value }))} placeholder={t.financesPage.expenses.descriptionPlaceholder} className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Category</label>
+                      <label className={labelCls}>{t.financesPage.cols.category}</label>
                       <select value={addExpForm.category} onChange={e => setAddExpForm(f => ({ ...f, category: e.target.value }))} className={inputCls}>
-                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.expenseCategories[c] || c}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Payment Method</label>
-                      <SelectWithAdd value={addExpForm.paymentMethod} onChange={v => setAddExpForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel="payment method" className={inputCls} />
+                      <label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label>
+                      <SelectWithAdd value={addExpForm.paymentMethod} onChange={v => setAddExpForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} />
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Provider / Supplier</label>
-                    <input value={addExpForm.supplier} onChange={e => setAddExpForm(f => ({ ...f, supplier: e.target.value }))} placeholder="e.g. Home Depot" className={inputCls} />
+                    <label className={labelCls}>{t.financesPage.expenses.providerSupplier}</label>
+                    <input value={addExpForm.supplier} onChange={e => setAddExpForm(f => ({ ...f, supplier: e.target.value }))} placeholder={t.financesPage.expenses.providerPlaceholder} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Receipt URL</label>
+                    <label className={labelCls}>{t.financesPage.expenses.receiptUrl}</label>
                     <input value={addExpForm.receiptUrl} onChange={e => setAddExpForm(f => ({ ...f, receiptUrl: e.target.value }))} placeholder="https://..." className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Notes</label>
+                    <label className={labelCls}>{t.financesPage.common.notes}</label>
                     <textarea value={addExpForm.notes} onChange={e => setAddExpForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} />
                   </div>
                 </div>
                 <div className="flex gap-3 px-5 pb-5">
                   <button onClick={() => { setAddExpOpen(false); setAddExpError('') }}
-                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">Cancel</button>
+                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">{t.financesPage.common.cancel}</button>
                   <button onClick={handleAddExpense} disabled={addExpSaving}
                     className="flex-1 py-2 bg-[#f87171] hover:bg-[#ef4444] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50">
-                    {addExpSaving ? 'Saving...' : 'Save Expense'}
+                    {addExpSaving ? t.financesPage.common.saving : t.financesPage.expenses.saveExpense}
                   </button>
                 </div>
               </div>
@@ -2825,55 +2829,55 @@ export default function FinancesPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md shadow-2xl">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2f3d]">
-                  <div className="text-sm font-bold text-[#e8eaf0]">Edit Expense #{editExpTarget.expenseNumber}</div>
+                  <div className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.expenses.editExpenseHash(editExpTarget.expenseNumber)}</div>
                   <button onClick={() => setEditExpOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors"><X size={16} /></button>
                 </div>
                 <div className="p-5 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Date</label>
+                      <label className={labelCls}>{t.financesPage.cols.date}</label>
                       <input type="date" value={editExpForm.expenseDate} onChange={e => setEditExpForm(f => ({ ...f, expenseDate: e.target.value }))} className={inputCls} />
                     </div>
                     <div>
-                      <label className={labelCls}>Amount</label>
+                      <label className={labelCls}>{t.financesPage.cols.amount}</label>
                       <input type="number" step="0.01" value={editExpForm.amount} onChange={e => setEditExpForm(f => ({ ...f, amount: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Description</label>
+                    <label className={labelCls}>{t.financesPage.cols.description}</label>
                     <input value={editExpForm.description} onChange={e => setEditExpForm(f => ({ ...f, description: e.target.value }))} className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Category</label>
+                      <label className={labelCls}>{t.financesPage.cols.category}</label>
                       <select value={editExpForm.category} onChange={e => setEditExpForm(f => ({ ...f, category: e.target.value }))} className={inputCls}>
-                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.expenseCategories[c] || c}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Payment Method</label>
-                      <SelectWithAdd value={editExpForm.paymentMethod} onChange={v => setEditExpForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel="payment method" className={inputCls} />
+                      <label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label>
+                      <SelectWithAdd value={editExpForm.paymentMethod} onChange={v => setEditExpForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} />
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Provider / Supplier</label>
+                    <label className={labelCls}>{t.financesPage.expenses.providerSupplier}</label>
                     <input value={editExpForm.supplier} onChange={e => setEditExpForm(f => ({ ...f, supplier: e.target.value }))} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Receipt URL</label>
+                    <label className={labelCls}>{t.financesPage.expenses.receiptUrl}</label>
                     <input value={editExpForm.receiptUrl} onChange={e => setEditExpForm(f => ({ ...f, receiptUrl: e.target.value }))} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Notes</label>
+                    <label className={labelCls}>{t.financesPage.common.notes}</label>
                     <textarea value={editExpForm.notes} onChange={e => setEditExpForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} />
                   </div>
                 </div>
                 <div className="flex gap-3 px-5 pb-5">
                   <button onClick={() => setEditExpOpen(false)}
-                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">Cancel</button>
+                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">{t.financesPage.common.cancel}</button>
                   <button onClick={handleEditExpense} disabled={editExpSaving}
                     className="flex-1 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50">
-                    {editExpSaving ? 'Saving...' : 'Save Changes'}
+                    {editExpSaving ? t.financesPage.common.saving : t.financesPage.common.saveChanges}
                   </button>
                 </div>
               </div>
@@ -2885,70 +2889,70 @@ export default function FinancesPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md shadow-2xl">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2f3d]">
-                  <div className="text-sm font-bold text-[#e8eaf0]">Edit Recurring Expense</div>
+                  <div className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.expenses.editRecurringExpense}</div>
                   <button onClick={() => setEditRecOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors"><X size={16} /></button>
                 </div>
                 <div className="p-5 space-y-3">
                   <div>
-                    <label className={labelCls}>Name</label>
+                    <label className={labelCls}>{t.financesPage.cols.name}</label>
                     <input value={editRecForm.name} onChange={e => setEditRecForm(f => ({ ...f, name: e.target.value }))} className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Category</label>
+                      <label className={labelCls}>{t.financesPage.cols.category}</label>
                       <select value={editRecForm.category} onChange={e => setEditRecForm(f => ({ ...f, category: e.target.value }))} className={inputCls}>
-                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.expenseCategories[c] || c}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Amount</label>
+                      <label className={labelCls}>{t.financesPage.cols.amount}</label>
                       <input type="number" step="0.01" value={editRecForm.amount} onChange={e => setEditRecForm(f => ({ ...f, amount: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Frequency</label>
+                      <label className={labelCls}>{t.financesPage.expenses.colFrequency}</label>
                       <select value={editRecForm.frequency} onChange={e => setEditRecForm(f => ({ ...f, frequency: e.target.value }))} className={inputCls}>
-                        <option value="weekly">Weekly</option>
-                        <option value="biweekly">Biweekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="annual">Annual</option>
+                        <option value="weekly">{t.financesPage.frequency.weekly}</option>
+                        <option value="biweekly">{t.financesPage.frequency.biweekly}</option>
+                        <option value="monthly">{t.financesPage.frequency.monthly}</option>
+                        <option value="quarterly">{t.financesPage.frequency.quarterly}</option>
+                        <option value="annual">{t.financesPage.frequency.annual}</option>
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Day of Month</label>
+                      <label className={labelCls}>{t.financesPage.expenses.dayOfMonth}</label>
                       <input type="number" min="1" max="31" value={editRecForm.dayOfMonth} onChange={e => setEditRecForm(f => ({ ...f, dayOfMonth: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Payment Method</label>
-                      <SelectWithAdd value={editRecForm.paymentMethod} onChange={v => setEditRecForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel="payment method" className={inputCls} />
+                      <label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label>
+                      <SelectWithAdd value={editRecForm.paymentMethod} onChange={v => setEditRecForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} />
                     </div>
                     <div>
-                      <label className={labelCls}>Start Date</label>
+                      <label className={labelCls}>{t.financesPage.expenses.startDate}</label>
                       <input type="date" value={editRecForm.startDate} onChange={e => setEditRecForm(f => ({ ...f, startDate: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between py-2 px-3 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg">
-                    <span className="text-xs text-[#e8eaf0]">Auto-register expenses</span>
+                    <span className="text-xs text-[#e8eaf0]">{t.financesPage.expenses.autoRegisterExpenses}</span>
                     <button onClick={() => setEditRecForm(f => ({ ...f, autoRegister: !f.autoRegister }))}
                       className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${editRecForm.autoRegister ? 'bg-[#38d9a9]' : 'bg-[#2a2f3d]'}`}>
                       <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${editRecForm.autoRegister ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                     </button>
                   </div>
                   <div>
-                    <label className={labelCls}>Notes</label>
+                    <label className={labelCls}>{t.financesPage.common.notes}</label>
                     <textarea value={editRecForm.notes} onChange={e => setEditRecForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} />
                   </div>
                 </div>
                 <div className="flex gap-3 px-5 pb-5">
                   <button onClick={() => setEditRecOpen(false)}
-                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">Cancel</button>
+                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">{t.financesPage.common.cancel}</button>
                   <button onClick={handleEditRecurring} disabled={editRecSaving}
                     className="flex-1 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50">
-                    {editRecSaving ? 'Saving...' : 'Save Changes'}
+                    {editRecSaving ? t.financesPage.common.saving : t.financesPage.common.saveChanges}
                   </button>
                 </div>
               </div>
@@ -2960,7 +2964,7 @@ export default function FinancesPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md shadow-2xl">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2f3d]">
-                  <div className="text-sm font-bold text-[#e8eaf0]">Add Recurring Expense</div>
+                  <div className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.expenses.addRecurringExpense}</div>
                   <button onClick={() => { setAddRecOpen(false); setAddRecError('') }}
                     className="text-[#6b7280] hover:text-[#e8eaf0] transition-colors"><X size={16} /></button>
                 </div>
@@ -2969,65 +2973,65 @@ export default function FinancesPage() {
                     <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-2.5">{addRecError}</div>
                   )}
                   <div>
-                    <label className={labelCls}>Name <span className="text-[#f87171]">*</span></label>
-                    <input value={addRecForm.name} onChange={e => setAddRecForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Software subscription" className={inputCls} />
+                    <label className={labelCls}>{t.financesPage.cols.name} <span className="text-[#f87171]">*</span></label>
+                    <input value={addRecForm.name} onChange={e => setAddRecForm(f => ({ ...f, name: e.target.value }))} placeholder={t.financesPage.expenses.recurringNamePlaceholder} className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Category</label>
+                      <label className={labelCls}>{t.financesPage.cols.category}</label>
                       <select value={addRecForm.category} onChange={e => setAddRecForm(f => ({ ...f, category: e.target.value }))} className={inputCls}>
-                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {EXP_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.expenseCategories[c] || c}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Amount <span className="text-[#f87171]">*</span></label>
+                      <label className={labelCls}>{t.financesPage.cols.amount} <span className="text-[#f87171]">*</span></label>
                       <input type="number" step="0.01" value={addRecForm.amount} onChange={e => setAddRecForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={inputCls} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Frequency</label>
+                      <label className={labelCls}>{t.financesPage.expenses.colFrequency}</label>
                       <select value={addRecForm.frequency} onChange={e => setAddRecForm(f => ({ ...f, frequency: e.target.value }))} className={inputCls}>
-                        <option value="weekly">Weekly</option>
-                        <option value="biweekly">Biweekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="annual">Annual</option>
+                        <option value="weekly">{t.financesPage.frequency.weekly}</option>
+                        <option value="biweekly">{t.financesPage.frequency.biweekly}</option>
+                        <option value="monthly">{t.financesPage.frequency.monthly}</option>
+                        <option value="quarterly">{t.financesPage.frequency.quarterly}</option>
+                        <option value="annual">{t.financesPage.frequency.annual}</option>
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Day of Month</label>
+                      <label className={labelCls}>{t.financesPage.expenses.dayOfMonth}</label>
                       <input type="number" min="1" max="31" value={addRecForm.dayOfMonth} onChange={e => setAddRecForm(f => ({ ...f, dayOfMonth: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Payment Method</label>
-                      <SelectWithAdd value={addRecForm.paymentMethod} onChange={v => setAddRecForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel="payment method" className={inputCls} />
+                      <label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label>
+                      <SelectWithAdd value={addRecForm.paymentMethod} onChange={v => setAddRecForm(f => ({ ...f, paymentMethod: v }))} options={PAYMENT_METHODS} storageKey="paymentMethod" addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} />
                     </div>
                     <div>
-                      <label className={labelCls}>Start Date <span className="text-[#f87171]">*</span></label>
+                      <label className={labelCls}>{t.financesPage.expenses.startDate} <span className="text-[#f87171]">*</span></label>
                       <input type="date" value={addRecForm.startDate} onChange={e => setAddRecForm(f => ({ ...f, startDate: e.target.value }))} className={inputCls} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between py-2 px-3 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg">
-                    <span className="text-xs text-[#e8eaf0]">Auto-register expenses</span>
+                    <span className="text-xs text-[#e8eaf0]">{t.financesPage.expenses.autoRegisterExpenses}</span>
                     <button onClick={() => setAddRecForm(f => ({ ...f, autoRegister: !f.autoRegister }))}
                       className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${addRecForm.autoRegister ? 'bg-[#38d9a9]' : 'bg-[#2a2f3d]'}`}>
                       <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${addRecForm.autoRegister ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                     </button>
                   </div>
                   <div>
-                    <label className={labelCls}>Notes</label>
+                    <label className={labelCls}>{t.financesPage.common.notes}</label>
                     <textarea value={addRecForm.notes} onChange={e => setAddRecForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} />
                   </div>
                 </div>
                 <div className="flex gap-3 px-5 pb-5">
                   <button onClick={() => { setAddRecOpen(false); setAddRecError('') }}
-                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">Cancel</button>
+                    className="flex-1 py-2 bg-[#1e2330] border border-[#2a2f3d] text-[#9ca3af] text-xs font-semibold rounded-lg hover:text-[#e8eaf0] transition-all">{t.financesPage.common.cancel}</button>
                   <button onClick={handleAddRecurring} disabled={addRecSaving}
                     className="flex-1 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50">
-                    {addRecSaving ? 'Saving...' : 'Save Recurring'}
+                    {addRecSaving ? t.financesPage.common.saving : t.financesPage.expenses.saveRecurring}
                   </button>
                 </div>
               </div>
@@ -3042,10 +3046,10 @@ export default function FinancesPage() {
           {/* Stat cards */}
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: 'Total Products',   value: String(totalProducts),        color: '#4f8ef7', border: 'border-t-[#4f8ef7]' },
-              { label: 'Low Stock',        value: String(lowStockCount),         color: '#f87171', border: 'border-t-[#f87171]' },
-              { label: 'Inventory Value',  value: fmt(totalInvValue),            color: '#38d9a9', border: 'border-t-[#38d9a9]' },
-              { label: 'Categories',       value: String(INV_CATEGORIES.length), color: '#f59e0b', border: 'border-t-[#f59e0b]' },
+              { label: t.financesPage.inventory.totalProducts,   value: String(totalProducts),        color: '#4f8ef7', border: 'border-t-[#4f8ef7]' },
+              { label: t.financesPage.inventory.lowStock,        value: String(lowStockCount),         color: '#f87171', border: 'border-t-[#f87171]' },
+              { label: t.financesPage.inventory.inventoryValue,  value: fmt(totalInvValue),            color: '#38d9a9', border: 'border-t-[#38d9a9]' },
+              { label: t.financesPage.inventory.categories,      value: String(INV_CATEGORIES.length), color: '#f59e0b', border: 'border-t-[#f59e0b]' },
             ].map(card => (
               <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4 relative overflow-hidden`}>
                 <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
@@ -3059,7 +3063,7 @@ export default function FinancesPage() {
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
               <Search size={13} className="text-[#6b7280] shrink-0" />
               <input
-                type="text" placeholder="Search by name, SKU, supplier…"
+                type="text" placeholder={t.financesPage.inventory.searchPlaceholder}
                 value={invSearchQ} onChange={e => setInvSearchQ(e.target.value)}
                 className="bg-transparent text-xs text-[#e8eaf0] placeholder-[#6b7280] outline-none flex-1"
               />
@@ -3072,8 +3076,8 @@ export default function FinancesPage() {
             </div>
             <select value={invCatFilter} onChange={e => setInvCatFilter(e.target.value)}
               className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] px-2 py-1.5 outline-none">
-              <option value="all">All Categories</option>
-              {INV_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="all">{t.financesPage.expenses.allCategories}</option>
+              {INV_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.inventoryCategories[c] || c}</option>)}
             </select>
             <button onClick={() => setInvLowStock(v => !v)}
               className={`text-[10px] font-bold px-2.5 py-1.5 rounded-full border transition-colors ${
@@ -3081,11 +3085,11 @@ export default function FinancesPage() {
                   ? 'bg-[rgba(248,113,113,0.15)] border-[#f87171] text-[#f87171]'
                   : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
               }`}>
-              ⚠ Low Stock {lowStockCount > 0 && `(${lowStockCount})`}
+              ⚠ {t.financesPage.inventory.lowStock} {lowStockCount > 0 && `(${lowStockCount})`}
             </button>
             <button onClick={() => openMovementModal()}
               className="ml-auto flex items-center gap-1.5 bg-[#f59e0b] hover:bg-[#d97706] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
-              ↓↑ Stock In/Out
+              ↓↑ {t.financesPage.inventory.stockInOut}
             </button>
             <button onClick={() => setMovHistoryOpen(v => !v)}
               className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
@@ -3093,11 +3097,11 @@ export default function FinancesPage() {
                   ? 'bg-[rgba(79,142,247,0.15)] border-[#4f8ef7] text-[#4f8ef7]'
                   : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
               }`}>
-              🕘 History {invMovements.length > 0 && `(${invMovements.length})`}
+              🕘 {t.financesPage.common.history} {invMovements.length > 0 && `(${invMovements.length})`}
             </button>
             <button onClick={() => setAddProdOpen(true)}
               className="flex items-center gap-1.5 bg-[#4f8ef7] hover:bg-[#3a7de8] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
-              <Plus size={12} /> Add Product
+              <Plus size={12} /> {t.financesPage.inventory.addProduct}
             </button>
           </div>
 
@@ -3106,7 +3110,7 @@ export default function FinancesPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[#1e2330]">
-                  {['SKU', 'Product', 'Category', 'Unit', 'Stock', 'Min.', 'Unit Cost', 'Total Value', 'Supplier', 'Status', ''].map(h => (
+                  {[t.financesPage.inventory.colSku, t.financesPage.inventory.colProduct, t.financesPage.cols.category, t.financesPage.cols.unit, t.financesPage.inventory.colStock, t.financesPage.inventory.colMin, t.financesPage.inventory.colUnitCost, t.financesPage.inventory.colTotalValue, t.financesPage.inventory.colSupplier, t.financesPage.summary.colStatus, ''].map(h => (
                     <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
                   ))}
                 </tr>
@@ -3115,7 +3119,7 @@ export default function FinancesPage() {
                 {filteredInventory.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="text-center py-10 text-[#6b7280] text-xs">
-                      {inventory.length === 0 ? 'No products yet. Add your first product.' : 'No products match the filters.'}
+                      {inventory.length === 0 ? t.financesPage.inventory.noProductsYet : t.financesPage.inventory.noProductsMatch}
                     </td>
                   </tr>
                 ) : filteredInventory.map(prod => {
@@ -3126,7 +3130,7 @@ export default function FinancesPage() {
                     <tr key={prod.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                       <td className="px-3 py-2.5 font-mono text-[#4f8ef7]">{prod.sku}</td>
                       <td className="px-3 py-2.5 font-semibold text-[#e8eaf0]">{prod.name}</td>
-                      <td className="px-3 py-2.5 text-[#9ca3af]">{catEmoji[prod.category] || '📦'} {prod.category}</td>
+                      <td className="px-3 py-2.5 text-[#9ca3af]">{catEmoji[prod.category] || '📦'} {t.financesPage.inventoryCategories[prod.category] || prod.category}</td>
                       <td className="px-3 py-2.5 text-[#9ca3af]">{prod.unitOfMeasure}</td>
                       <td className="px-3 py-2.5 font-bold" style={{ color: isLow ? '#f87171' : '#38d9a9' }}>{prod.currentStock}</td>
                       <td className="px-3 py-2.5 text-[#6b7280]">{prod.minimumStock}</td>
@@ -3135,25 +3139,25 @@ export default function FinancesPage() {
                       <td className="px-3 py-2.5 text-[#9ca3af]">{prod.supplier || '—'}</td>
                       <td className="px-3 py-2.5">
                         {isLow ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(248,113,113,0.15)] text-[#f87171]">⚠ Low Stock</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(248,113,113,0.15)] text-[#f87171]">⚠ {t.financesPage.inventory.lowStock}</span>
                         ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(56,217,169,0.15)] text-[#38d9a9]">✓ Normal</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(56,217,169,0.15)] text-[#38d9a9]">✓ {t.financesPage.inventory.normal}</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5 flex items-center gap-2">
                         <button onClick={() => openMovementModal(prod, 'out')}
                           className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[rgba(245,158,11,0.15)] text-[#f59e0b] hover:bg-[rgba(245,158,11,0.25)] transition-colors"
-                          title="Register usage (stock out)">
-                          − Use
+                          title={t.financesPage.inventory.registerUsageTitle}>
+                          − {t.financesPage.inventory.use}
                         </button>
-                        <button onClick={() => openEditProduct(prod)} className="text-[#9ca3af] hover:text-[#e8eaf0] transition-colors" title="Edit">✏️</button>
+                        <button onClick={() => openEditProduct(prod)} className="text-[#9ca3af] hover:text-[#e8eaf0] transition-colors" title={t.financesPage.common.edit}>✏️</button>
                         {isLow && (
                           <button onClick={() => openEditProduct(prod)}
                             className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[rgba(79,142,247,0.15)] text-[#4f8ef7] hover:bg-[rgba(79,142,247,0.25)] transition-colors">
-                            Reorder
+                            {t.financesPage.inventory.reorder}
                           </button>
                         )}
-                        <button onClick={() => handleDeleteProduct(prod.id)} className="text-[#f87171] hover:text-[#ef4444] transition-colors" title="Delete">🗑</button>
+                        <button onClick={() => handleDeleteProduct(prod.id)} className="text-[#f87171] hover:text-[#ef4444] transition-colors" title={t.financesPage.common.delete}>🗑</button>
                       </td>
                     </tr>
                   )
@@ -3166,29 +3170,29 @@ export default function FinancesPage() {
           {movHistoryOpen && (
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-[#2a2f3d] flex items-center justify-between">
-                <h3 className="text-xs font-bold text-[#e8eaf0]">🕘 Stock Movement History</h3>
-                <span className="text-[10px] text-[#6b7280]">{invMovements.length} movements</span>
+                <h3 className="text-xs font-bold text-[#e8eaf0]">🕘 {t.financesPage.inventory.stockMovementHistory}</h3>
+                <span className="text-[10px] text-[#6b7280]">{t.financesPage.inventory.movementsCount(invMovements.length)}</span>
               </div>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-[#1e2330]">
-                    {['Date', 'Product', 'Type', 'Qty', 'Comment', 'By'].map(h => (
+                    {[t.financesPage.cols.date, t.financesPage.inventory.colProduct, t.financesPage.cols.type, t.financesPage.inventory.colQty, t.financesPage.inventory.colComment, t.financesPage.inventory.colBy].map(h => (
                       <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {invMovements.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-8 text-[#6b7280] text-xs">No movements registered yet.</td></tr>
+                    <tr><td colSpan={6} className="text-center py-8 text-[#6b7280] text-xs">{t.financesPage.inventory.noMovementsYet}</td></tr>
                   ) : invMovements.map(m => (
                     <tr key={m.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                       <td className="px-3 py-2 text-[#9ca3af] whitespace-nowrap">{formatDate(m.date)}</td>
                       <td className="px-3 py-2 font-semibold text-[#e8eaf0]">{m.productName} <span className="text-[#6b7280] font-mono font-normal">({m.sku})</span></td>
                       <td className="px-3 py-2">
                         {m.type === 'out' ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">↓ Out</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">↓ {t.financesPage.inventory.out}</span>
                         ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(56,217,169,0.15)] text-[#38d9a9]">↑ In</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(56,217,169,0.15)] text-[#38d9a9]">↑ {t.financesPage.inventory.in}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 font-bold font-mono" style={{ color: m.type === 'out' ? '#f59e0b' : '#38d9a9' }}>
@@ -3208,16 +3212,16 @@ export default function FinancesPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMovModalOpen(false)}>
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#e8eaf0]">{movForm.type === 'out' ? '↓ Register Usage' : '↑ Register Restock'}</h3>
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{movForm.type === 'out' ? `↓ ${t.financesPage.inventory.registerUsage}` : `↑ ${t.financesPage.inventory.registerRestock}`}</h3>
                   <button onClick={() => setMovModalOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
                 </div>
                 {movError && <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-3">{movError}</div>}
                 <div className="flex gap-2">
-                  {([['out', '↓ Out (use)'], ['in', '↑ In (restock)']] as const).map(([t, label]) => (
-                    <button key={t} onClick={() => setMovForm(f => ({ ...f, type: t }))}
+                  {([['out', `↓ ${t.financesPage.inventory.outUse}`], ['in', `↑ ${t.financesPage.inventory.inRestock}`]] as const).map(([mt, label]) => (
+                    <button key={mt} onClick={() => setMovForm(f => ({ ...f, type: mt }))}
                       className={`flex-1 text-[11px] font-bold px-3 py-2 rounded-lg border transition-colors ${
-                        movForm.type === t
-                          ? t === 'out'
+                        movForm.type === mt
+                          ? mt === 'out'
                             ? 'bg-[rgba(245,158,11,0.15)] border-[#f59e0b] text-[#f59e0b]'
                             : 'bg-[rgba(56,217,169,0.15)] border-[#38d9a9] text-[#38d9a9]'
                           : 'bg-transparent border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'
@@ -3227,42 +3231,42 @@ export default function FinancesPage() {
                   ))}
                 </div>
                 <div>
-                  <label className={labelCls}>Product *</label>
+                  <label className={labelCls}>{t.financesPage.inventory.productRequired}</label>
                   <select className={inputCls} value={movForm.productId} onChange={e => setMovForm(f => ({ ...f, productId: e.target.value }))}>
-                    <option value="">— Select product —</option>
+                    <option value="">{t.financesPage.inventory.selectProduct}</option>
                     {inventory.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.currentStock} {p.unitOfMeasure} available)</option>
+                      <option key={p.id} value={p.id}>{t.financesPage.inventory.productAvailable(p.name, p.currentStock, p.unitOfMeasure)}</option>
                     ))}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>Quantity *</label>
+                    <label className={labelCls}>{t.financesPage.inventory.quantityRequired}</label>
                     <input type="number" min="1" className={inputCls} value={movForm.quantity}
                       onChange={e => setMovForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0" />
                   </div>
                   <div>
-                    <label className={labelCls}>Date</label>
+                    <label className={labelCls}>{t.financesPage.cols.date}</label>
                     <input type="date" className={inputCls} value={movForm.date}
                       onChange={e => setMovForm(f => ({ ...f, date: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Comment</label>
+                  <label className={labelCls}>{t.financesPage.inventory.comment}</label>
                   <input className={inputCls} value={movForm.comment}
                     onChange={e => setMovForm(f => ({ ...f, comment: e.target.value }))}
-                    placeholder={movForm.type === 'out' ? 'e.g. Used at Franklin Cleaning job' : 'e.g. Walmart purchase'} />
+                    placeholder={movForm.type === 'out' ? t.financesPage.inventory.commentOutPlaceholder : t.financesPage.inventory.commentInPlaceholder} />
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button onClick={() => setMovModalOpen(false)}
                     className="flex-1 text-xs font-bold text-[#9ca3af] border border-[#2a2f3d] rounded-lg py-2.5 hover:text-[#e8eaf0] transition-colors">
-                    Cancel
+                    {t.financesPage.common.cancel}
                   </button>
                   <button onClick={handleSaveMovement} disabled={movSaving}
                     className={`flex-1 text-xs font-bold text-white rounded-lg py-2.5 transition-colors disabled:opacity-50 ${
                       movForm.type === 'out' ? 'bg-[#f59e0b] hover:bg-[#d97706]' : 'bg-[#38d9a9] hover:bg-[#2bc394]'
                     }`}>
-                    {movSaving ? 'Saving…' : movForm.type === 'out' ? 'Deduct from stock' : 'Add to stock'}
+                    {movSaving ? t.financesPage.common.saving : movForm.type === 'out' ? t.financesPage.inventory.deductFromStock : t.financesPage.inventory.addToStock}
                   </button>
                 </div>
               </div>
@@ -3274,57 +3278,57 @@ export default function FinancesPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAddProdOpen(false)}>
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#e8eaf0]">Add Product</h3>
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.inventory.addProduct}</h3>
                   <button onClick={() => setAddProdOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
                 </div>
                 {addProdError && <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-3">{addProdError}</div>}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>SKU <span className="text-[#4f8ef7]">(auto if blank)</span></label>
+                    <label className={labelCls}>{t.financesPage.inventory.colSku} <span className="text-[#4f8ef7]">{t.financesPage.inventory.autoIfBlank}</span></label>
                     <input className={inputCls} value={addProdForm.sku} onChange={e => setAddProdForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. CHM-001" />
                   </div>
                   <div>
-                    <label className={labelCls}>Name *</label>
-                    <input className={inputCls} value={addProdForm.name} onChange={e => setAddProdForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. All-purpose cleaner" />
+                    <label className={labelCls}>{t.financesPage.common.nameRequired}</label>
+                    <input className={inputCls} value={addProdForm.name} onChange={e => setAddProdForm(f => ({ ...f, name: e.target.value }))} placeholder={t.financesPage.inventory.productNamePlaceholder} />
                   </div>
                   <div>
-                    <label className={labelCls}>Category</label>
+                    <label className={labelCls}>{t.financesPage.cols.category}</label>
                     <select className={inputCls} value={addProdForm.category} onChange={e => setAddProdForm(f => ({ ...f, category: e.target.value }))}>
-                      {INV_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      {INV_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.inventoryCategories[c] || c}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Unit of Measure</label>
+                    <label className={labelCls}>{t.financesPage.inventory.unitOfMeasure}</label>
                     <select className={inputCls} value={addProdForm.unitOfMeasure} onChange={e => setAddProdForm(f => ({ ...f, unitOfMeasure: e.target.value }))}>
-                      {INV_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      {INV_UNITS.map(u => <option key={u} value={u}>{t.financesPage.inventoryUnits[u] || u}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Unit Cost ($) *</label>
+                    <label className={labelCls}>{t.financesPage.inventory.unitCostRequired}</label>
                     <input type="number" min="0" step="0.01" className={inputCls} value={addProdForm.unitCost} onChange={e => setAddProdForm(f => ({ ...f, unitCost: e.target.value }))} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className={labelCls}>Current Stock</label>
+                    <label className={labelCls}>{t.financesPage.inventory.colStock}</label>
                     <input type="number" min="0" className={inputCls} value={addProdForm.currentStock} onChange={e => setAddProdForm(f => ({ ...f, currentStock: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Minimum Stock</label>
+                    <label className={labelCls}>{t.financesPage.inventory.minimumStock}</label>
                     <input type="number" min="0" className={inputCls} value={addProdForm.minimumStock} onChange={e => setAddProdForm(f => ({ ...f, minimumStock: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Supplier</label>
-                    <input className={inputCls} value={addProdForm.supplier} onChange={e => setAddProdForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Optional" />
+                    <label className={labelCls}>{t.financesPage.inventory.colSupplier}</label>
+                    <input className={inputCls} value={addProdForm.supplier} onChange={e => setAddProdForm(f => ({ ...f, supplier: e.target.value }))} placeholder={t.financesPage.common.optional} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Notes</label>
-                  <textarea rows={2} className={inputCls} value={addProdForm.notes} onChange={e => setAddProdForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes…" />
+                  <label className={labelCls}>{t.financesPage.common.notes}</label>
+                  <textarea rows={2} className={inputCls} value={addProdForm.notes} onChange={e => setAddProdForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.financesPage.common.optionalNotes} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setAddProdOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">Cancel</button>
+                  <button onClick={() => setAddProdOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">{t.financesPage.common.cancel}</button>
                   <button onClick={handleAddProduct} disabled={addProdSaving}
                     className="flex-1 py-2 text-xs font-bold bg-[#4f8ef7] hover:bg-[#3a7de8] disabled:opacity-50 text-white rounded-lg transition-colors">
-                    {addProdSaving ? 'Saving…' : 'Add Product'}
+                    {addProdSaving ? t.financesPage.common.saving : t.financesPage.inventory.addProduct}
                   </button>
                 </div>
               </div>
@@ -3336,56 +3340,56 @@ export default function FinancesPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditProdOpen(false)}>
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#e8eaf0]">Edit Product</h3>
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.inventory.editProduct}</h3>
                   <button onClick={() => setEditProdOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>SKU</label>
+                    <label className={labelCls}>{t.financesPage.inventory.colSku}</label>
                     <input className={inputCls} value={editProdForm.sku} onChange={e => setEditProdForm(f => ({ ...f, sku: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Name *</label>
+                    <label className={labelCls}>{t.financesPage.common.nameRequired}</label>
                     <input className={inputCls} value={editProdForm.name} onChange={e => setEditProdForm(f => ({ ...f, name: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Category</label>
+                    <label className={labelCls}>{t.financesPage.cols.category}</label>
                     <select className={inputCls} value={editProdForm.category} onChange={e => setEditProdForm(f => ({ ...f, category: e.target.value }))}>
-                      {INV_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      {INV_CATEGORIES.map(c => <option key={c} value={c}>{t.financesPage.inventoryCategories[c] || c}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Unit of Measure</label>
+                    <label className={labelCls}>{t.financesPage.inventory.unitOfMeasure}</label>
                     <select className={inputCls} value={editProdForm.unitOfMeasure} onChange={e => setEditProdForm(f => ({ ...f, unitOfMeasure: e.target.value }))}>
-                      {INV_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      {INV_UNITS.map(u => <option key={u} value={u}>{t.financesPage.inventoryUnits[u] || u}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Unit Cost ($) *</label>
+                    <label className={labelCls}>{t.financesPage.inventory.unitCostRequired}</label>
                     <input type="number" min="0" step="0.01" className={inputCls} value={editProdForm.unitCost} onChange={e => setEditProdForm(f => ({ ...f, unitCost: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Current Stock</label>
+                    <label className={labelCls}>{t.financesPage.inventory.colStock}</label>
                     <input type="number" min="0" className={inputCls} value={editProdForm.currentStock} onChange={e => setEditProdForm(f => ({ ...f, currentStock: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Minimum Stock</label>
+                    <label className={labelCls}>{t.financesPage.inventory.minimumStock}</label>
                     <input type="number" min="0" className={inputCls} value={editProdForm.minimumStock} onChange={e => setEditProdForm(f => ({ ...f, minimumStock: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Supplier</label>
-                    <input className={inputCls} value={editProdForm.supplier} onChange={e => setEditProdForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Optional" />
+                    <label className={labelCls}>{t.financesPage.inventory.colSupplier}</label>
+                    <input className={inputCls} value={editProdForm.supplier} onChange={e => setEditProdForm(f => ({ ...f, supplier: e.target.value }))} placeholder={t.financesPage.common.optional} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Notes</label>
-                  <textarea rows={2} className={inputCls} value={editProdForm.notes} onChange={e => setEditProdForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes…" />
+                  <label className={labelCls}>{t.financesPage.common.notes}</label>
+                  <textarea rows={2} className={inputCls} value={editProdForm.notes} onChange={e => setEditProdForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.financesPage.common.optionalNotes} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setEditProdOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">Cancel</button>
+                  <button onClick={() => setEditProdOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">{t.financesPage.common.cancel}</button>
                   <button onClick={handleEditProduct} disabled={editProdSaving}
                     className="flex-1 py-2 text-xs font-bold bg-[#4f8ef7] hover:bg-[#3a7de8] disabled:opacity-50 text-white rounded-lg transition-colors">
-                    {editProdSaving ? 'Saving…' : 'Save Changes'}
+                    {editProdSaving ? t.financesPage.common.saving : t.financesPage.common.saveChanges}
                   </button>
                 </div>
               </div>
@@ -3399,17 +3403,17 @@ export default function FinancesPage() {
           {/* Stat cards */}
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: 'Total Assets',    value: String(totalAssets),        color: '#4f8ef7', border: 'border-t-[#4f8ef7]' },
-              { label: 'Active',          value: String(activeAssetsCount),  color: '#38d9a9', border: 'border-t-[#38d9a9]' },
-              { label: 'Purchase Value',  value: fmt(totalPurchaseValue),    color: '#f59e0b', border: 'border-t-[#f59e0b]' },
-              { label: 'Current Value',   value: fmt(totalCurrentValue),     color: '#a78bfa', border: 'border-t-[#a78bfa]' },
+              { label: t.financesPage.assets.totalAssets,    value: String(totalAssets),        color: '#4f8ef7', border: 'border-t-[#4f8ef7]' },
+              { label: t.financesPage.assets.active,          value: String(activeAssetsCount),  color: '#38d9a9', border: 'border-t-[#38d9a9]' },
+              { label: t.financesPage.assets.purchaseValue,  value: fmt(totalPurchaseValue),    color: '#f59e0b', border: 'border-t-[#f59e0b]' },
+              { label: t.financesPage.assets.currentValue,   value: fmt(totalCurrentValue),     color: '#a78bfa', border: 'border-t-[#a78bfa]' },
             ].map(card => (
               <div key={card.label} className={`bg-[#161922] border border-[#2a2f3d] border-t-2 ${card.border} rounded-xl p-4`}>
                 <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{card.label}</div>
                 <div className="text-2xl font-bold mt-2" style={{ color: card.color, fontFamily: 'var(--font-display)' }}>{card.value}</div>
-                {card.label === 'Current Value' && totalPurchaseValue > 0 && (
+                {card.label === t.financesPage.assets.currentValue && totalPurchaseValue > 0 && (
                   <div className="text-[10px] text-[#6b7280] mt-1">
-                    {((totalCurrentValue / totalPurchaseValue) * 100).toFixed(0)}% of original
+                    {t.financesPage.assets.pctOfOriginal(Math.round((totalCurrentValue / totalPurchaseValue) * 100))}
                   </div>
                 )}
               </div>
@@ -3421,7 +3425,7 @@ export default function FinancesPage() {
             <div className="flex items-center gap-2 flex-1 min-w-[180px]">
               <Search size={13} className="text-[#6b7280] shrink-0" />
               <input
-                type="text" placeholder="Search assets…"
+                type="text" placeholder={t.financesPage.assets.searchAssetsPlaceholder}
                 value={assetSearchQ} onChange={e => setAssetSearchQ(e.target.value)}
                 className="bg-transparent text-xs text-[#e8eaf0] placeholder-[#6b7280] outline-none flex-1"
               />
@@ -3434,19 +3438,19 @@ export default function FinancesPage() {
             </div>
             <select value={assetTypeFilter} onChange={e => setAssetTypeFilter(e.target.value)}
               className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] px-2 py-1.5 outline-none">
-              <option value="all">All Types</option>
-              {ASSET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              <option value="all">{t.financesPage.assets.allTypes}</option>
+              {ASSET_TYPES.map(at => <option key={at} value={at}>{t.financesPage.assetTypes[at] || at}</option>)}
             </select>
             <select value={assetStatusFilter} onChange={e => setAssetStatusFilter(e.target.value)}
               className="bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] px-2 py-1.5 outline-none">
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="retired">Retired</option>
+              <option value="all">{t.financesPage.assets.allStatuses}</option>
+              <option value="active">{t.financesPage.assets.active}</option>
+              <option value="maintenance">{t.financesPage.assets.maintenance}</option>
+              <option value="retired">{t.financesPage.assets.retired}</option>
             </select>
             <button onClick={() => setAddAssetOpen(true)}
               className="ml-auto flex items-center gap-1.5 bg-[#4f8ef7] hover:bg-[#3a7de8] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
-              <Plus size={12} /> Add Asset
+              <Plus size={12} /> {t.financesPage.assets.addAsset}
             </button>
           </div>
 
@@ -3455,7 +3459,7 @@ export default function FinancesPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[#1e2330]">
-                  {['Asset', 'Type', 'Serial #', 'Purchase Date', 'Purchase Value', 'Current Value', 'Annual Depr.', 'Status', ''].map(h => (
+                  {[t.financesPage.assets.colAsset, t.financesPage.cols.type, t.financesPage.assets.colSerial, t.financesPage.assets.colPurchaseDate, t.financesPage.assets.colPurchaseValue, t.financesPage.assets.colCurrentValue, t.financesPage.assets.colAnnualDepr, t.financesPage.summary.colStatus, ''].map(h => (
                     <th key={h} className="text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-3 py-2.5">{h}</th>
                   ))}
                 </tr>
@@ -3464,27 +3468,27 @@ export default function FinancesPage() {
                 {filteredAssets.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-10 text-[#6b7280] text-xs">
-                      {assets.length === 0 ? 'No assets yet. Add your first asset.' : 'No assets match the filters.'}
+                      {assets.length === 0 ? t.financesPage.assets.noAssetsYet : t.financesPage.assets.noAssetsMatch}
                     </td>
                   </tr>
                 ) : filteredAssets.map(asset => {
                   const typeEmoji: Record<string, string> = { Vehicle: '🚐', Equipment: '🧰', Tool: '🔧', Technology: '💻', Furniture: '🪑', Other: '📦' }
                   const statusColor: Record<string, string> = { active: '#38d9a9', maintenance: '#f59e0b', retired: '#6b7280' }
-                  const statusLabel: Record<string, string> = { active: '✓ Active', maintenance: '⚙ Maintenance', retired: '✗ Retired' }
+                  const statusLabel: Record<string, string> = { active: `✓ ${t.financesPage.assets.active}`, maintenance: `⚙ ${t.financesPage.assets.maintenance}`, retired: `✗ ${t.financesPage.assets.retired}` }
                   const depreciation = Number(asset.purchaseValue) > 0
                     ? ((1 - Number(asset.currentValue) / Number(asset.purchaseValue)) * 100).toFixed(0)
                     : '0'
                   return (
                     <tr key={asset.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
                       <td className="px-3 py-2.5 font-semibold text-[#e8eaf0]">{asset.name}</td>
-                      <td className="px-3 py-2.5 text-[#9ca3af]">{typeEmoji[asset.type] || '📦'} {asset.type}</td>
+                      <td className="px-3 py-2.5 text-[#9ca3af]">{typeEmoji[asset.type] || '📦'} {t.financesPage.assetTypes[asset.type] || asset.type}</td>
                       <td className="px-3 py-2.5 font-mono text-[#6b7280]">{asset.serialNumber || '—'}</td>
                       <td className="px-3 py-2.5 text-[#9ca3af]">{formatDate(asset.purchaseDate)}</td>
                       <td className="px-3 py-2.5 font-mono text-[#e8eaf0]">{fmt(Number(asset.purchaseValue))}</td>
                       <td className="px-3 py-2.5 font-mono font-bold text-[#38d9a9]">{fmt(Number(asset.currentValue))}</td>
                       <td className="px-3 py-2.5">
-                        <span className="text-[#9ca3af]">{Number(asset.annualDepreciation)}%/yr</span>
-                        <span className="ml-1 text-[#6b7280]">({depreciation}% total)</span>
+                        <span className="text-[#9ca3af]">{t.financesPage.assets.pctPerYear(Number(asset.annualDepreciation))}</span>
+                        <span className="ml-1 text-[#6b7280]">{t.financesPage.assets.pctTotalParen(Number(depreciation))}</span>
                       </td>
                       <td className="px-3 py-2.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -3496,8 +3500,8 @@ export default function FinancesPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2.5 flex items-center gap-2">
-                        <button onClick={() => openEditAsset(asset)} className="text-[#9ca3af] hover:text-[#e8eaf0] transition-colors" title="Edit">✏️</button>
-                        <button onClick={() => handleDeleteAsset(asset.id)} className="text-[#f87171] hover:text-[#ef4444] transition-colors" title="Delete">🗑</button>
+                        <button onClick={() => openEditAsset(asset)} className="text-[#9ca3af] hover:text-[#e8eaf0] transition-colors" title={t.financesPage.common.edit}>✏️</button>
+                        <button onClick={() => handleDeleteAsset(asset.id)} className="text-[#f87171] hover:text-[#ef4444] transition-colors" title={t.financesPage.common.delete}>🗑</button>
                       </td>
                     </tr>
                   )
@@ -3511,59 +3515,59 @@ export default function FinancesPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAddAssetOpen(false)}>
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#e8eaf0]">Add Asset</h3>
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.assets.addAsset}</h3>
                   <button onClick={() => setAddAssetOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
                 </div>
                 {addAssetError && <div className="bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.25)] text-[#f87171] text-xs rounded-lg p-3">{addAssetError}</div>}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className={labelCls}>Asset Name *</label>
-                    <input className={inputCls} value={addAssetForm.name} onChange={e => setAddAssetForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Cleaning Van #1" />
+                    <label className={labelCls}>{t.financesPage.assets.assetNameRequired}</label>
+                    <input className={inputCls} value={addAssetForm.name} onChange={e => setAddAssetForm(f => ({ ...f, name: e.target.value }))} placeholder={t.financesPage.assets.assetNamePlaceholder} />
                   </div>
                   <div>
-                    <label className={labelCls}>Type</label>
+                    <label className={labelCls}>{t.financesPage.cols.type}</label>
                     <select className={inputCls} value={addAssetForm.type} onChange={e => setAddAssetForm(f => ({ ...f, type: e.target.value }))}>
-                      {ASSET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      {ASSET_TYPES.map(at => <option key={at} value={at}>{t.financesPage.assetTypes[at] || at}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Status</label>
+                    <label className={labelCls}>{t.financesPage.summary.colStatus}</label>
                     <select className={inputCls} value={addAssetForm.status} onChange={e => setAddAssetForm(f => ({ ...f, status: e.target.value }))}>
-                      <option value="active">Active</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="retired">Retired</option>
+                      <option value="active">{t.financesPage.assets.active}</option>
+                      <option value="maintenance">{t.financesPage.assets.maintenance}</option>
+                      <option value="retired">{t.financesPage.assets.retired}</option>
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Purchase Date *</label>
+                    <label className={labelCls}>{t.financesPage.assets.purchaseDateRequired}</label>
                     <input type="date" className={inputCls} value={addAssetForm.purchaseDate} onChange={e => setAddAssetForm(f => ({ ...f, purchaseDate: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Serial Number</label>
-                    <input className={inputCls} value={addAssetForm.serialNumber} onChange={e => setAddAssetForm(f => ({ ...f, serialNumber: e.target.value }))} placeholder="Optional" />
+                    <label className={labelCls}>{t.financesPage.assets.serialNumber}</label>
+                    <input className={inputCls} value={addAssetForm.serialNumber} onChange={e => setAddAssetForm(f => ({ ...f, serialNumber: e.target.value }))} placeholder={t.financesPage.common.optional} />
                   </div>
                   <div>
-                    <label className={labelCls}>Purchase Value ($) *</label>
+                    <label className={labelCls}>{t.financesPage.assets.purchaseValueRequired}</label>
                     <input type="number" min="0" step="0.01" className={inputCls} value={addAssetForm.purchaseValue} onChange={e => setAddAssetForm(f => ({ ...f, purchaseValue: e.target.value }))} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className={labelCls}>Current Value ($)</label>
-                    <input type="number" min="0" step="0.01" className={inputCls} value={addAssetForm.currentValue} onChange={e => setAddAssetForm(f => ({ ...f, currentValue: e.target.value }))} placeholder="Defaults to purchase value" />
+                    <label className={labelCls}>{t.financesPage.assets.currentValueDollar}</label>
+                    <input type="number" min="0" step="0.01" className={inputCls} value={addAssetForm.currentValue} onChange={e => setAddAssetForm(f => ({ ...f, currentValue: e.target.value }))} placeholder={t.financesPage.assets.defaultsToPurchaseValue} />
                   </div>
                   <div className="col-span-2">
-                    <label className={labelCls}>Annual Depreciation (%)</label>
+                    <label className={labelCls}>{t.financesPage.assets.annualDepreciationPct}</label>
                     <input type="number" min="0" max="100" step="0.1" className={inputCls} value={addAssetForm.annualDepreciation} onChange={e => setAddAssetForm(f => ({ ...f, annualDepreciation: e.target.value }))} placeholder="e.g. 20" />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Notes</label>
-                  <textarea rows={2} className={inputCls} value={addAssetForm.notes} onChange={e => setAddAssetForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes…" />
+                  <label className={labelCls}>{t.financesPage.common.notes}</label>
+                  <textarea rows={2} className={inputCls} value={addAssetForm.notes} onChange={e => setAddAssetForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.financesPage.common.optionalNotes} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setAddAssetOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">Cancel</button>
+                  <button onClick={() => setAddAssetOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">{t.financesPage.common.cancel}</button>
                   <button onClick={handleAddAsset} disabled={addAssetSaving}
                     className="flex-1 py-2 text-xs font-bold bg-[#4f8ef7] hover:bg-[#3a7de8] disabled:opacity-50 text-white rounded-lg transition-colors">
-                    {addAssetSaving ? 'Saving…' : 'Add Asset'}
+                    {addAssetSaving ? t.financesPage.common.saving : t.financesPage.assets.addAsset}
                   </button>
                 </div>
               </div>
@@ -3575,58 +3579,58 @@ export default function FinancesPage() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditAssetOpen(false)}>
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#e8eaf0]">Edit Asset</h3>
+                  <h3 className="text-sm font-bold text-[#e8eaf0]">{t.financesPage.assets.editAsset}</h3>
                   <button onClick={() => setEditAssetOpen(false)} className="text-[#6b7280] hover:text-[#e8eaf0]"><X size={16} /></button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className={labelCls}>Asset Name *</label>
+                    <label className={labelCls}>{t.financesPage.assets.assetNameRequired}</label>
                     <input className={inputCls} value={editAssetForm.name} onChange={e => setEditAssetForm(f => ({ ...f, name: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Type</label>
+                    <label className={labelCls}>{t.financesPage.cols.type}</label>
                     <select className={inputCls} value={editAssetForm.type} onChange={e => setEditAssetForm(f => ({ ...f, type: e.target.value }))}>
-                      {ASSET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      {ASSET_TYPES.map(at => <option key={at} value={at}>{t.financesPage.assetTypes[at] || at}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Status</label>
+                    <label className={labelCls}>{t.financesPage.summary.colStatus}</label>
                     <select className={inputCls} value={editAssetForm.status} onChange={e => setEditAssetForm(f => ({ ...f, status: e.target.value }))}>
-                      <option value="active">Active</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="retired">Retired</option>
+                      <option value="active">{t.financesPage.assets.active}</option>
+                      <option value="maintenance">{t.financesPage.assets.maintenance}</option>
+                      <option value="retired">{t.financesPage.assets.retired}</option>
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Purchase Date *</label>
+                    <label className={labelCls}>{t.financesPage.assets.purchaseDateRequired}</label>
                     <input type="date" className={inputCls} value={editAssetForm.purchaseDate} onChange={e => setEditAssetForm(f => ({ ...f, purchaseDate: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Serial Number</label>
-                    <input className={inputCls} value={editAssetForm.serialNumber} onChange={e => setEditAssetForm(f => ({ ...f, serialNumber: e.target.value }))} placeholder="Optional" />
+                    <label className={labelCls}>{t.financesPage.assets.serialNumber}</label>
+                    <input className={inputCls} value={editAssetForm.serialNumber} onChange={e => setEditAssetForm(f => ({ ...f, serialNumber: e.target.value }))} placeholder={t.financesPage.common.optional} />
                   </div>
                   <div>
-                    <label className={labelCls}>Purchase Value ($) *</label>
+                    <label className={labelCls}>{t.financesPage.assets.purchaseValueRequired}</label>
                     <input type="number" min="0" step="0.01" className={inputCls} value={editAssetForm.purchaseValue} onChange={e => setEditAssetForm(f => ({ ...f, purchaseValue: e.target.value }))} />
                   </div>
                   <div>
-                    <label className={labelCls}>Current Value ($)</label>
+                    <label className={labelCls}>{t.financesPage.assets.currentValueDollar}</label>
                     <input type="number" min="0" step="0.01" className={inputCls} value={editAssetForm.currentValue} onChange={e => setEditAssetForm(f => ({ ...f, currentValue: e.target.value }))} />
                   </div>
                   <div className="col-span-2">
-                    <label className={labelCls}>Annual Depreciation (%)</label>
+                    <label className={labelCls}>{t.financesPage.assets.annualDepreciationPct}</label>
                     <input type="number" min="0" max="100" step="0.1" className={inputCls} value={editAssetForm.annualDepreciation} onChange={e => setEditAssetForm(f => ({ ...f, annualDepreciation: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Notes</label>
-                  <textarea rows={2} className={inputCls} value={editAssetForm.notes} onChange={e => setEditAssetForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes…" />
+                  <label className={labelCls}>{t.financesPage.common.notes}</label>
+                  <textarea rows={2} className={inputCls} value={editAssetForm.notes} onChange={e => setEditAssetForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.financesPage.common.optionalNotes} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button onClick={() => setEditAssetOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">Cancel</button>
+                  <button onClick={() => setEditAssetOpen(false)} className="flex-1 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">{t.financesPage.common.cancel}</button>
                   <button onClick={handleEditAsset} disabled={editAssetSaving}
                     className="flex-1 py-2 text-xs font-bold bg-[#4f8ef7] hover:bg-[#3a7de8] disabled:opacity-50 text-white rounded-lg transition-colors">
-                    {editAssetSaving ? 'Saving…' : 'Save Changes'}
+                    {editAssetSaving ? t.financesPage.common.saving : t.financesPage.common.saveChanges}
                   </button>
                 </div>
               </div>
@@ -3654,24 +3658,24 @@ export default function FinancesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-bold text-[#e8eaf0]">
-                  {estEditId ? '✏️ Edit Estimate' : 'New Estimate'}
+                  {estEditId ? `✏️ ${t.financesPage.estimates.editEstimate}` : t.financesPage.estimates.newEstimate}
                 </h2>
-                <p className="text-xs text-[#6b7280] mt-0.5">Fill in the fields, save to history or preview the PDF</p>
+                <p className="text-xs text-[#6b7280] mt-0.5">{t.financesPage.estimates.fillFieldsHint}</p>
               </div>
               <div className="flex items-center gap-2">
                 {estEditId && (
                   <button onClick={() => { setEstEditId(null); resetEstForm() }}
                     className="px-3 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
-                    Cancel Edit
+                    {t.financesPage.estimates.cancelEdit}
                   </button>
                 )}
                 <button onClick={handlePreviewEstimate}
                   className="px-4 py-2 border border-[#4b3fa0] text-[#4b3fa0] hover:bg-[#4b3fa0]/10 text-xs font-semibold rounded-lg transition-colors">
-                  Preview PDF
+                  {t.financesPage.estimates.previewPdf}
                 </button>
                 <button onClick={handleSaveEstimate} disabled={estSaving}
                   className="flex items-center gap-2 px-4 py-2 bg-[#4b3fa0] hover:bg-[#3a2f90] disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors">
-                  {estSaving ? 'Saving…' : estEditId ? 'Update Estimate' : 'Save Estimate'}
+                  {estSaving ? t.financesPage.common.saving : estEditId ? t.financesPage.estimates.updateEstimate : t.financesPage.estimates.saveEstimate}
                 </button>
               </div>
             </div>
@@ -3682,47 +3686,47 @@ export default function FinancesPage() {
               <div className="space-y-4">
                 {/* Client section */}
                 <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 space-y-3">
-                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">Client</div>
+                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.summary.colClient}</div>
                   <div className="flex gap-2">
                     <button onClick={() => setEstClientMode('manual')}
                       className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${estClientMode === 'manual' ? 'bg-[#4b3fa0] border-[#4b3fa0] text-white' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'}`}>
-                      Manual Entry
+                      {t.financesPage.estimates.manualEntry}
                     </button>
                     <button onClick={() => { setEstClientMode('registered'); estLoadClients() }}
                       className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${estClientMode === 'registered' ? 'bg-[#4b3fa0] border-[#4b3fa0] text-white' : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0]'}`}>
-                      Registered Client
+                      {t.financesPage.estimates.registeredClient}
                     </button>
                   </div>
                   {estClientMode === 'registered' ? (
                     <div>
-                      <label className={labelCls}>Select Client</label>
+                      <label className={labelCls}>{t.financesPage.estimates.selectClient}</label>
                       <select className={inputCls} value={estClientId}
                         onChange={e => {
                           if (e.target.value === '__add_client__') { setEstClientModalOpen(true); return }
                           setEstClientId(e.target.value)
                         }}>
-                        <option value="">— Select client —</option>
+                        <option value="">{t.financesPage.estimates.selectClientPlaceholder}</option>
                         {estClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        <option value="__add_client__">+ New Client…</option>
+                        <option value="__add_client__">{t.financesPage.estimates.newClientOption}</option>
                       </select>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
-                        <label className={labelCls}>Full Name *</label>
-                        <input className={inputCls} value={estForm.clientName} onChange={e => setEstForm(f => ({ ...f, clientName: e.target.value }))} placeholder="Client name" />
+                        <label className={labelCls}>{t.financesPage.estimates.fullNameRequired}</label>
+                        <input className={inputCls} value={estForm.clientName} onChange={e => setEstForm(f => ({ ...f, clientName: e.target.value }))} placeholder={t.financesPage.estimates.clientNamePlaceholder} />
                       </div>
                       <div>
-                        <label className={labelCls}>Email</label>
+                        <label className={labelCls}>{t.financesPage.estimates.email}</label>
                         <input type="email" className={inputCls} value={estForm.clientEmail} onChange={e => setEstForm(f => ({ ...f, clientEmail: e.target.value }))} placeholder="client@email.com" />
                       </div>
                       <div>
-                        <label className={labelCls}>Phone</label>
+                        <label className={labelCls}>{t.financesPage.estimates.phone}</label>
                         <input className={inputCls} value={estForm.clientPhone} onChange={e => setEstForm(f => ({ ...f, clientPhone: e.target.value }))} placeholder="(xxx) xxx-xxxx" />
                       </div>
                       <div className="col-span-2">
-                        <label className={labelCls}>Address</label>
-                        <input className={inputCls} value={estForm.clientAddress} onChange={e => setEstForm(f => ({ ...f, clientAddress: e.target.value }))} placeholder="123 Main St, City, State" />
+                        <label className={labelCls}>{t.financesPage.estimates.address}</label>
+                        <input className={inputCls} value={estForm.clientAddress} onChange={e => setEstForm(f => ({ ...f, clientAddress: e.target.value }))} placeholder={t.financesPage.estimates.addressPlaceholder} />
                       </div>
                     </div>
                   )}
@@ -3730,22 +3734,22 @@ export default function FinancesPage() {
 
                 {/* Estimate details */}
                 <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 space-y-3">
-                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">Estimate Details</div>
+                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.estimates.estimateDetails}</div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Estimate Number</label>
+                      <label className={labelCls}>{t.financesPage.estimates.estimateNumber}</label>
                       <input className={inputCls} value={estForm.estimateNumber} onChange={e => setEstForm(f => ({ ...f, estimateNumber: e.target.value }))} />
                     </div>
                     <div>
-                      <label className={labelCls}>Tax Rate (%)</label>
+                      <label className={labelCls}>{t.financesPage.invoices.taxPercent}</label>
                       <input type="number" min="0" max="100" step="0.1" className={inputCls} value={estForm.taxRate} onChange={e => setEstForm(f => ({ ...f, taxRate: e.target.value }))} />
                     </div>
                     <div>
-                      <label className={labelCls}>Issue Date</label>
+                      <label className={labelCls}>{t.financesPage.invoices.issueDate}</label>
                       <input type="date" className={inputCls} value={estForm.issueDate} onChange={e => setEstForm(f => ({ ...f, issueDate: e.target.value }))} />
                     </div>
                     <div>
-                      <label className={labelCls}>Valid Until</label>
+                      <label className={labelCls}>{t.financesPage.estimates.validUntil}</label>
                       <input type="date" className={inputCls} value={estForm.validUntil} onChange={e => setEstForm(f => ({ ...f, validUntil: e.target.value }))} />
                     </div>
                   </div>
@@ -3753,20 +3757,20 @@ export default function FinancesPage() {
                     <div className="pt-1 border-t border-[#2a2f3d]">
                       <label className="flex items-center gap-2 text-xs font-semibold text-[#9ca3af] cursor-pointer pt-2">
                         <input type="checkbox" checked={estScheduleVisit} onChange={e => setEstScheduleVisit(e.target.checked)} className="w-3.5 h-3.5" />
-                        Schedule a visit to this property
+                        {t.financesPage.estimates.scheduleVisit}
                       </label>
                       {estScheduleVisit && (
                         <div className="grid grid-cols-2 gap-3 mt-2">
                           <div>
-                            <label className={labelCls}>Visit Date</label>
+                            <label className={labelCls}>{t.financesPage.estimates.visitDate}</label>
                             <input type="date" className={inputCls} value={estVisitDate} onChange={e => setEstVisitDate(e.target.value)} />
                           </div>
                           <div>
-                            <label className={labelCls}>Visit Time</label>
+                            <label className={labelCls}>{t.financesPage.estimates.visitTime}</label>
                             <select className={inputCls} value={estVisitTime} onChange={e => setEstVisitTime(e.target.value)}>
-                              <option value="">— Select time —</option>
-                              {TIME_SLOTS.map(t => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
+                              <option value="">{t.financesPage.estimates.selectTimePlaceholder}</option>
+                              {TIME_SLOTS.map(slot => (
+                                <option key={slot.value} value={slot.value}>{slot.label}</option>
                               ))}
                             </select>
                           </div>
@@ -3775,8 +3779,8 @@ export default function FinancesPage() {
                     </div>
                   )}
                   <div>
-                    <label className={labelCls}>Notes</label>
-                    <textarea rows={3} className={inputCls} value={estForm.notes} onChange={e => setEstForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes for the client…" />
+                    <label className={labelCls}>{t.financesPage.common.notes}</label>
+                    <textarea rows={3} className={inputCls} value={estForm.notes} onChange={e => setEstForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.financesPage.estimates.notesPlaceholder} />
                   </div>
                 </div>
               </div>
@@ -3784,22 +3788,22 @@ export default function FinancesPage() {
               {/* Right column – line items */}
               <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">Line Items</div>
+                  <div className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{t.financesPage.estimates.lineItems}</div>
                   <button onClick={estAddItem}
                     className="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-[#4f8ef7]/10 hover:bg-[#4f8ef7]/20 text-[#4f8ef7] rounded-lg transition-colors">
-                    <Plus className="w-3 h-3" /> Add Item
+                    <Plus className="w-3 h-3" /> {t.financesPage.estimates.addItem}
                   </button>
                 </div>
 
                 <div className="space-y-2">
                   <div className="grid grid-cols-[1fr_60px_90px_80px_24px] gap-2 text-[10px] font-bold text-[#6b7280] uppercase tracking-wider px-1">
-                    <span>Description</span><span className="text-center">Qty</span><span className="text-right">Unit Price</span><span className="text-right">Total</span><span></span>
+                    <span>{t.financesPage.cols.description}</span><span className="text-center">{t.financesPage.estimates.qty}</span><span className="text-right">{t.financesPage.estimates.unitPrice}</span><span className="text-right">{t.financesPage.summary.colTotal}</span><span></span>
                   </div>
                   {estItems.map((item, idx) => (
                     <div key={idx} className="grid grid-cols-[1fr_60px_90px_80px_24px] gap-2 items-center">
                       <input className={inputCls} value={item.description}
                         onChange={e => estUpdateItem(idx, 'description', e.target.value)}
-                        placeholder="Service description" />
+                        placeholder={t.financesPage.estimates.serviceDescriptionPlaceholder} />
                       <input type="number" min="0" step="1" className={inputCls + ' text-center px-1'} value={item.qty}
                         onChange={e => estUpdateItem(idx, 'qty', e.target.value)} />
                       <input type="number" min="0" step="0.01" className={inputCls + ' text-right px-1'} value={item.unitPrice}
@@ -3817,17 +3821,17 @@ export default function FinancesPage() {
                   {estTaxRate > 0 && (
                     <>
                       <div className="flex justify-between text-xs text-[#6b7280]">
-                        <span>Subtotal</span>
+                        <span>{t.financesPage.invoices.subtotal}</span>
                         <span className="font-mono">${estSubtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-[#6b7280]">
-                        <span>Tax ({estTaxRate}%)</span>
+                        <span>{t.financesPage.invoices.taxPctParen(estTaxRate)}</span>
                         <span className="font-mono">${estTax.toFixed(2)}</span>
                       </div>
                     </>
                   )}
                   <div className="flex justify-between text-sm font-bold text-[#e8eaf0]">
-                    <span>TOTAL</span>
+                    <span>{t.financesPage.invoices.totalUpper}</span>
                     <span className="font-mono text-[#26BD97]">${estTotal.toFixed(2)}</span>
                   </div>
                 </div>
@@ -3837,14 +3841,14 @@ export default function FinancesPage() {
             {/* ── Estimate History ── */}
             <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2f3d]">
-                <div className="text-xs font-bold text-[#e8eaf0]">Estimate History</div>
+                <div className="text-xs font-bold text-[#e8eaf0]">{t.financesPage.estimates.estimateHistory}</div>
                 <div className="flex gap-1">
                   {([
-                    { key: 'all',             label: 'All'             },
-                    { key: 'pending',         label: 'Pending'         },
-                    { key: 'service_created', label: 'Service Created' },
-                    { key: 'converted',       label: 'Converted'       },
-                    { key: 'cancelled',       label: 'Cancelled'       },
+                    { key: 'all',             label: t.financesPage.common.all                     },
+                    { key: 'pending',         label: t.financesPage.common.pending                  },
+                    { key: 'service_created', label: t.financesPage.estimates.serviceCreated        },
+                    { key: 'converted',       label: t.financesPage.estimates.converted             },
+                    { key: 'cancelled',       label: t.status.cancelled                             },
                   ] as const).map(f => (
                     <button key={f.key} onClick={() => setEstHistFilter(f.key)}
                       className={`px-3 py-1 text-[10px] font-semibold rounded-md transition-colors whitespace-nowrap ${estHistFilter === f.key ? 'bg-[#4b3fa0] text-white' : 'text-[#6b7280] hover:text-[#e8eaf0]'}`}>
@@ -3855,20 +3859,20 @@ export default function FinancesPage() {
               </div>
 
               {filteredEstimates.length === 0 ? (
-                <div className="text-center py-10 text-xs text-[#6b7280]">No estimates found</div>
+                <div className="text-center py-10 text-xs text-[#6b7280]">{t.financesPage.estimates.noEstimatesFound}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-max text-xs">
                     <thead>
                       <tr className="border-b border-[#2a2f3d] text-[10px] text-[#6b7280] uppercase tracking-wider">
-                        <th className="text-left px-4 py-2.5 font-semibold">Estimate #</th>
-                        <th className="text-left px-4 py-2.5 font-semibold">Client</th>
-                        <th className="text-left px-4 py-2.5 font-semibold">Issue Date</th>
-                        <th className="text-left px-4 py-2.5 font-semibold">Valid Until</th>
-                        <th className="text-right px-4 py-2.5 font-semibold">Total</th>
-                        <th className="text-center px-4 py-2.5 font-semibold">Status</th>
-                        <th className="text-left px-4 py-2.5 font-semibold">Action</th>
-                        <th className="text-center px-4 py-2.5 font-semibold">Actions</th>
+                        <th className="text-left px-4 py-2.5 font-semibold">{t.financesPage.estimates.colEstimateNum}</th>
+                        <th className="text-left px-4 py-2.5 font-semibold">{t.financesPage.summary.colClient}</th>
+                        <th className="text-left px-4 py-2.5 font-semibold">{t.financesPage.invoices.issueDate}</th>
+                        <th className="text-left px-4 py-2.5 font-semibold">{t.financesPage.estimates.validUntil}</th>
+                        <th className="text-right px-4 py-2.5 font-semibold">{t.financesPage.summary.colTotal}</th>
+                        <th className="text-center px-4 py-2.5 font-semibold">{t.financesPage.summary.colStatus}</th>
+                        <th className="text-left px-4 py-2.5 font-semibold">{t.financesPage.estimates.colAction}</th>
+                        <th className="text-center px-4 py-2.5 font-semibold">{t.financesPage.estimates.colActions}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3890,36 +3894,36 @@ export default function FinancesPage() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${STATUS_COLORS[est.status] ?? STATUS_COLORS.pending}`}>
-                              {est.status}
+                              {t.financesPage.estimateStatus[est.status] || est.status}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {est.status === 'service_created' ? (
-                              <span className="text-[10px] font-semibold text-[#a78bfa]">✓ Service Created</span>
+                              <span className="text-[10px] font-semibold text-[#a78bfa]">✓ {t.financesPage.estimates.serviceCreated}</span>
                             ) : est.status === 'converted' && est.invoice ? (
                               <span className="text-[#26BD97] font-mono font-semibold text-[10px]">{est.invoice.invoiceNumber}</span>
                             ) : (
                               <button onClick={() => openCreateServiceFromEstimate(est)}
                                 className="text-[10px] px-2.5 py-1 bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/30 rounded-lg font-semibold transition-colors">
-                                + Create Service
+                                + {t.financesPage.estimates.createService}
                               </button>
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => previewSavedEstimate(est)} title="Preview PDF"
+                              <button onClick={() => previewSavedEstimate(est)} title={t.financesPage.estimates.previewPdf}
                                 className="text-[#6b7280] hover:text-[#4f8ef7] transition-colors text-[10px] font-medium">
-                                PDF
+                                {t.financesPage.estimates.pdf}
                               </button>
                               <span className="text-[#2a2f3d]">·</span>
-                              <button onClick={() => loadEstimateForEdit(est)} title="Edit"
+                              <button onClick={() => loadEstimateForEdit(est)} title={t.financesPage.common.edit}
                                 className="text-[#6b7280] hover:text-[#f59e0b] transition-colors text-[10px] font-medium">
-                                Edit
+                                {t.financesPage.common.edit}
                               </button>
                               <span className="text-[#2a2f3d]">·</span>
-                              <button onClick={() => handleDeleteEstimate(est.id)} title="Delete"
+                              <button onClick={() => handleDeleteEstimate(est.id)} title={t.financesPage.common.delete}
                                 className="text-[#6b7280] hover:text-[#f87171] transition-colors text-[10px] font-medium">
-                                Del
+                                {t.financesPage.estimates.del}
                               </button>
                             </div>
                           </td>
@@ -3963,9 +3967,9 @@ export default function FinancesPage() {
       />
       <ConfirmModal
         open={confirmOpen}
-        title={`Delete Invoice ${confirmTarget?.invoiceNumber}`}
-        message={`This will permanently delete the invoice and unlink all its services so they can be re-invoiced.\n\nThis action cannot be undone.`}
-        confirmLabel={deleting ? 'Deleting...' : 'Delete Invoice'}
+        title={t.financesPage.invoices.deleteInvoiceTitle(confirmTarget?.invoiceNumber)}
+        message={t.financesPage.invoices.deleteInvoiceMessage}
+        confirmLabel={deleting ? t.financesPage.common.deleting : t.financesPage.invoices.deleteInvoiceLabel}
         onConfirm={handleConfirmDelete}
         onCancel={() => { setConfirmOpen(false); setConfirmTarget(null) }}
       />

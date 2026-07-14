@@ -14,26 +14,27 @@ import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
 import ErrorBanner from '@/components/ErrorBanner'
 import { fetchJsonOrThrow } from '@/lib/fetchJson'
 import { localDateStr } from '@/lib/local-date'
+import { useI18n } from '@/lib/i18n'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const ROLE_COLORS:   Record<string, string> = { admin: '#4f8ef7', user: '#a78bfa' }
 const STATUS_COLORS: Record<string, string> = { active: '#38d9a9', invited: '#f59e0b', inactive: '#6b7280' }
 
 const SCHEDULE_VISIBILITY_OPTIONS = [
-  { value: '1',    label: '1 day' },
-  { value: '2',    label: '2 days' },
-  { value: '3',    label: '3 days' },
-  { value: '4',    label: '4 days' },
-  { value: 'week', label: 'Full week' },
-  { value: 'full', label: 'Full calendar' },
+  { value: '1'    },
+  { value: '2'    },
+  { value: '3'    },
+  { value: '4'    },
+  { value: 'week' },
+  { value: 'full' },
 ]
 
 const PAY_METHODS = [
-  { value: 'check',   label: 'Check'   },
-  { value: 'zelle',   label: 'Zelle'   },
-  { value: 'cash',    label: 'Cash'    },
-  { value: 'venmo',   label: 'Venmo'   },
-  { value: 'cashapp', label: 'CashApp' },
+  { value: 'check'   },
+  { value: 'zelle'   },
+  { value: 'cash'    },
+  { value: 'venmo'   },
+  { value: 'cashapp' },
 ]
 
 function fmt(dateStr: string) {
@@ -75,6 +76,7 @@ interface RowEdits {
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function StaffPage() {
   const { data: session } = useSession()
+  const { t } = useI18n()
   const isAdmin = (session?.user as any)?.role === 'admin'
 
   const [staff, setStaff]           = useState<any[]>([])
@@ -100,7 +102,7 @@ export default function StaffPage() {
       if (!res.ok) throw new Error()
       setStaff(prev => prev.map(m => m.id === memberId ? { ...m, scheduleVisibility: value } : m))
     } catch {
-      alert('Could not update schedule access. Please try again.')
+      alert(t.staffPage.scheduleAccessError)
     } finally {
       setVisibilitySaving(null)
     }
@@ -163,14 +165,14 @@ export default function StaffPage() {
         setLoading(false)
         setSelectedMember((prev: any) => prev ? (d.find((s: any) => s.id === prev.id) ?? prev) : null)
       })
-      .catch((err) => { setLoadError(err.message || 'No se pudo cargar el staff.'); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || t.staffPage.loadStaffError); setLoading(false) })
   }
 
   function loadHistory() {
     setHistoryLoading(true)
     fetchJsonOrThrow('/api/payroll')
       .then(d => { setPayrollRecords(d); setHistoryError(null); setHistoryLoading(false) })
-      .catch((err) => { setHistoryError(err.message || 'No se pudo cargar el historial de payroll.'); setHistoryLoading(false) })
+      .catch((err) => { setHistoryError(err.message || t.staffPage.loadPayrollHistoryError); setHistoryLoading(false) })
   }
 
   useEffect(() => { loadStaff() }, [])
@@ -406,9 +408,7 @@ export default function StaffPage() {
         }).filter((s: any) => s !== null && s.count > 0)
       : []
 
-    const typeLabel =
-      r.paymentType === 'per_job'   ? 'Per Service' :
-      r.paymentType === 'fixed_day' ? 'Fixed'       : 'Daily'
+    const typeLabel = t.staffPage.payTypeLabels[r.paymentType] || t.staffPage.payTypeLabels.daily
 
     const svcColors: Record<string, string> = {
       '1BR': 'bg-[rgba(79,142,247,0.1)] border-[rgba(79,142,247,0.3)] text-[#4f8ef7]',
@@ -421,7 +421,7 @@ export default function StaffPage() {
       <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl overflow-hidden text-xs">
         {/* Header */}
         <div className="px-4 py-2.5 border-b border-[#2a2f3d] flex items-center justify-between bg-[rgba(56,217,169,0.04)]">
-          <span className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider">Payment Detail</span>
+          <span className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider">{t.staffPage.paymentDetail}</span>
           <span className="text-sm font-bold text-[#38d9a9]">${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
         </div>
 
@@ -429,7 +429,7 @@ export default function StaffPage() {
           {/* Pay type + Method */}
           <div className="px-4 py-2.5 grid grid-cols-2 gap-x-6">
             <div>
-              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">Pay Type</div>
+              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">{t.staffPage.payType}</div>
               <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
                 r.paymentType === 'per_job'   ? 'bg-[rgba(167,139,250,0.15)] text-[#a78bfa]' :
                 r.paymentType === 'fixed_day' ? 'bg-[rgba(79,142,247,0.15)] text-[#4f8ef7]'  :
@@ -437,7 +437,7 @@ export default function StaffPage() {
               }`}>{typeLabel}</span>
             </div>
             <div>
-              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">Method</div>
+              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">{t.staffPage.method}</div>
               <div className="text-xs font-semibold text-[#e8eaf0] capitalize">{r.paymentMethod}</div>
             </div>
           </div>
@@ -446,8 +446,8 @@ export default function StaffPage() {
           {r.daysWorked != null && (
             <div className="px-4 py-2.5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-[#6b7280]">Days worked</span>
-                <span className="font-semibold text-[#a78bfa]">{r.daysWorked} {r.daysWorked === 1 ? 'day' : 'days'}</span>
+                <span className="text-[10px] text-[#6b7280]">{t.staffPage.daysWorked}</span>
+                <span className="font-semibold text-[#a78bfa]">{t.staffPage.dayCount(r.daysWorked)}</span>
               </div>
               {datesList.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -465,8 +465,8 @@ export default function StaffPage() {
           {r.servicesCount != null && r.paymentType === 'per_job' && (
             <div className="px-4 py-2.5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-[#6b7280]">Services completed</span>
-                <span className="font-semibold text-[#a78bfa]">{r.servicesCount} services</span>
+                <span className="text-[10px] text-[#6b7280]">{t.staffPage.servicesCompleted}</span>
+                <span className="font-semibold text-[#a78bfa]">{t.staffPage.serviceCount(r.servicesCount)}</span>
               </div>
               {svcChips.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -484,14 +484,14 @@ export default function StaffPage() {
 
           {/* Base pay */}
           <div className="px-4 py-2.5 flex items-center justify-between">
-            <span className="text-[10px] text-[#6b7280]">Base pay</span>
+            <span className="text-[10px] text-[#6b7280]">{t.staffPage.basePay}</span>
             <span className="font-semibold text-[#e8eaf0]">${base.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
 
           {/* Adjustment */}
           {adj !== 0 && (
             <div className="px-4 py-2.5 flex items-center justify-between">
-              <span className="text-[10px] text-[#6b7280]">Adjustment</span>
+              <span className="text-[10px] text-[#6b7280]">{t.staffPage.adjustment}</span>
               <span className={`font-semibold ${adj > 0 ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>
                 {adj > 0 ? '+' : ''}${adj.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
@@ -500,20 +500,20 @@ export default function StaffPage() {
 
           {/* Net pay */}
           <div className="px-4 py-2.5 flex items-center justify-between bg-[rgba(56,217,169,0.04)]">
-            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Net Pay</span>
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">{t.staffPage.netPay}</span>
             <span className="text-sm font-bold text-[#38d9a9]">${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
 
           {/* Status */}
           <div className="px-4 py-2.5 flex items-center justify-between">
-            <span className="text-[10px] text-[#6b7280]">Status</span>
+            <span className="text-[10px] text-[#6b7280]">{t.staffPage.status}</span>
             <span className={`font-semibold capitalize ${r.status === 'paid' ? 'text-[#38d9a9]' : 'text-[#f59e0b]'}`}>{r.status}</span>
           </div>
 
           {/* Raw breakdown fallback for old records */}
           {bkd && !hasDates && svcChips.length === 0 && (
             <div className="px-4 py-2.5">
-              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1.5">Breakdown</div>
+              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1.5">{t.staffPage.breakdown}</div>
               <div className="text-[10px] text-[#c4c9d8] leading-relaxed">{bkd}</div>
             </div>
           )}
@@ -521,7 +521,7 @@ export default function StaffPage() {
           {/* User note */}
           {note && (
             <div className="px-4 py-2.5">
-              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">Note</div>
+              <div className="text-[9px] text-[#6b7280] uppercase font-bold mb-1">{t.staffPage.note}</div>
               <div className="text-[10px] text-[#4f8ef7] leading-relaxed">{note}</div>
             </div>
           )}
@@ -536,22 +536,22 @@ export default function StaffPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">Staff</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Team & Payroll management</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.staff}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.staffPage.subtitle}</p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-semibold rounded-lg transition-colors"
         >
-          <Plus size={15} />New Staff Member
+          <Plus size={15} />{t.staffPage.newStaffMember}
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-[#2a2f3d]">
         {[
-          { key: 'team',    label: '👥 Team' },
-          { key: 'payroll', label: '💰 Payroll' },
+          { key: 'team',    label: `👥 ${t.staffPage.tabTeam}` },
+          { key: 'payroll', label: `💰 ${t.staffPage.tabPayroll}` },
         ].map(tab => (
           <button
             key={tab.key}
@@ -570,7 +570,7 @@ export default function StaffPage() {
         <div className="grid grid-cols-4 gap-3">
           {loadError && <div className="col-span-4"><ErrorBanner message={loadError} onRetry={loadStaff} /></div>}
           {loading ? (
-            <div className="col-span-4 text-center py-10 text-[#6b7280] text-xs">Loading...</div>
+            <div className="col-span-4 text-center py-10 text-[#6b7280] text-xs">{t.staffPage.loading}</div>
           ) : (
             <>
               {staff.map((member: any) => {
@@ -618,7 +618,7 @@ export default function StaffPage() {
                     {isAdmin && member.role === 'user' && (
                       <div className="mt-2 pt-2 border-t border-[#2a2f3d]" onClick={e => e.stopPropagation()}>
                         <label className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1 text-left">
-                          Calendar access
+                          {t.staffPage.calendarAccess}
                         </label>
                         <select
                           value={member.scheduleVisibility || '1'}
@@ -627,7 +627,7 @@ export default function StaffPage() {
                           className="w-full px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-50"
                         >
                           {SCHEDULE_VISIBILITY_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            <option key={opt.value} value={opt.value}>{t.staffPage.scheduleVisibilityOptions[opt.value]}</option>
                           ))}
                         </select>
                       </div>
@@ -642,7 +642,7 @@ export default function StaffPage() {
                 <div className="w-8 h-8 rounded-full bg-[rgba(79,142,247,0.1)] flex items-center justify-center">
                   <Plus size={16} className="text-[#4f8ef7]" />
                 </div>
-                <span className="text-xs font-semibold text-[#6b7280]">Add Member</span>
+                <span className="text-xs font-semibold text-[#6b7280]">{t.staffPage.addMember}</span>
               </div>
             </>
           )}
@@ -659,14 +659,14 @@ export default function StaffPage() {
             <div className="flex items-end gap-4 flex-wrap">
               <div>
                 <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">
-                  <CalendarDays size={9} className="inline mr-1" />From
+                  <CalendarDays size={9} className="inline mr-1" />{t.staffPage.from}
                 </label>
                 <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
                   className="px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">
-                  <CalendarDays size={9} className="inline mr-1" />To
+                  <CalendarDays size={9} className="inline mr-1" />{t.staffPage.to}
                 </label>
                 <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
                   className="px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
@@ -674,19 +674,19 @@ export default function StaffPage() {
 
               <div className="flex gap-1.5 flex-wrap">
                 {[
-                  { label: 'This week', fn: () => {
+                  { label: t.staffPage.thisWeek, fn: () => {
                     const d = new Date(); const day = d.getDay()
                     const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
                     const fri = new Date(mon); fri.setDate(mon.getDate() + 4)
                     setFromDate(localDateStr(mon)); setToDate(localDateStr(fri))
                   }},
-                  { label: 'Last week', fn: () => {
+                  { label: t.staffPage.lastWeek, fn: () => {
                     const d = new Date(); const day = d.getDay()
                     const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) - 7)
                     const fri = new Date(mon); fri.setDate(mon.getDate() + 4)
                     setFromDate(localDateStr(mon)); setToDate(localDateStr(fri))
                   }},
-                  { label: 'This month', fn: () => {
+                  { label: t.staffPage.thisMonth, fn: () => {
                     const d = new Date()
                     setFromDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`); setToDate(today)
                   }},
@@ -701,7 +701,7 @@ export default function StaffPage() {
               <button onClick={calculate} disabled={calcLoading || !fromDate || !toDate}
                 className="flex items-center gap-2 px-5 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-all ml-auto">
                 {calcLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                {calcLoading ? 'Calculating…' : 'Calculate Payroll'}
+                {calcLoading ? t.staffPage.calculating : t.staffPage.calculatePayroll}
               </button>
             </div>
           </div>
@@ -714,17 +714,17 @@ export default function StaffPage() {
                 <div>
                   <div className="text-sm font-bold text-[#e8eaf0] flex items-center gap-2">
                     <DollarSign size={14} className="text-[#38d9a9]" />
-                    Payroll — {fmt(fromDate)} to {fmt(toDate)}
+                    {t.staffPage.payrollRangeTitle(fmt(fromDate), fmt(toDate))}
                   </div>
-                  <div className="text-[10px] text-[#6b7280] mt-0.5">{calcRows.length} employees</div>
+                  <div className="text-[10px] text-[#6b7280] mt-0.5">{t.staffPage.employeeCount(calcRows.length)}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-xs font-bold text-[#38d9a9]">
-                    Total: ${totalPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {t.staffPage.total}: ${totalPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <button onClick={payAll} disabled={payingIds.size > 0 || paidThisBatch.size === calcRows.length}
                     className="flex items-center gap-2 px-4 py-2 bg-[#38d9a9] hover:bg-[#2bc99a] disabled:opacity-40 text-[#0a0d14] text-xs font-bold rounded-lg transition-all">
-                    <DollarSign size={12} />Pay All
+                    <DollarSign size={12} />{t.staffPage.payAll}
                   </button>
                 </div>
               </div>
@@ -775,11 +775,11 @@ export default function StaffPage() {
                             <>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-[10px] text-[#6b7280]">
-                                  {activeDays.length} of {row.workedDays.length} days · ${row.hourlyRate?.toLocaleString()}/day
+                                  {t.staffPage.daysOfTotal(activeDays.length, row.workedDays.length)} · ${row.hourlyRate?.toLocaleString()}/{t.staffPage.day}
                                 </span>
                                 {activeDays.length !== row.workedDays.length && (
                                   <span className="text-[9px] text-[#a78bfa] font-medium">
-                                    ({row.workedDays.length - activeDays.length} excluded)
+                                    {t.staffPage.excludedCount(row.workedDays.length - activeDays.length)}
                                   </span>
                                 )}
                               </div>
@@ -810,20 +810,20 @@ export default function StaffPage() {
                                   })}
                                 </div>
                               ) : (
-                                <div className="text-[10px] text-[#4b5568] italic">No service days found in this period</div>
+                                <div className="text-[10px] text-[#4b5568] italic">{t.staffPage.noServiceDaysFound}</div>
                               )}
 
                               {/* Adjustment for daily */}
                               <div className="flex items-center gap-2 pt-0.5">
-                                <span className="text-[10px] text-[#6b7280]">Adjustment:</span>
+                                <span className="text-[10px] text-[#6b7280]">{t.staffPage.adjustmentLabel}</span>
                                 <div className="flex rounded-lg overflow-hidden border border-[#2a2f3d]">
-                                  {(['days', 'money'] as const).map(t => (
-                                    <button key={t} disabled={isPaid}
-                                      onClick={() => setEdit(row.userId, 'adjustType', t)}
+                                  {(['days', 'money'] as const).map(adjType => (
+                                    <button key={adjType} disabled={isPaid}
+                                      onClick={() => setEdit(row.userId, 'adjustType', adjType)}
                                       className={`px-2 py-1 text-[10px] font-bold transition-colors disabled:opacity-40 ${
-                                        edit.adjustType === t ? 'bg-[#4f8ef7] text-white' : 'bg-[#1e2330] text-[#6b7280] hover:text-[#e8eaf0]'
+                                        edit.adjustType === adjType ? 'bg-[#4f8ef7] text-white' : 'bg-[#1e2330] text-[#6b7280] hover:text-[#e8eaf0]'
                                       }`}>
-                                      {t === 'days' ? 'Days' : '$'}
+                                      {adjType === 'days' ? t.staffPage.days : '$'}
                                     </button>
                                   ))}
                                 </div>
@@ -833,7 +833,7 @@ export default function StaffPage() {
                                   className="w-20 px-2 py-1 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] text-center focus:outline-none focus:border-[#4f8ef7] disabled:opacity-40 transition-colors"
                                 />
                                 <span className="text-[10px] text-[#6b7280]">
-                                  {edit.adjustType === 'days' ? 'extra days' : 'dollars'}
+                                  {edit.adjustType === 'days' ? t.staffPage.extraDays : t.staffPage.dollars}
                                 </span>
                               </div>
                             </>
@@ -842,7 +842,7 @@ export default function StaffPage() {
                           {/* ── PER SERVICE: room counts ── */}
                           {isPerSvc && (
                             <>
-                              <div className="text-[10px] text-[#6b7280]">Services in period</div>
+                              <div className="text-[10px] text-[#6b7280]">{t.staffPage.servicesInPeriod}</div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 {[
                                   { key: 'count1BR',   label: '1BR',  rate: rates.per1BR,   color: '#4f8ef7' },
@@ -860,7 +860,7 @@ export default function StaffPage() {
                                 ))}
                               </div>
                               <div className="flex items-center gap-2 pt-0.5">
-                                <span className="text-[10px] text-[#6b7280]">Adjustment ($):</span>
+                                <span className="text-[10px] text-[#6b7280]">{t.staffPage.adjustmentDollarsLabel}</span>
                                 <input type="number" step="1" min="-9999" value={edit.adjustment} disabled={isPaid}
                                   onChange={e => setEdit(row.userId, 'adjustment', e.target.value)}
                                   className="w-20 px-2 py-1 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] text-center focus:outline-none focus:border-[#4f8ef7] disabled:opacity-40 transition-colors"
@@ -873,14 +873,14 @@ export default function StaffPage() {
                           {isFixed && (
                             <>
                               <div className="text-[10px] text-[#6b7280]">
-                                Fixed pay · {PAY_FREQUENCIES.find(f => f.value === freq)?.label}
+                                {t.staffPage.fixedPay} · {PAY_FREQUENCIES.find(f => f.value === freq)?.label}
                               </div>
                               <div className="flex items-center gap-4">
                                 <div className="text-sm font-bold text-[#e8eaf0]">
                                   ${row.hourlyRate?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-[#6b7280]">Adjustment ($):</span>
+                                  <span className="text-[10px] text-[#6b7280]">{t.staffPage.adjustmentDollarsLabel}</span>
                                   <input type="number" step="1" min="-9999" value={edit.adjustment} disabled={isPaid}
                                     onChange={e => setEdit(row.userId, 'adjustment', e.target.value)}
                                     className="w-20 px-2 py-1 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] text-center focus:outline-none focus:border-[#4f8ef7] disabled:opacity-40 transition-colors"
@@ -900,11 +900,11 @@ export default function StaffPage() {
                             </div>
                             {isDaily && activeDays.length > 0 && (
                               <div className="text-[9px] text-[#6b7280]">
-                                {activeDays.length} days × ${row.hourlyRate}
+                                {t.staffPage.daysAtRate(activeDays.length, row.hourlyRate ?? 0)}
                                 {parseFloat(edit.adjustment || '0') !== 0 && (
                                   <span className="text-[#a78bfa] ml-1">
                                     {parseFloat(edit.adjustment) > 0 ? '+' : ''}{edit.adjustment}
-                                    {edit.adjustType === 'days' ? ' day' : '$'}
+                                    {edit.adjustType === 'days' ? ` ${t.staffPage.day}` : '$'}
                                   </span>
                                 )}
                               </div>
@@ -915,19 +915,19 @@ export default function StaffPage() {
                           <select value={edit.method} disabled={isPaid}
                             onChange={e => setEdit(row.userId, 'method', e.target.value)}
                             className="px-2 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-40 transition-colors">
-                            {PAY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            {PAY_METHODS.map(m => <option key={m.value} value={m.value}>{t.staffPage.payMethods[m.value]}</option>)}
                           </select>
 
                           {/* Pay button */}
                           {isPaid ? (
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(56,217,169,0.1)] text-[#38d9a9] text-xs font-semibold whitespace-nowrap">
-                              <CheckCircle2 size={12} />Paid
+                              <CheckCircle2 size={12} />{t.staffPage.paid}
                             </div>
                           ) : (
                             <button onClick={() => payOne(row)} disabled={isPaying}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4f8ef7] hover:bg-[#3a7ee0] disabled:opacity-50 text-white text-xs font-semibold transition-all whitespace-nowrap">
                               {isPaying ? <Loader2 size={12} className="animate-spin" /> : <DollarSign size={12} />}
-                              {isPaying ? 'Paying…' : 'Pay'}
+                              {isPaying ? t.staffPage.paying : t.staffPage.pay}
                             </button>
                           )}
                         </div>
@@ -937,7 +937,7 @@ export default function StaffPage() {
                       <div className="px-5 pb-3.5">
                         <input type="text" value={edit.notes} disabled={isPaid}
                           onChange={e => setEdit(row.userId, 'notes', e.target.value)}
-                          placeholder="Notes (optional)…"
+                          placeholder={t.staffPage.notesPlaceholder}
                           className="w-full px-3 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#4b5568] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-40 transition-colors" />
                       </div>
                     </div>
@@ -949,7 +949,7 @@ export default function StaffPage() {
               <div className="px-5 py-3 border-t border-[#2a2f3d] flex justify-between items-center">
                 <div className="text-[10px] text-[#6b7280]">{fmt(fromDate)} – {fmt(toDate)}</div>
                 <div className="text-sm font-bold text-[#38d9a9]">
-                  Total: ${totalPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {t.staffPage.total}: ${totalPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -960,32 +960,32 @@ export default function StaffPage() {
             {/* Sub-tabs */}
             <div className="flex items-end border-b border-[#2a2f3d] px-5 pt-3.5">
               {([
-                { key: 'batches',  label: 'Payroll History' },
-                { key: 'employee', label: 'Employee Report'  },
-              ] as const).map(t => (
-                <button key={t.key} onClick={() => setHistoryTab(t.key)}
+                { key: 'batches',  label: t.staffPage.payrollHistory },
+                { key: 'employee', label: t.staffPage.employeeReport  },
+              ] as const).map(tabItem => (
+                <button key={tabItem.key} onClick={() => setHistoryTab(tabItem.key)}
                   className={`pb-3 mr-6 text-xs font-semibold border-b-2 transition-all ${
-                    historyTab === t.key ? 'border-[#4f8ef7] text-[#4f8ef7]' : 'border-transparent text-[#6b7280] hover:text-[#e8eaf0]'
+                    historyTab === tabItem.key ? 'border-[#4f8ef7] text-[#4f8ef7]' : 'border-transparent text-[#6b7280] hover:text-[#e8eaf0]'
                   }`}>
-                  {t.label}
+                  {tabItem.label}
                 </button>
               ))}
               <div className="ml-auto pb-3 text-[10px] text-[#6b7280]">
                 {historyTab === 'batches'
-                  ? `${historyBatches.length} batches · ${payrollRecords.length} records`
-                  : reportResults.length > 0 ? `${reportResults.length} payments` : ''}
+                  ? t.staffPage.batchesAndRecordsCount(historyBatches.length, payrollRecords.length)
+                  : reportResults.length > 0 ? t.staffPage.paymentsCount(reportResults.length) : ''}
               </div>
             </div>
 
             {historyLoading ? (
               <div className="flex items-center justify-center py-10 gap-2 text-[#6b7280] text-xs">
-                <Loader2 size={14} className="animate-spin" />Loading…
+                <Loader2 size={14} className="animate-spin" />{t.staffPage.loadingEllipsis}
               </div>
 
             ) : historyTab === 'batches' ? (
               /* ════════ Batch History ════════ */
               payrollRecords.length === 0 ? (
-                <div className="text-center py-10 text-[#6b7280] text-xs">No payroll records yet.</div>
+                <div className="text-center py-10 text-[#6b7280] text-xs">{t.staffPage.noPayrollRecordsYet}</div>
               ) : (
                 <div className="divide-y divide-[#2a2f3d]">
                   {historyBatches.map(batch => {
@@ -1006,11 +1006,11 @@ export default function StaffPage() {
                                   {batch.payDate ? fmtFull(batch.payDate) : '—'}
                                 </span>
                                 <span className="text-[10px] text-[#6b7280]">
-                                  Period: {batch.periodFrom ? fmt(batch.periodFrom) : '—'} – {batch.periodTo ? fmt(batch.periodTo) : '—'}
+                                  {t.staffPage.periodRange(batch.periodFrom ? fmt(batch.periodFrom) : '—', batch.periodTo ? fmt(batch.periodTo) : '—')}
                                 </span>
                               </div>
                               <div className="text-[10px] text-[#6b7280] mt-0.5">
-                                {batch.records.length} {batch.records.length === 1 ? 'employee' : 'employees'}
+                                {t.staffPage.employeeOrEmployees(batch.records.length)}
                               </div>
                             </div>
                             <div className="flex items-center gap-3 flex-shrink-0">
@@ -1020,7 +1020,7 @@ export default function StaffPage() {
                               {batchOpen ? <ChevronUp size={14} className="text-[#6b7280]" /> : <ChevronDown size={14} className="text-[#6b7280]" />}
                             </div>
                           </button>
-                          <button onClick={() => { setBatchDelTarget(batch); setBatchDelOpen(true) }} title="Delete entire batch"
+                          <button onClick={() => { setBatchDelTarget(batch); setBatchDelOpen(true) }} title={t.staffPage.deleteEntireBatch}
                             className="mr-3 p-1.5 rounded text-[#6b7280] hover:text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] transition-all opacity-0 group-hover:opacity-100">
                             <Trash2 size={14} />
                           </button>
@@ -1047,26 +1047,26 @@ export default function StaffPage() {
                                           r.paymentType === 'fixed_day' ? 'bg-[rgba(79,142,247,0.15)] text-[#4f8ef7]'  :
                                           'bg-[rgba(245,158,11,0.15)] text-[#f59e0b]'
                                         }`}>
-                                          {r.paymentType === 'per_job' ? 'Per Svc' : r.paymentType === 'fixed_day' ? 'Fixed' : 'Daily'}
+                                          {t.staffPage.payTypeLabelsShort[r.paymentType] || t.staffPage.payTypeLabelsShort.daily}
                                         </span>
                                         <span className="text-[10px] text-[#6b7280] capitalize">{r.paymentMethod}</span>
-                                        {r.daysWorked    != null && <span className="text-[10px] text-[#a78bfa]">{r.daysWorked} days</span>}
-                                        {r.servicesCount != null && r.paymentType === 'per_job' && <span className="text-[10px] text-[#a78bfa]">{r.servicesCount} services</span>}
+                                        {r.daysWorked    != null && <span className="text-[10px] text-[#a78bfa]">{t.staffPage.dayCount(r.daysWorked)}</span>}
+                                        {r.servicesCount != null && r.paymentType === 'per_job' && <span className="text-[10px] text-[#a78bfa]">{t.staffPage.serviceCount(r.servicesCount)}</span>}
                                       </div>
                                     </div>
                                     <span className="text-sm font-bold text-[#38d9a9] flex-shrink-0">
                                       ${Number(r.netPay).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                     <div className="flex items-center gap-0.5 flex-shrink-0">
-                                      <button onClick={() => toggleEmpRow(rowKey)} title="View detail"
+                                      <button onClick={() => toggleEmpRow(rowKey)} title={t.staffPage.viewDetail}
                                         className="p-1 rounded text-[#6b7280] hover:text-[#4f8ef7] hover:bg-[rgba(79,142,247,0.1)] transition-all">
                                         <Eye size={13} />
                                       </button>
-                                      <button onClick={() => openPayEdit(r)} title="Edit"
+                                      <button onClick={() => openPayEdit(r)} title={t.staffPage.edit}
                                         className="p-1 rounded text-[#6b7280] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.1)] transition-all">
                                         <Pencil size={13} />
                                       </button>
-                                      <button onClick={() => { setPayDelTarget(r); setPayDelOpen(true) }} title="Delete"
+                                      <button onClick={() => { setPayDelTarget(r); setPayDelOpen(true) }} title={t.staffPage.delete}
                                         className="p-1 rounded text-[#6b7280] hover:text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] transition-all">
                                         <Trash2 size={13} />
                                       </button>
@@ -1087,7 +1087,7 @@ export default function StaffPage() {
                             {/* Batch footer */}
                             <div className="pl-14 pr-5 py-2.5 flex justify-between items-center">
                               <span className="text-[10px] text-[#6b7280]">
-                                Batch total · {batch.records.length} {batch.records.length === 1 ? 'employee' : 'employees'}
+                                {t.staffPage.batchTotal} · {t.staffPage.employeeOrEmployees(batch.records.length)}
                               </span>
                               <span className="text-sm font-bold text-[#38d9a9]">
                                 ${batch.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -1106,38 +1106,38 @@ export default function StaffPage() {
               <div className="p-5 space-y-4">
                 <div className="flex items-end gap-3 flex-wrap">
                   <div className="flex-1 min-w-52">
-                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">Employee</label>
+                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.employee}</label>
                     <select value={reportStaffId} onChange={e => setReportStaffId(e.target.value)}
                       className="w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors">
-                      <option value="">— Select employee —</option>
+                      <option value="">{t.staffPage.selectEmployee}</option>
                       {staff.filter((s: any) => s.role === 'user').map((s: any) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">From</label>
+                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.from}</label>
                     <input type="date" value={reportFrom} onChange={e => setReportFrom(e.target.value)}
                       className="px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">To</label>
+                    <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.to}</label>
                     <input type="date" value={reportTo} onChange={e => setReportTo(e.target.value)}
                       className="px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
                   </div>
                   {(reportFrom || reportTo) && (
                     <button onClick={() => { setReportFrom(''); setReportTo('') }}
                       className="px-3 py-2 text-[10px] text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
-                      Clear dates
+                      {t.staffPage.clearDates}
                     </button>
                   )}
                 </div>
 
                 {!reportStaffId ? (
-                  <div className="text-center py-10 text-[#6b7280] text-xs">Select an employee to view their payment history.</div>
+                  <div className="text-center py-10 text-[#6b7280] text-xs">{t.staffPage.selectEmployeeHint}</div>
                 ) : reportResults.length === 0 ? (
                   <div className="text-center py-10 text-[#6b7280] text-xs">
-                    No payments found{reportFrom || reportTo ? ' in the selected date range' : ''}.
+                    {reportFrom || reportTo ? t.staffPage.noPaymentsFoundInRange : t.staffPage.noPaymentsFound}
                   </div>
                 ) : (() => {
                   const totalPaid     = reportResults.reduce((s: number, r: any) => s + (Number(r.netPay) || 0), 0)
@@ -1154,17 +1154,17 @@ export default function StaffPage() {
                         <div>
                           <div className="text-sm font-bold text-[#e8eaf0]">{selectedStaff?.name}</div>
                           <div className="text-[10px] text-[#6b7280]">
-                            {reportResults.length} payments · {reportFrom || reportTo ? `${reportFrom || '…'} to ${reportTo || '…'}` : 'all time'}
+                            {t.staffPage.paymentsCount(reportResults.length)} · {reportFrom || reportTo ? `${reportFrom || '…'} to ${reportTo || '…'}` : t.staffPage.allTime}
                           </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-4 gap-3">
                         {[
-                          { label: 'Total Paid',  value: `$${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#38d9a9' },
-                          { label: 'Payments',    value: reportResults.length,  color: '#4f8ef7' },
-                          { label: 'Days Worked', value: totalDays     || '—',  color: '#f59e0b' },
-                          { label: 'Services',    value: totalServices || '—',  color: '#a78bfa' },
+                          { label: t.staffPage.totalPaid,  value: `$${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#38d9a9' },
+                          { label: t.staffPage.payments,    value: reportResults.length,  color: '#4f8ef7' },
+                          { label: t.staffPage.daysWorkedCard, value: totalDays     || '—',  color: '#f59e0b' },
+                          { label: t.staffPage.services,    value: totalServices || '—',  color: '#a78bfa' },
                         ].map(card => (
                           <div key={card.label} className="bg-[#1e2330] border border-[#2a2f3d] rounded-xl p-3 text-center">
                             <div className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider mb-1.5">{card.label}</div>
@@ -1190,23 +1190,23 @@ export default function StaffPage() {
                                   </div>
                                   <div className="text-[10px] text-[#6b7280] mt-0.5 flex items-center gap-2">
                                     <span className="capitalize">{r.paymentMethod}</span>
-                                    {r.daysWorked    != null && <span>· {r.daysWorked} days</span>}
-                                    {r.servicesCount != null && r.paymentType === 'per_job' && <span>· {r.servicesCount} services</span>}
+                                    {r.daysWorked    != null && <span>· {t.staffPage.dayCount(r.daysWorked)}</span>}
+                                    {r.servicesCount != null && r.paymentType === 'per_job' && <span>· {t.staffPage.serviceCount(r.servicesCount)}</span>}
                                   </div>
                                 </div>
                                 <span className="text-sm font-bold text-[#38d9a9] flex-shrink-0">
                                   ${Number(r.netPay).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </span>
                                 <div className="flex items-center gap-0.5 flex-shrink-0">
-                                  <button onClick={() => toggleEmpRow(r.id)} title="View detail"
+                                  <button onClick={() => toggleEmpRow(r.id)} title={t.staffPage.viewDetail}
                                     className="p-1 rounded text-[#6b7280] hover:text-[#4f8ef7] hover:bg-[rgba(79,142,247,0.1)] transition-all">
                                     <Eye size={13} />
                                   </button>
-                                  <button onClick={() => openPayEdit(r)} title="Edit"
+                                  <button onClick={() => openPayEdit(r)} title={t.staffPage.edit}
                                     className="p-1 rounded text-[#6b7280] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.1)] transition-all">
                                     <Pencil size={13} />
                                   </button>
-                                  <button onClick={() => { setPayDelTarget(r); setPayDelOpen(true) }} title="Delete"
+                                  <button onClick={() => { setPayDelTarget(r); setPayDelOpen(true) }} title={t.staffPage.delete}
                                     className="p-1 rounded text-[#6b7280] hover:text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] transition-all">
                                     <Trash2 size={13} />
                                   </button>
@@ -1221,7 +1221,7 @@ export default function StaffPage() {
                           )
                         })}
                         <div className="px-4 py-2.5 flex justify-between items-center border-t border-[#2a2f3d]">
-                          <span className="text-[10px] text-[#6b7280]">{reportResults.length} payments total</span>
+                          <span className="text-[10px] text-[#6b7280]">{t.staffPage.paymentsTotalCount(reportResults.length)}</span>
                           <span className="text-sm font-bold text-[#38d9a9]">
                             ${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
@@ -1250,7 +1250,7 @@ export default function StaffPage() {
           <div className="absolute inset-0 bg-black/75" onClick={() => setPayEditOpen(false)} />
           <div className="relative bg-[#161922] border border-[#2a2f3d] rounded-2xl w-full max-w-sm p-6 shadow-[0_32px_100px_rgba(0,0,0,0.6)]">
             <div className="flex items-center justify-between mb-5">
-              <div className="text-sm font-bold text-[#e8eaf0]">Edit Payroll Record</div>
+              <div className="text-sm font-bold text-[#e8eaf0]">{t.staffPage.editPayrollRecord}</div>
               <button onClick={() => setPayEditOpen(false)}
                 className="p-1.5 rounded-lg text-[#6b7280] hover:text-[#e8eaf0] hover:bg-[#252b3b] transition-all">
                 <X size={14} />
@@ -1259,28 +1259,28 @@ export default function StaffPage() {
             <div className="text-[10px] text-[#6b7280] mb-4">{payEditRecord.staff?.name}</div>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">Pay Date</label>
+                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.payDate}</label>
                 <input type="date" value={payEditForm.payDate}
                   onChange={e => setPayEditForm(f => ({ ...f, payDate: e.target.value }))}
                   className="w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">Payment Method</label>
+                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.paymentMethod}</label>
                 <select value={payEditForm.paymentMethod}
                   onChange={e => setPayEditForm(f => ({ ...f, paymentMethod: e.target.value }))}
                   className="w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors">
-                  {PAY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  {PAY_METHODS.map(m => <option key={m.value} value={m.value}>{t.staffPage.payMethods[m.value]}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">Amount ($)</label>
+                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.amountDollars}</label>
                 <input type="number" step="0.01" min="0" value={payEditForm.netPay}
                   onChange={e => setPayEditForm(f => ({ ...f, netPay: e.target.value }))}
                   className="w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">Note</label>
-                <input type="text" value={payEditForm.note} placeholder="Optional note…"
+                <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5">{t.staffPage.note}</label>
+                <input type="text" value={payEditForm.note} placeholder={t.staffPage.optionalNotePlaceholder}
                   onChange={e => setPayEditForm(f => ({ ...f, note: e.target.value }))}
                   className="w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors" />
               </div>
@@ -1288,11 +1288,11 @@ export default function StaffPage() {
             <div className="flex gap-3 mt-6">
               <button onClick={() => setPayEditOpen(false)}
                 className="flex-1 py-2 rounded-lg text-xs font-semibold border border-[#2a2f3d] text-[#9ca3af] hover:text-[#e8eaf0] hover:border-[#4f8ef7] transition-all">
-                Cancel
+                {t.staffPage.cancel}
               </button>
               <button onClick={savePayEdit} disabled={payEditSaving}
                 className="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-[#4f8ef7] hover:bg-[#3a7ee0] disabled:opacity-50 transition-all">
-                {payEditSaving ? 'Saving…' : 'Save'}
+                {payEditSaving ? t.staffPage.saving : t.staffPage.save}
               </button>
             </div>
           </div>
@@ -1301,17 +1301,21 @@ export default function StaffPage() {
 
       <ConfirmModal
         open={payDelOpen}
-        title="Delete Payroll Record"
-        message={`Delete payment of $${Number(payDelTarget?.netPay || 0).toFixed(2)} for ${payDelTarget?.staff?.name}?\n\nThis will also remove the linked expense. This cannot be undone.`}
-        confirmLabel={payDeleting ? 'Deleting…' : 'Delete'}
+        title={t.staffPage.deletePayrollRecordTitle}
+        message={t.staffPage.deletePayrollRecordMessage(Number(payDelTarget?.netPay || 0).toFixed(2), payDelTarget?.staff?.name || '')}
+        confirmLabel={payDeleting ? t.staffPage.deletingEllipsis : t.staffPage.delete}
         onConfirm={confirmPayDelete}
         onCancel={() => { setPayDelOpen(false); setPayDelTarget(null) }}
       />
       <ConfirmModal
         open={batchDelOpen}
-        title="Delete Entire Payroll Batch"
-        message={`Delete all ${batchDelTarget?.records?.length || 0} records in this batch?\n\nPay date: ${batchDelTarget?.payDate ? fmtFull(batchDelTarget.payDate) : '—'}\nTotal: $${(batchDelTarget?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\nThis will also remove linked expenses. This cannot be undone.`}
-        confirmLabel={batchDeleting ? 'Deleting…' : 'Delete Batch'}
+        title={t.staffPage.deleteBatchTitle}
+        message={t.staffPage.deleteBatchMessage(
+          batchDelTarget?.records?.length || 0,
+          batchDelTarget?.payDate ? fmtFull(batchDelTarget.payDate) : '—',
+          (batchDelTarget?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
+        )}
+        confirmLabel={batchDeleting ? t.staffPage.deletingEllipsis : t.staffPage.deleteBatch}
         onConfirm={confirmBatchDelete}
         onCancel={() => { setBatchDelOpen(false); setBatchDelTarget(null) }}
       />

@@ -11,6 +11,7 @@ import { useSyncPoll } from '@/lib/useSyncPoll'
 import CountUp from '@/components/ui/CountUp'
 import ErrorBanner from '@/components/ErrorBanner'
 import { localDateStr } from '@/lib/local-date'
+import { useI18n } from '@/lib/i18n'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -20,21 +21,21 @@ function fmt12h(t?: string | null) {
 }
 
 const COLS = [
-  { key: 'id',        label: 'ID' },
-  { key: 'date',      label: 'Date' },
-  { key: 'time',      label: 'Time' },
-  { key: 'client',    label: 'Client' },
-  { key: 'address',   label: 'Address' },
-  { key: 'unit',      label: 'Unit' },
-  { key: 'roomSize',  label: 'Room Size' },
-  { key: 'type',      label: 'Type' },
-  { key: 'basePrice', label: 'Price' },
-  { key: 'addFee',    label: 'Add. Fee' },
-  { key: 'total',     label: 'Total' },
-  { key: 'status',    label: 'Status' },
-  { key: 'staff',     label: 'Staff' },
-  { key: 'payment',   label: 'Payment' },
-  { key: 'invoice',   label: 'Invoice #' },
+  { key: 'id' },
+  { key: 'date' },
+  { key: 'time' },
+  { key: 'client' },
+  { key: 'address' },
+  { key: 'unit' },
+  { key: 'roomSize' },
+  { key: 'type' },
+  { key: 'basePrice' },
+  { key: 'addFee' },
+  { key: 'total' },
+  { key: 'status' },
+  { key: 'staff' },
+  { key: 'payment' },
+  { key: 'invoice' },
 ] as const
 type ColKey = typeof COLS[number]['key']
 
@@ -47,16 +48,10 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: '#f87171',
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  in_progress: 'In Progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
-
 const TYPE_COLOR = '#4f8ef7'
 
 export default function ServicesPage() {
+  const { t } = useI18n()
   const [services, setServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -129,19 +124,19 @@ export default function ServicesPage() {
 
   function exportToExcel() {
     const rows = filtered.map(s => ({
-      'ID':             `#${s.serviceNumber}`,
-      'Date':           s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '',
-      'Time':           fmt12h(s.serviceTime),
-      'Client':         s.client?.name || '',
-      'Address':        s.address || '',
-      'Unit':           s.unit || '',
-      'Room Size':      s.roomSize || '',
-      'Type':           s.type || '',
-      'Base Price':     Number(s.basePrice) || 0,
-      'Additional Fee': Number(s.additionalFee) || 0,
-      'Total':          Number(s.total) || 0,
-      'Status':         s.status || '',
-      'Staff':          s.staff?.map((st: any) => st.user?.name).join(', ') || '',
+      [t.servicesPage.columnLabels.id]:             `#${s.serviceNumber}`,
+      [t.servicesPage.columnLabels.date]:           s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '',
+      [t.servicesPage.columnLabels.time]:           fmt12h(s.serviceTime),
+      [t.servicesPage.columnLabels.client]:         s.client?.name || '',
+      [t.servicesPage.columnLabels.address]:        s.address || '',
+      [t.servicesPage.columnLabels.unit]:           s.unit || '',
+      [t.servicesPage.columnLabels.roomSize]:       s.roomSize || '',
+      [t.servicesPage.columnLabels.type]:           s.type || '',
+      [t.servicesPage.excelHeaders.basePrice]:      Number(s.basePrice) || 0,
+      [t.servicesPage.excelHeaders.additionalFee]:  Number(s.additionalFee) || 0,
+      [t.servicesPage.columnLabels.total]:          Number(s.total) || 0,
+      [t.servicesPage.columnLabels.status]:         s.status || '',
+      [t.servicesPage.columnLabels.staff]:          s.staff?.map((st: any) => st.user?.name).join(', ') || '',
     }))
 
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -158,11 +153,11 @@ export default function ServicesPage() {
     fetch('/api/services')
       .then(async res => {
         const data = await res.json()
-        if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar los servicios.')
+        if (!res.ok) throw new Error(data?.error || t.servicesPage.loadError)
         return data
       })
       .then(data => { setServices(data); setLoadError(null); setLoading(false) })
-      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los servicios.'); setLoading(false) })
+      .catch((err) => { setLoadError(err.message || t.servicesPage.loadError); setLoading(false) })
   }
 
   useEffect(() => { loadServices() }, [])
@@ -195,7 +190,7 @@ export default function ServicesPage() {
       const data = await res.json()
       if (!res.ok) {
         setConfirmOpen(false)
-        alert(data.error || 'Failed to delete service')
+        alert(data.error || t.servicesPage.failedToDeleteService)
         return
       }
       // Elimina del state local inmediatamente — sin reload
@@ -203,7 +198,7 @@ export default function ServicesPage() {
       setConfirmOpen(false)
       setConfirmTarget(null)
     } catch {
-      alert('Failed to delete service')
+      alert(t.servicesPage.failedToDeleteService)
     } finally {
       setDeleting(false)
     }
@@ -300,12 +295,12 @@ export default function ServicesPage() {
         body: JSON.stringify({ ids }),
       })
       const data = await res.json()
-      if (!res.ok) { setBulkConfirmOpen(false); alert(data.error || 'Failed to delete'); return }
+      if (!res.ok) { setBulkConfirmOpen(false); alert(data.error || t.servicesPage.failedToDeleteServices); return }
       setServices(prev => prev.filter(s => !ids.includes(s.id)))
       setSelectedIds(new Set())
       setBulkConfirmOpen(false)
     } catch {
-      alert('Failed to delete services')
+      alert(t.servicesPage.failedToDeleteServices)
     } finally {
       setBulkDeleting(false)
     }
@@ -317,35 +312,35 @@ export default function ServicesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">Services</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Complete service management</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.services}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.servicesPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={exportToExcel}
             disabled={filtered.length === 0}
-            title="Export to Excel"
+            title={t.servicesPage.exportExcelTitle}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#2a2f3d] text-[#6b7280] hover:text-[#4f8ef7] hover:border-[#4f8ef7] disabled:opacity-40 transition-all text-xs font-semibold"
           >
-            <Download size={13} />Excel
+            <Download size={13} />{t.servicesPage.excel}
           </button>
 
           {/* Column picker */}
           <div className="relative" ref={colPickerRef}>
             <button
               onClick={() => setColPickerOpen(v => !v)}
-              title="Show/hide columns"
+              title={t.servicesPage.showHideColumnsTitle}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
                 colPickerOpen
                   ? 'border-[#4f8ef7] text-[#4f8ef7] bg-[rgba(79,142,247,0.08)]'
                   : 'border-[#2a2f3d] text-[#6b7280] hover:text-[#4f8ef7] hover:border-[#4f8ef7]'
               }`}
             >
-              <SlidersHorizontal size={13} />Columns
+              <SlidersHorizontal size={13} />{t.servicesPage.columnsButton}
             </button>
             {colPickerOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-[#1e2330] border border-[#2a2f3d] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-3 min-w-[160px]">
-                <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">Visible Columns</div>
+                <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-2">{t.servicesPage.visibleColumns}</div>
                 {COLS.map(c => (
                   <label key={c.key} className="flex items-center gap-2 py-1 cursor-pointer group">
                     <input
@@ -354,7 +349,7 @@ export default function ServicesPage() {
                       onChange={() => toggleCol(c.key)}
                       className="accent-[#4f8ef7] w-3 h-3"
                     />
-                    <span className="text-xs text-[#9ca3af] group-hover:text-[#e8eaf0] transition-colors">{c.label}</span>
+                    <span className="text-xs text-[#9ca3af] group-hover:text-[#e8eaf0] transition-colors">{t.servicesPage.columnLabels[c.key]}</span>
                   </label>
                 ))}
               </div>
@@ -366,14 +361,14 @@ export default function ServicesPage() {
               onClick={() => setBulkConfirmOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#f87171] text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] text-xs font-semibold transition-all"
             >
-              <Trash2 size={13} />Delete {selectedCount}
+              <Trash2 size={13} />{t.servicesPage.deleteCount(selectedCount)}
             </button>
           )}
           <button
             onClick={() => setModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-semibold rounded-lg transition-colors">
             <Plus size={15} />
-            New Service
+            {t.servicesPage.newService}
           </button>
         </div>
       </div>
@@ -382,16 +377,16 @@ export default function ServicesPage() {
       {!loading && (
         <div className="grid grid-cols-6 gap-2">
           {[
-            { label: 'Total Services', value: stats.total,               color: '#6b7280', bg: 'rgba(107,114,128,0.1)'  },
-            { label: 'Pending',     value: stats.counts.pending,      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'   },
-            { label: 'In Progress', value: stats.counts.in_progress,  color: '#4f8ef7', bg: 'rgba(79,142,247,0.1)'   },
-            { label: 'Completed',   value: stats.counts.completed,    color: '#26BD97', bg: 'rgba(38,189,151,0.1)'   },
-            { label: 'Cancelled',   value: stats.counts.cancelled,    color: '#f87171', bg: 'rgba(248,113,113,0.1)'  },
+            { statusKey: 'all',         label: t.servicesPage.totalServices, value: stats.total,               color: '#6b7280', bg: 'rgba(107,114,128,0.1)'  },
+            { statusKey: 'pending',     label: t.status.pending,             value: stats.counts.pending,      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'   },
+            { statusKey: 'in_progress', label: t.status.in_progress,         value: stats.counts.in_progress,  color: '#4f8ef7', bg: 'rgba(79,142,247,0.1)'   },
+            { statusKey: 'completed',   label: t.status.completed,           value: stats.counts.completed,    color: '#26BD97', bg: 'rgba(38,189,151,0.1)'   },
+            { statusKey: 'cancelled',   label: t.status.cancelled,           value: stats.counts.cancelled,    color: '#f87171', bg: 'rgba(248,113,113,0.1)'  },
           ].map(card => (
-            <div key={card.label}
+            <div key={card.statusKey}
               className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-opacity-60 transition-all"
               style={{ borderColor: `${card.color}40` }}
-              onClick={() => setFilter(card.label === 'Total Services' ? 'all' : Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k] === card.label) || 'all')}
+              onClick={() => setFilter(card.statusKey)}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
                 style={{ background: card.bg, color: card.color }}>
@@ -407,7 +402,7 @@ export default function ServicesPage() {
               style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
               <CountUp value={stats.completedUninvoiced} />
             </div>
-            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">Completed not Invoiced</div>
+            <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">{t.servicesPage.completedNotInvoiced}</div>
           </div>
         </div>
       )}
@@ -419,7 +414,7 @@ export default function ServicesPage() {
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" />
             <input
               type="text"
-              placeholder="Search services..."
+              placeholder={t.servicesPage.searchPlaceholder}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-8 pr-7 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] w-48"
@@ -441,11 +436,11 @@ export default function ServicesPage() {
               }}
               className="pl-3 pr-7 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors appearance-none w-48"
             >
-              <option value="">All clients</option>
+              <option value="">{t.servicesPage.allClients}</option>
               {uniqueClients.map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
-              <option value="__add_client__">+ New Client…</option>
+              <option value="__add_client__">{t.servicesPage.newClientOption}</option>
             </select>
             <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] text-[10px]">▾</span>
           </div>
@@ -475,9 +470,9 @@ export default function ServicesPage() {
           {/* Invoice filter toggle */}
           <div className="flex items-center bg-[#1e2330] border border-[#2a2f3d] rounded-lg overflow-hidden">
             {([
-              { key: 'all',        label: 'All' },
-              { key: 'uninvoiced', label: 'No Invoice' },
-              { key: 'invoiced',   label: 'Invoiced' },
+              { key: 'all',        label: t.servicesPage.invoiceFilter.all },
+              { key: 'uninvoiced', label: t.servicesPage.invoiceFilter.noInvoice },
+              { key: 'invoiced',   label: t.servicesPage.invoiceFilter.invoiced },
             ] as const).map(opt => (
               <button
                 key={opt.key}
@@ -499,7 +494,7 @@ export default function ServicesPage() {
               onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all') }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-[#6b7280] hover:text-[#f87171] border border-[#2a2f3d] hover:border-[#f87171] transition-all"
             >
-              <X size={11} />Clear
+              <X size={11} />{t.servicesPage.clear}
             </button>
           )}
         </div>
@@ -519,22 +514,22 @@ export default function ServicesPage() {
                 />
               </th>
               {([
-                { colKey: 'id',        label: 'ID',        sk: 'serviceNumber' },
-                { colKey: 'date',      label: 'Date',      sk: 'serviceDate'   },
-                { colKey: 'time',      label: 'Time',      sk: 'time'          },
-                { colKey: 'client',    label: 'Client',    sk: 'client'        },
-                { colKey: 'address',   label: 'Address',   sk: 'address'       },
-                { colKey: 'unit',      label: 'Unit',      sk: null            },
-                { colKey: 'roomSize',  label: 'Room Size', sk: 'roomSize'      },
-                { colKey: 'type',      label: 'Type',      sk: 'type'          },
-                { colKey: 'basePrice', label: 'Price',     sk: 'basePrice'     },
-                { colKey: 'addFee',    label: 'Add. Fee',  sk: 'addFee'        },
-                { colKey: 'total',     label: 'Total',     sk: 'total'         },
-                { colKey: 'status',    label: 'Status',    sk: 'status'        },
-                { colKey: 'staff',     label: 'Staff',     sk: null            },
-                { colKey: 'payment',   label: 'Payment',   sk: 'payment'       },
-                { colKey: 'invoice',   label: 'Invoice #', sk: null            },
-              ] as const).map(({ colKey, label, sk }) => col(colKey as any) && (
+                { colKey: 'id',        sk: 'serviceNumber' },
+                { colKey: 'date',      sk: 'serviceDate'   },
+                { colKey: 'time',      sk: 'time'          },
+                { colKey: 'client',    sk: 'client'        },
+                { colKey: 'address',   sk: 'address'       },
+                { colKey: 'unit',      sk: null            },
+                { colKey: 'roomSize',  sk: 'roomSize'      },
+                { colKey: 'type',      sk: 'type'          },
+                { colKey: 'basePrice', sk: 'basePrice'     },
+                { colKey: 'addFee',    sk: 'addFee'        },
+                { colKey: 'total',     sk: 'total'         },
+                { colKey: 'status',    sk: 'status'        },
+                { colKey: 'staff',     sk: null            },
+                { colKey: 'payment',   sk: 'payment'       },
+                { colKey: 'invoice',   sk: null            },
+              ] as const).map(({ colKey, sk }) => col(colKey as any) && (
                 <th
                   key={colKey}
                   onClick={sk ? () => {
@@ -545,7 +540,7 @@ export default function ServicesPage() {
                     sk ? 'cursor-pointer hover:text-[#e8eaf0] transition-colors' : ''
                   } ${sortKey === sk ? 'text-[#4f8ef7]' : 'text-[#6b7280]'}`}
                 >
-                  {label}{sk && sortKey === sk ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                  {t.servicesPage.columnLabels[colKey]}{sk && sortKey === sk ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
                 </th>
               ))}
               <th className="px-3 py-2.5" />
@@ -554,12 +549,12 @@ export default function ServicesPage() {
           <tbody ref={tableBodyRef}>
             {loading ? (
               <tr>
-                <td colSpan={visibleCols.size + 2} className="text-center py-10 text-[#6b7280] text-xs">Loading...</td>
+                <td colSpan={visibleCols.size + 2} className="text-center py-10 text-[#6b7280] text-xs">{t.servicesPage.loading}</td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={visibleCols.size + 2} className="text-center py-10 text-[#6b7280] text-xs">
-                  No services found. Create your first service to get started.
+                  {t.servicesPage.noServicesFound}
                 </td>
               </tr>
             ) : (
@@ -582,7 +577,7 @@ export default function ServicesPage() {
                     {col('id') && <td className="px-3 py-2.5 text-xs text-[#4f8ef7] font-mono font-medium">
                       #{s.serviceNumber}
                       {s.invoicedAt && (
-                        <span className="ml-1 text-[9px] text-[#f59e0b] bg-[#f59e0b15] px-1 py-0.5 rounded">inv</span>
+                        <span className="ml-1 text-[9px] text-[#f59e0b] bg-[#f59e0b15] px-1 py-0.5 rounded">{t.servicesPage.invoicedBadge}</span>
                       )}
                     </td>}
                     {col('date') && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
@@ -605,9 +600,9 @@ export default function ServicesPage() {
                     </td>}
                     {col('total')     && <td className="px-3 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">${s.total}</td>}
                     {col('status') && <td className="px-3 py-2.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
                         style={{ backgroundColor: `${color}20`, color }}>
-                        {STATUS_LABELS[s.status]}
+                        {t.status[s.status] || s.status}
                       </span>
                     </td>}
                     {col('staff') && <td className="px-3 py-2.5 text-xs text-[#9ca3af]">
@@ -625,25 +620,25 @@ export default function ServicesPage() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => { setSelectedService(s); setDetailOpen(true) }}
-                          title="View"
+                          title={t.servicesPage.actions.view}
                           className="p-1 rounded text-[#6b7280] hover:text-[#4f8ef7] hover:bg-[rgba(79,142,247,0.1)] transition-all">
                           <Eye size={13} />
                         </button>
                         <button
                           onClick={() => { setSelectedService(s); setDetailOpen(true) }}
-                          title="Edit"
+                          title={t.servicesPage.actions.edit}
                           className="p-1 rounded text-[#6b7280] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.1)] transition-all">
                           <Pencil size={13} />
                         </button>
                         <button
                           onClick={() => handleDuplicate(s)}
-                          title="Duplicate"
+                          title={t.servicesPage.actions.duplicate}
                           className="p-1 rounded text-[#6b7280] hover:text-[#38d9a9] hover:bg-[rgba(56,217,169,0.1)] transition-all">
                           <Copy size={13} />
                         </button>
                         <button
                           onClick={() => requestDelete(s)}
-                          title="Delete"
+                          title={t.servicesPage.actions.delete}
                           className="p-1 rounded text-[#6b7280] hover:text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] transition-all">
                           <Trash2 size={13} />
                         </button>
@@ -660,12 +655,12 @@ export default function ServicesPage() {
       {/* Count + filtered total */}
       {!loading && (
         <div className="flex items-center gap-4 text-xs text-[#6b7280]">
-          <span>Showing <span className="font-semibold text-[#e8eaf0]">{filtered.length}</span> of {services.length} services</span>
+          <span>{t.servicesPage.showingLabel} <span className="font-semibold text-[#e8eaf0]">{filtered.length}</span> {t.servicesPage.ofServices(services.length)}</span>
           {filtered.length > 0 && (
             <>
               <span className="text-[#2a2f3d]">|</span>
               <span>
-                Total:{' '}
+                {t.servicesPage.total}{' '}
                 <span className="font-bold text-[#38d9a9] font-mono">
                   ${filtered.reduce((s, r) => s + (Number(r.total) || 0), 0)
                     .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -691,21 +686,21 @@ export default function ServicesPage() {
       />
       <ConfirmModal
         open={confirmOpen}
-        title={`Delete Service #${confirmTarget?.serviceNumber}`}
+        title={t.servicesPage.deleteServiceTitle(confirmTarget?.serviceNumber)}
         message={
           confirmTarget?.invoicedAt
-            ? `This service is part of an invoice.\n\nAre you sure you want to delete it? This may affect billing records.`
-            : `Are you sure you want to delete service #${confirmTarget?.serviceNumber}?\n\nThis action cannot be undone.`
+            ? t.servicesPage.deleteInvoicedMessage
+            : t.servicesPage.deleteServiceMessage(confirmTarget?.serviceNumber)
         }
-        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
+        confirmLabel={deleting ? t.servicesPage.deleting : t.servicesPage.actions.delete}
         onConfirm={handleConfirmDelete}
         onCancel={() => { setConfirmOpen(false); setConfirmTarget(null) }}
       />
       <ConfirmModal
         open={bulkConfirmOpen}
-        title={`Delete ${selectedCount} Service${selectedCount !== 1 ? 's' : ''}`}
-        message={`Are you sure you want to delete ${selectedCount} selected service${selectedCount !== 1 ? 's' : ''}?\n\nThis action cannot be undone.`}
-        confirmLabel={bulkDeleting ? 'Deleting...' : `Delete ${selectedCount}`}
+        title={t.servicesPage.deleteServicesTitle(selectedCount)}
+        message={t.servicesPage.deleteServicesMessage(selectedCount)}
+        confirmLabel={bulkDeleting ? t.servicesPage.deleting : t.servicesPage.deleteCount(selectedCount)}
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkConfirmOpen(false)}
       />

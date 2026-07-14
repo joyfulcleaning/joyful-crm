@@ -8,6 +8,7 @@ import {
   CheckCircle, Layers, ClipboardList, UserCheck,
 } from 'lucide-react'
 import ErrorBanner from '@/components/ErrorBanner'
+import { useI18n } from '@/lib/i18n'
 
 // ─── Date helpers ────────────────────────────────────────────────
 const TODAY = new Date()
@@ -28,15 +29,15 @@ function prevMonth(d: Date): { from: Date; to: Date } {
   return { from, to }
 }
 
-const PRESETS: { key: string; label: string; getRange: () => { from: Date; to: Date } }[] = [
-  { key: 'this_week',  label: 'This Week',    getRange: () => ({ from: startOf(TODAY, 'week'),  to: TODAY }) },
-  { key: 'this_month', label: 'This Month',   getRange: () => ({ from: startOf(TODAY, 'month'), to: TODAY }) },
-  { key: 'last_month', label: 'Last Month',   getRange: () => prevMonth(TODAY) },
-  { key: 'last_30',    label: 'Last 30 Days', getRange: () => ({ from: subDays(TODAY, 30), to: TODAY }) },
-  { key: 'last_90',    label: 'Last 90 Days', getRange: () => ({ from: subDays(TODAY, 90), to: TODAY }) },
-  { key: 'this_year',  label: 'This Year',    getRange: () => ({ from: startOf(TODAY, 'year'),  to: TODAY }) },
-  { key: 'all_time',   label: 'All Time',     getRange: () => ({ from: new Date('2020-01-01'), to: TODAY }) },
-  { key: 'custom',     label: 'Custom',       getRange: () => ({ from: subDays(TODAY, 30), to: TODAY }) },
+const PRESETS: { key: string; labelKey: string; label: string; getRange: () => { from: Date; to: Date } }[] = [
+  { key: 'this_week',  labelKey: 'thisWeek',  label: 'This Week',    getRange: () => ({ from: startOf(TODAY, 'week'),  to: TODAY }) },
+  { key: 'this_month', labelKey: 'thisMonth', label: 'This Month',   getRange: () => ({ from: startOf(TODAY, 'month'), to: TODAY }) },
+  { key: 'last_month', labelKey: 'lastMonth', label: 'Last Month',   getRange: () => prevMonth(TODAY) },
+  { key: 'last_30',    labelKey: 'last30',    label: 'Last 30 Days', getRange: () => ({ from: subDays(TODAY, 30), to: TODAY }) },
+  { key: 'last_90',    labelKey: 'last90',    label: 'Last 90 Days', getRange: () => ({ from: subDays(TODAY, 90), to: TODAY }) },
+  { key: 'this_year',  labelKey: 'thisYear',  label: 'This Year',    getRange: () => ({ from: startOf(TODAY, 'year'),  to: TODAY }) },
+  { key: 'all_time',   labelKey: 'allTime',   label: 'All Time',     getRange: () => ({ from: new Date('2020-01-01'), to: TODAY }) },
+  { key: 'custom',     labelKey: 'custom',    label: 'Custom',       getRange: () => ({ from: subDays(TODAY, 30), to: TODAY }) },
 ]
 
 // ─── Export utilities ─────────────────────────────────────────────
@@ -396,6 +397,7 @@ type RawData = Record<DataKey, any[]>
 
 // ─── Component ────────────────────────────────────────────────────
 export default function ExportPage() {
+  const { t } = useI18n()
   const [preset, setPreset]         = useState('last_90')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
@@ -428,7 +430,7 @@ export default function ExportPage() {
         .catch(() => { failed.push(key); return [key, []] as const })
     )).then((results) => {
       setRaw(Object.fromEntries(results) as unknown as RawData)
-      setLoadError(failed.length > 0 ? `No se pudo cargar: ${failed.join(', ')}. Los datos exportados podrían estar incompletos.` : null)
+      setLoadError(failed.length > 0 ? t.exportPage.loadErrorMsg(failed.join(', ')) : null)
       setLoading(false)
     })
   }
@@ -489,7 +491,7 @@ export default function ExportPage() {
       const name = `${report.label.replace(/ /g, '_')}_${stamp()}`
       const sub  = `Period: ${rangeLabel()} — ${rows.length} records`
 
-      if (!rows.length) { alert('No data found for the selected range.'); return }
+      if (!rows.length) { alert(t.exportPage.noDataAlert); return }
 
       if (format === 'csv') {
         downloadCSV(rows, `${name}.csv`)
@@ -551,35 +553,35 @@ export default function ExportPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#e8eaf0]">Export Center</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">Download reports as CSV, Excel or PDF</p>
+          <h1 className="text-lg font-bold text-[#e8eaf0]">{t.exportPage.title}</h1>
+          <p className="text-xs text-[#6b7280] mt-0.5">{t.exportPage.subtitle}</p>
         </div>
         {loading && (
           <div className="text-xs text-[#6b7280] flex items-center gap-1.5">
-            <RotateCcw size={12} className="animate-spin" /> Loading data…
+            <RotateCcw size={12} className="animate-spin" /> {t.exportPage.loadingData}
           </div>
         )}
       </div>
 
       {/* Date Range */}
       <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4">
-        <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-3">Date Range</div>
+        <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-3">{t.exportPage.dateRangeTitle}</div>
         <div className="flex gap-2 flex-wrap">
           {PRESETS.map(p => (
             <button key={p.key} onClick={() => setPreset(p.key)} className={btnCls(preset === p.key)}>
-              {p.label}
+              {t.exportPage.presets[p.labelKey as keyof typeof t.exportPage.presets]}
             </button>
           ))}
         </div>
         {preset === 'custom' && (
           <div className="flex gap-3 mt-3">
             <div>
-              <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1">From</label>
+              <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1">{t.exportPage.fromLabel}</label>
               <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
                 className="px-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]" />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1">To</label>
+              <label className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1">{t.exportPage.toLabel}</label>
               <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
                 className="px-3 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7]" />
             </div>
@@ -590,14 +592,14 @@ export default function ExportPage() {
       {/* Summary bar */}
       {!loading && (
         <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-5 py-3 flex items-center gap-6">
-          <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider shrink-0">In this period</div>
+          <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider shrink-0">{t.exportPage.inThisPeriod}</div>
           <div className="flex gap-5 flex-wrap">
             {REPORTS.map(r => (
               <div key={r.id} className="flex items-center gap-1.5">
                 <span className="text-lg font-bold" style={{ color: r.color, fontFamily: 'var(--font-display)' }}>
                   {counts[r.id]}
                 </span>
-                <span className="text-[10px] text-[#6b7280]">{r.label}</span>
+                <span className="text-[10px] text-[#6b7280]">{t.exportPage.reports[r.id].label}</span>
               </div>
             ))}
           </div>
@@ -624,8 +626,8 @@ export default function ExportPage() {
                     <Icon size={16} style={{ color: report.color }} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-[#e8eaf0] leading-tight">{report.label}</div>
-                    <div className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{report.desc}</div>
+                    <div className="text-sm font-semibold text-[#e8eaf0] leading-tight">{t.exportPage.reports[report.id].label}</div>
+                    <div className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{t.exportPage.reports[report.id].desc}</div>
                   </div>
                 </div>
                 <div className="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ml-1.5"
@@ -639,18 +641,18 @@ export default function ExportPage() {
                 <div className="flex items-center gap-1 mb-2">
                   <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded border"
                     style={{ borderColor: report.color + '40', color: report.color, background: report.color + '0f' }}>
-                    + {report.secondary.label}
+                    + {t.exportPage.reports[report.id].secondaryLabel}
                   </span>
-                  <span className="text-[9px] text-[#6b7280]">in Excel</span>
+                  <span className="text-[9px] text-[#6b7280]">{t.exportPage.inExcel}</span>
                 </div>
               )}
 
               {/* Format buttons */}
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { fmt: 'csv'   as const, label: 'CSV',   Icon: FileText        },
-                  { fmt: 'excel' as const, label: 'Excel', Icon: FileSpreadsheet  },
-                  { fmt: 'pdf'   as const, label: 'PDF',   Icon: Download         },
+                  { fmt: 'csv'   as const, label: t.exportPage.formats.csv,   Icon: FileText        },
+                  { fmt: 'excel' as const, label: t.exportPage.formats.excel, Icon: FileSpreadsheet  },
+                  { fmt: 'pdf'   as const, label: t.exportPage.formats.pdf,   Icon: Download         },
                 ].map(({ fmt, label, Icon: FmtIcon }) => (
                   <button
                     key={fmt}
@@ -665,7 +667,7 @@ export default function ExportPage() {
                       } disabled:opacity-40`}
                   >
                     {isDone(fmt)
-                      ? <><CheckCircle size={10} /> Done</>
+                      ? <><CheckCircle size={10} /> {t.exportPage.done}</>
                       : isExp(fmt)
                         ? <><RotateCcw size={10} className="animate-spin" /> …</>
                         : <><FmtIcon size={10} /> {label}</>
@@ -685,9 +687,9 @@ export default function ExportPage() {
             <Layers size={18} className="text-[#4f8ef7]" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-[#e8eaf0]">Export All</div>
+            <div className="text-sm font-semibold text-[#e8eaf0]">{t.exportPage.exportAllTitle}</div>
             <div className="text-[10px] text-[#6b7280] mt-0.5">
-              One Excel file with {totalSheets} sheets — all reports for the selected period
+              {t.exportPage.exportAllDesc(totalSheets)}
             </div>
           </div>
         </div>
@@ -701,10 +703,10 @@ export default function ExportPage() {
             } disabled:opacity-50`}
         >
           {done.includes('all')
-            ? <><CheckCircle size={13} /> Downloaded</>
+            ? <><CheckCircle size={13} /> {t.exportPage.downloaded}</>
             : exporting === 'all'
-              ? <><RotateCcw size={13} className="animate-spin" /> Generating…</>
-              : <><FileSpreadsheet size={13} /> Download .xlsx</>
+              ? <><RotateCcw size={13} className="animate-spin" /> {t.exportPage.generating}</>
+              : <><FileSpreadsheet size={13} /> {t.exportPage.downloadXlsx}</>
           }
         </button>
       </div>
@@ -712,9 +714,9 @@ export default function ExportPage() {
       {/* Tips */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: '📄', title: 'CSV',           body: 'Compatible with any software. Opens directly in Excel, Google Sheets, or Numbers.' },
-          { icon: '📊', title: 'Excel (.xlsx)',  body: 'Unified reports export 2 sheets in the same file — primary data + sub-report.' },
-          { icon: '🖨️', title: 'PDF',            body: 'Opens the print dialog. Save as PDF or print directly.' },
+          { icon: '📄', title: t.exportPage.tips.csv.title,   body: t.exportPage.tips.csv.body },
+          { icon: '📊', title: t.exportPage.tips.excel.title, body: t.exportPage.tips.excel.body },
+          { icon: '🖨️', title: t.exportPage.tips.pdf.title,   body: t.exportPage.tips.pdf.body },
         ].map(tip => (
           <div key={tip.title} className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-3 flex items-start gap-3">
             <span className="text-xl">{tip.icon}</span>

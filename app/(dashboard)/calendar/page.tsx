@@ -11,6 +11,7 @@ import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import ErrorBanner from '@/components/ErrorBanner'
+import { useI18n } from '@/lib/i18n'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -20,17 +21,17 @@ function fmt12h(t?: string | null) {
 }
 
 const CAL_COLS = [
-  { key: 'id',      label: 'ID' },
-  { key: 'time',    label: 'Time' },
-  { key: 'client',  label: 'Client' },
-  { key: 'unit',    label: 'Unit' },
-  { key: 'numericKey', label: 'Clave' },
-  { key: 'roomSize',label: 'Room Size' },
-  { key: 'address', label: 'Address' },
-  { key: 'type',    label: 'Type' },
-  { key: 'staff',   label: 'Staff' },
-  { key: 'status',  label: 'Status' },
-  { key: 'total',   label: 'Total' },
+  { key: 'id' },
+  { key: 'time' },
+  { key: 'client' },
+  { key: 'unit' },
+  { key: 'numericKey' },
+  { key: 'roomSize' },
+  { key: 'address' },
+  { key: 'type' },
+  { key: 'staff' },
+  { key: 'status' },
+  { key: 'total' },
 ] as const
 type CalColKey = typeof CAL_COLS[number]['key']
 
@@ -91,12 +92,12 @@ function getCalWeeks(viewStart: Date, viewEnd: Date): { start: string; end: stri
   return weeks
 }
 
-function weekLabel(wStart: string, wEnd: string): string {
+function weekLabel(wStart: string, wEnd: string, locale: string = 'en-US'): string {
   const s = new Date(wStart + 'T12:00:00Z')
   const e = new Date(wEnd + 'T12:00:00Z')
   e.setUTCDate(e.getUTCDate() - 1)
-  const sm = s.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()
-  const em = e.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()
+  const sm = s.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' }).toUpperCase()
+  const em = e.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' }).toUpperCase()
   const sd = s.getUTCDate()
   const ed = e.getUTCDate()
   return sm === em ? `${sm} ${sd}–${ed}` : `${sm} ${sd}–${em} ${ed}`
@@ -107,6 +108,7 @@ function fmtAmt(n: number): string {
 }
 
 export default function CalendarPage() {
+  const { t } = useI18n()
   const [events, setEvents] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -248,7 +250,7 @@ export default function CalendarPage() {
         const btn = document.createElement('button')
         btn.className = 'fc-day-add-btn'
         btn.textContent = '+'
-        btn.title = 'New service'
+        btn.title = t.calendarPage.newServiceTooltip
         btn.onclick = (e) => {
           e.stopPropagation()
           window.dispatchEvent(new CustomEvent('cal-new-service', { detail: { date: dateAttr } }))
@@ -257,7 +259,7 @@ export default function CalendarPage() {
         else frame.appendChild(btn)
       })
     }, 80)
-  }, [])
+  }, [t])
 
   const handleDatesSet = useCallback((info: any) => {
     setViewStart(info.start)
@@ -277,7 +279,7 @@ export default function CalendarPage() {
     fetch(`/api/services${qs}`, { cache: 'no-store' })
       .then(async res => {
         const data = await res.json()
-        if (!res.ok) throw new Error(data?.error || 'No se pudieron cargar los servicios del calendario.')
+        if (!res.ok) throw new Error(data?.error || t.calendarPage.loadServicesError)
         return data
       })
       .then(data => {
@@ -286,7 +288,7 @@ export default function CalendarPage() {
         servicesRef.current = data
         const mapped = data.map((s: any) => ({
           id: s.id,
-          title: `${fmt12h(s.serviceTime)} · ${s.client?.name?.split(' ').slice(0,2).join(' ') || 'Service'}`,
+          title: `${fmt12h(s.serviceTime)} · ${s.client?.name?.split(' ').slice(0,2).join(' ') || t.calendarPage.serviceFallback}`,
           start: `${getDateStr(s.serviceDate)}T${s.serviceTime}`,
           backgroundColor: `${STATUS_COLORS[s.status]}20` || '#6b728020',
           borderColor: STATUS_COLORS[s.status] || '#6b7280',
@@ -303,7 +305,7 @@ export default function CalendarPage() {
         }
         injectBadges()
       })
-      .catch((err) => { setLoadError(err.message || 'No se pudieron cargar los servicios del calendario.'); setEvents([]) })
+      .catch((err) => { setLoadError(err.message || t.calendarPage.loadServicesError); setEvents([]) })
   }
 
   function loadExpenses() {
@@ -405,8 +407,8 @@ export default function CalendarPage() {
   const activeDateServices = services.filter(s => getDateStr(s.serviceDate) === activeDate)
   const activeDateRevenue = activeDateServices.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
   const activeDateLabel = isToday
-    ? 'TODAY'
-    : new Date(activeDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    ? t.calendarPage.today
+    : new Date(activeDate + 'T12:00:00').toLocaleDateString(t.locale, { month: 'short', day: 'numeric' })
 
   const visitEvents = showEstimateVisits ? estimateVisits.map(v => ({
     id: `visit-${v.id}`,
@@ -425,7 +427,7 @@ export default function CalendarPage() {
     const wSvcs = services.filter(s => { const d = getDateStr(s.serviceDate); return d >= start && d < end })
     const revenue = wSvcs.filter(s => s.status === 'completed').reduce((sum, s) => sum + Number(s.total), 0)
     const expTotal = expenses.filter(e => { const d = getDateStr(e.expenseDate); return d >= start && d < end }).reduce((sum, e) => sum + Number(e.amount), 0)
-    return { label: weekLabel(start, end), count: wSvcs.length, revenue, expenses: expTotal, net: revenue - expTotal }
+    return { label: weekLabel(start, end, t.locale), count: wSvcs.length, revenue, expenses: expTotal, net: revenue - expTotal }
   })
 
   useEffect(() => {
@@ -442,8 +444,8 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Calendar</h1>
-          <p className="text-[var(--muted)] text-sm mt-1">Monthly operational overview</p>
+          <h1 className="text-2xl font-bold text-[var(--text)]">{t.nav.calendar}</h1>
+          <p className="text-[var(--muted)] text-sm mt-1">{t.calendarPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
@@ -455,7 +457,7 @@ export default function CalendarPage() {
               style={{ accentColor: ESTIMATE_VISIT_COLOR }}
             />
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
-            Estimate Visits
+            {t.calendarPage.estimateVisits}
           </label>
           {sessionUser?.role === 'admin' && (
             <div className="relative" ref={shareMenuRef}>
@@ -468,15 +470,15 @@ export default function CalendarPage() {
                 }`}
               >
                 <Link2 size={13} />
-                Share Calendar
+                {t.calendarPage.shareCalendar}
               </button>
               {shareOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-4 w-80">
-                  <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">Subscribe to this calendar</div>
+                  <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">{t.calendarPage.subscribeToCalendar}</div>
                   {shareLoading ? (
-                    <div className="text-xs text-[var(--muted)] py-2">Loading…</div>
+                    <div className="text-xs text-[var(--muted)] py-2">{t.calendarPage.loading}</div>
                   ) : shareError || !shareUrl ? (
-                    <div className="text-xs text-[#f87171] py-2">Couldn't load the link.</div>
+                    <div className="text-xs text-[#f87171] py-2">{t.calendarPage.couldNotLoadLink}</div>
                   ) : (
                     <>
                       <div className="flex items-center gap-1.5 mb-3">
@@ -488,7 +490,7 @@ export default function CalendarPage() {
                         />
                         <button
                           onClick={copyShareUrl}
-                          title="Copy link"
+                          title={t.calendarPage.copyLink}
                           className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[#4f8ef7] hover:border-[#4f8ef7] transition-all flex-shrink-0"
                         >
                           {shareCopied ? <Check size={13} /> : <Copy size={13} />}
@@ -501,16 +503,16 @@ export default function CalendarPage() {
                           rel="noopener noreferrer"
                           className="block w-full text-center px-3 py-2 bg-[var(--surface2)] hover:bg-[var(--surface3)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text)] transition-colors"
                         >
-                          Add to Google Calendar
+                          {t.calendarPage.addToGoogleCalendar}
                         </a>
                         <a
                           href={shareUrl.replace(/^https?:/, 'webcal:')}
                           className="block w-full text-center px-3 py-2 bg-[var(--surface2)] hover:bg-[var(--surface3)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text)] transition-colors"
                         >
-                          Add to Apple Calendar
+                          {t.calendarPage.addToAppleCalendar}
                         </a>
                       </div>
-                      <p className="text-[10px] text-[var(--muted)] mt-3">For Outlook or any other app, paste the link above as a "subscribe from URL" calendar.</p>
+                      <p className="text-[10px] text-[var(--muted)] mt-3">{t.calendarPage.outlookHint}</p>
                     </>
                   )}
                 </div>
@@ -521,7 +523,7 @@ export default function CalendarPage() {
             onClick={() => { setNewServiceDate(todayStr); setNewServiceOpen(true) }}
             className="px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-medium rounded-lg transition-colors"
           >
-            + New Service
+            + {t.calendarPage.newService}
           </button>
         </div>
       </div>
@@ -590,7 +592,7 @@ export default function CalendarPage() {
           <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3 shadow-[var(--shadow-rest,none)]">
             <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">{activeDateLabel}</div>
             <div className="text-2xl font-bold text-[#38d9a9]" style={{ fontFamily: 'var(--font-display)' }}>{fmtAmt(activeDateRevenue)}</div>
-            <div className="text-[11px] text-[var(--muted)] mt-1">{activeDateServices.length} {activeDateServices.length === 1 ? 'service' : 'services'}</div>
+            <div className="text-[11px] text-[var(--muted)] mt-1">{t.calendarPage.serviceCount(activeDateServices.length)}</div>
           </div>
 
           {/* Weekly cards — absolutely positioned to match each calendar row */}
@@ -605,19 +607,19 @@ export default function CalendarPage() {
               >
                 <div className="h-full flex flex-col justify-between p-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-[var(--muted)]">Services</span>
+                    <span className="text-xs text-[var(--muted)]">{t.calendarPage.servicesLabel}</span>
                     <span className="text-xs font-bold text-[var(--text)]">{w.count}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-[var(--muted)]">Revenue</span>
+                    <span className="text-xs text-[var(--muted)]">{t.calendarPage.revenueLabel}</span>
                     <span className="text-xs font-bold text-[#38d9a9]">{fmtAmt(w.revenue)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-[var(--muted)]">Expenses</span>
+                    <span className="text-xs text-[var(--muted)]">{t.calendarPage.expensesLabel}</span>
                     <span className="text-xs font-bold text-[#f87171]">{fmtAmt(w.expenses)}</span>
                   </div>
                   <div className="border-t border-[var(--border)] pt-1 flex justify-between items-center">
-                    <span className="text-xs font-bold text-[var(--muted)]">Net</span>
+                    <span className="text-xs font-bold text-[var(--muted)]">{t.calendarPage.netLabel}</span>
                     <span className={`text-xs font-bold ${w.net >= 0 ? 'text-[#38d9a9]' : 'text-[#f87171]'}`}>{fmtAmt(w.net)}</span>
                   </div>
                 </div>
@@ -636,7 +638,7 @@ export default function CalendarPage() {
                 <ChevronLeft size={14} />
               </button>
               <div className="text-sm font-semibold text-[var(--text)]">
-                📋 Services for {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {t.calendarPage.servicesForDate(new Date(selectedDate + 'T12:00:00').toLocaleDateString(t.locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))}
               </div>
               <button onClick={() => shiftDay(1)} className="p-1 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[#4f8ef7] transition-all">
                 <ChevronRight size={14} />
@@ -645,22 +647,22 @@ export default function CalendarPage() {
             <div className="relative" ref={calColPickerRef}>
               <button
                 onClick={() => setCalColPickerOpen(v => !v)}
-                title="Show/hide columns"
+                title={t.calendarPage.showHideColumns}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold transition-all ${
                   calColPickerOpen
                     ? 'border-[#4f8ef7] text-[#4f8ef7] bg-[rgba(79,142,247,0.08)]'
                     : 'border-[var(--border)] text-[var(--muted)] hover:text-[#4f8ef7] hover:border-[#4f8ef7]'
                 }`}
               >
-                <SlidersHorizontal size={11} />Columns
+                <SlidersHorizontal size={11} />{t.calendarPage.columns}
               </button>
               {calColPickerOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-3 min-w-[150px]">
-                  <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">Visible Columns</div>
+                  <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">{t.calendarPage.visibleColumns}</div>
                   {CAL_COLS.map(c => (
                     <label key={c.key} className="flex items-center gap-2 py-1 cursor-pointer group">
                       <input type="checkbox" checked={calVisibleCols.has(c.key)} onChange={() => toggleCalCol(c.key)} className="accent-[#4f8ef7] w-3 h-3" />
-                      <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)] transition-colors">{c.label}</span>
+                      <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)] transition-colors">{t.calendarPage.col[c.key]}</span>
                     </label>
                   ))}
                 </div>
@@ -668,22 +670,22 @@ export default function CalendarPage() {
             </div>
           </div>
           {selectedServices.length === 0 ? (
-            <p className="text-[var(--muted)] text-sm text-center py-6">No services scheduled for this day.</p>
+            <p className="text-[var(--muted)] text-sm text-center py-6">{t.calendarPage.noServicesForDay}</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  {ccol('id')       && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">ID</th>}
-                  {ccol('time')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Time</th>}
-                  {ccol('client')   && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Client</th>}
-                  {ccol('unit')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Unit</th>}
-                  {ccol('numericKey') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Clave</th>}
-                  {ccol('roomSize') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Room Size</th>}
-                  {ccol('address')  && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Address</th>}
-                  {ccol('type')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Type</th>}
-                  {ccol('staff')    && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Staff</th>}
-                  {ccol('status')   && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Status</th>}
-                  {ccol('total')    && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Total</th>}
+                  {ccol('id')       && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.id}</th>}
+                  {ccol('time')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.time}</th>}
+                  {ccol('client')   && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.client}</th>}
+                  {ccol('unit')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.unit}</th>}
+                  {ccol('numericKey') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.numericKey}</th>}
+                  {ccol('roomSize') && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.roomSize}</th>}
+                  {ccol('address')  && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.address}</th>}
+                  {ccol('type')     && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.type}</th>}
+                  {ccol('staff')    && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.staff}</th>}
+                  {ccol('status')   && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.status}</th>}
+                  {ccol('total')    && <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.total}</th>}
                   <th className="pb-2" />
                 </tr>
               </thead>
@@ -705,17 +707,17 @@ export default function CalendarPage() {
                     </td>}
                     {ccol('status')   && <td className="py-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${STATUS_COLORS[s.status]}20`, color: STATUS_COLORS[s.status] }}>
-                        {s.status?.replace('_', ' ')}
+                        {t.status[s.status] || s.status?.replace('_', ' ')}
                       </span>
                     </td>}
                     {ccol('total')    && <td className="py-2 font-bold text-[#38d9a9]" style={{ fontFamily: 'var(--font-mono)' }}>${s.total}</td>}
                     <td className="py-2">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => { setEditService(s); setEditOpen(true) }} title="Edit"
+                        <button onClick={() => { setEditService(s); setEditOpen(true) }} title={t.calendarPage.edit}
                           className="p-1 rounded text-[#6b7280] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.1)] transition-all">
                           <Pencil size={13} />
                         </button>
-                        <button onClick={() => handleDuplicate(s)} title="Duplicate"
+                        <button onClick={() => handleDuplicate(s)} title={t.calendarPage.duplicate}
                           className="p-1 rounded text-[#6b7280] hover:text-[#38d9a9] hover:bg-[rgba(56,217,169,0.1)] transition-all">
                           <Copy size={13} />
                         </button>
@@ -733,16 +735,16 @@ export default function CalendarPage() {
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-[var(--shadow-rest,none)]">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
-            <div className="text-sm font-semibold text-[var(--text)]">Estimate Visits</div>
+            <div className="text-sm font-semibold text-[var(--text)]">{t.calendarPage.estimateVisits}</div>
           </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Time</th>
-                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Name</th>
-                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Phone</th>
-                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Address</th>
-                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">Notes</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.time}</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.nameCol}</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.phoneCol}</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.col.address}</th>
+                <th className="text-left text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider pb-2">{t.calendarPage.notesCol}</th>
               </tr>
             </thead>
             <tbody>

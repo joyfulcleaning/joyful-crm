@@ -8,6 +8,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { ChevronDown } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, Filler)
 
@@ -21,16 +22,17 @@ function weekOriginFor(y: number): Date {
   return new Date(jan1.getTime() - jan1.getUTCDay() * 86400000)
 }
 
-function weekRange(origin: Date, idx: number): string {
+function weekRange(origin: Date, idx: number, locale: string = 'en-US'): string {
   const s = new Date(origin.getTime() + idx * 7 * 86400000)
   const e = new Date(s.getTime() + 6 * 86400000)
-  const sm = s.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
-  const em = e.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+  const sm = s.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' })
+  const em = e.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' })
   const sd = s.getUTCDate(), ed = e.getUTCDate()
   return sm === em ? `${sm} ${sd}–${ed}` : `${sm} ${sd} – ${em} ${ed}`
 }
 
 export default function WeeklyGrowthChart() {
+  const { t } = useI18n()
   const [light, setLight]           = useState(false)
   const [year, setYear]             = useState(CUR_YEAR)
   const [data, setData]             = useState<WeekData[]>([])
@@ -79,7 +81,7 @@ export default function WeeklyGrowthChart() {
   const chartData = {
     labels,
     datasets: [{
-      label: 'Net Income',
+      label: t.charts.weeklyGrowth.datasetLabel,
       data: data.map(d => d.netIncome),
       borderColor: green,
       backgroundColor: light ? 'rgba(62,155,117,0.08)' : 'rgba(56,217,169,0.08)',
@@ -101,7 +103,7 @@ export default function WeeklyGrowthChart() {
     callbacks: {
       title: (items: any[]) => {
         const i = items[0].dataIndex
-        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i)}`
+        return `${data[i]?.week ?? ''}  ·  ${weekRange(weekOriginFor(year), i, t.locale)}`
       },
       label: (ctx: any) => {
         const i   = ctx.dataIndex
@@ -109,7 +111,11 @@ export default function WeeklyGrowthChart() {
         const exp = data[i]?.expenses ?? 0
         const net = ctx.raw as number
         const fmtN = (n: number) => `${n >= 0 ? '$' : '-$'}${Math.abs(Math.round(n)).toLocaleString()}`
-        return [`  Completed:   ${fmtN(rev)}`, `  Expenses:    ${fmtN(exp)}`, `  Net income:  ${fmtN(net)}`]
+        return [
+          t.charts.weeklyGrowth.tooltipCompleted(fmtN(rev)),
+          t.charts.weeklyGrowth.tooltipExpenses(fmtN(exp)),
+          t.charts.weeklyGrowth.tooltipNetIncome(fmtN(net)),
+        ]
       },
     },
   }
@@ -145,13 +151,13 @@ export default function WeeklyGrowthChart() {
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow-rest,none)]">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text)]">Weekly Net Income Growth</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">Completed Services − Expenses · per week · {year}</p>
+          <h2 className="text-sm font-semibold text-[var(--text)]">{t.charts.weeklyGrowth.title}</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{t.charts.weeklyGrowth.subtitle(year)}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: green }} />
-            <span className="text-xs text-[var(--muted)]">Net Income</span>
+            <span className="text-xs text-[var(--muted)]">{t.charts.weeklyGrowth.datasetLabel}</span>
           </div>
           {/* Year selector */}
           <div ref={menuRef} className="relative">
@@ -184,9 +190,9 @@ export default function WeeklyGrowthChart() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">Loading…</div>
+        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">{t.charts.weeklyGrowth.loading}</div>
       ) : !hasData ? (
-        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">No data for {year}</div>
+        <div className="flex items-center justify-center h-36 text-xs text-[var(--muted)]">{t.charts.weeklyGrowth.noData(year)}</div>
       ) : (
         <div key={data.length} style={{ position: 'relative', height: 156 }}>
           <div style={{ position: 'absolute', inset: 0 }}>

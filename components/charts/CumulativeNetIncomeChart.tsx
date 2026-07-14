@@ -7,6 +7,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { ChevronDown } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
@@ -20,6 +21,7 @@ const CUR_YEAR = new Date().getFullYear()
 const YEARS    = Array.from({ length: CUR_YEAR - 2025 }, (_, i) => 2026 + i)
 
 export default function CumulativeNetIncomeChart() {
+  const { t } = useI18n()
   const [light, setLight]       = useState(false)
   const [year, setYear]         = useState(CUR_YEAR)
   const [raw, setRaw]           = useState<WeekData[]>([])
@@ -73,7 +75,7 @@ export default function CumulativeNetIncomeChart() {
   const chartData = {
     labels,
     datasets: [{
-      label: 'Cumulative Net Income',
+      label: t.charts.cumulativeNetIncome.datasetLabel,
       data: cumulative,
       borderColor: color,
       backgroundColor: colorFill,
@@ -101,10 +103,10 @@ export default function CumulativeNetIncomeChart() {
         const rev    = raw[i]?.revenue  ?? 0
         const exp    = raw[i]?.expenses ?? 0
         return [
-          `  Completed:   ${fmt(rev)}`,
-          `  Expenses:    ${fmt(exp)}`,
-          `  Net income:  ${fmt(weekly)}`,
-          `  Cumulative:  ${fmt(cum)}`,
+          t.charts.cumulativeNetIncome.tooltipCompleted(fmt(rev)),
+          t.charts.cumulativeNetIncome.tooltipExpenses(fmt(exp)),
+          t.charts.cumulativeNetIncome.tooltipNetIncome(fmt(weekly)),
+          t.charts.cumulativeNetIncome.tooltipCumulative(fmt(cum)),
         ]
       },
     },
@@ -139,13 +141,13 @@ export default function CumulativeNetIncomeChart() {
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-rest,none)] p-5">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="text-sm font-bold text-[var(--text)]">Cumulative Weekly Net Income</div>
-          <div className="text-xs text-[var(--muted)] mt-0.5">Σ (Completed Services − Expenses) · running total · {year}</div>
+          <div className="text-sm font-bold text-[var(--text)]">{t.charts.cumulativeNetIncome.title}</div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">{t.charts.cumulativeNetIncome.subtitle(year)}</div>
         </div>
         <div className="flex items-center gap-3">
           {!loading && !allZero && (
             <div className="text-right">
-              <div className="text-xs text-[var(--muted)]">Total accumulated</div>
+              <div className="text-xs text-[var(--muted)]">{t.charts.cumulativeNetIncome.totalAccumulated}</div>
               <div className="text-base font-bold mt-0.5" style={{ color }}>{fmt(totalNow)}</div>
             </div>
           )}
@@ -180,9 +182,9 @@ export default function CumulativeNetIncomeChart() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">{t.charts.cumulativeNetIncome.loading}</div>
       ) : allZero ? (
-        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">No data for {year}</div>
+        <div className="flex items-center justify-center h-48 text-[var(--muted)] text-sm">{t.charts.cumulativeNetIncome.noData(year)}</div>
       ) : (
         <div key={raw.length} style={{ position: 'relative', height: 200 }}>
           <div style={{ position: 'absolute', inset: 0 }}>
