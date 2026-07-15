@@ -52,6 +52,7 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
   const annotationsRef = useRef<any[]>([])
   const businessPhoneAnnotationRef = useRef<any>(null)
   const businessPhoneLocationRef = useRef<Props['businessPhoneLocation']>(businessPhoneLocation)
+  const lastFitKeyRef = useRef<string | null>(null)
   const selectedRef = useRef<any>(selected)
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -245,9 +246,15 @@ export default function MapView({ services, selected, onSelect, businessPhoneLoc
 
     annotationsRef.current = newAnnotations
 
-    if (newAnnotations.length > 0) {
+    // Only re-fit the camera when the actual set of pins changes (new day,
+    // filter change, a service added/removed) — not on every background
+    // poll of the same day's data, which would otherwise silently undo any
+    // manual zoom/pan the admin just did.
+    const fitKey = services.map(s => s.id).sort().join(',')
+    if (newAnnotations.length > 0 && fitKey !== lastFitKeyRef.current) {
       map.showItems(newAnnotations, { animate: false, padding: new mapkit.Padding(60, 60, 60, 60) })
     }
+    lastFitKeyRef.current = fitKey
   }, [services, selected, showPopupForService])
 
   // Live marker for the single shared business phone (not a service pin —
