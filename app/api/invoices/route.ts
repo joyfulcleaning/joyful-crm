@@ -3,19 +3,14 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
+import { transitionOverdueInvoices } from '@/lib/invoice-overdue'
 
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthUser(request)
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Auto-transition sent invoices past their dueDate to overdue
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    await prisma.invoice.updateMany({
-      where: { status: 'sent', dueDate: { lt: today, not: null } },
-      data:  { status: 'overdue' },
-    })
+    await transitionOverdueInvoices()
 
     const invoices = await prisma.invoice.findMany({
       include: {
@@ -66,13 +61,13 @@ export async function POST(request: Request) {
         )
       }
 
-      // A cancelled service was never actually performed — it should never be billable.
-      const cancelledCount = await prisma.service.count({
-        where: { id: { in: incomingServiceIds }, status: 'cancelled' },
+      // Only completed services were actually performed — anything else (pending, reschedule, cancelled) should never be billable.
+      const nonInvoiceableCount = await prisma.service.count({
+        where: { id: { in: incomingServiceIds }, status: { not: 'completed' } },
       })
-      if (cancelledCount > 0) {
+      if (nonInvoiceableCount > 0) {
         return NextResponse.json(
-          { error: 'One or more selected services are cancelled and cannot be invoiced. Deselect them and try again.' },
+          { error: 'One or more selected services are not completed yet and cannot be invoiced. Deselect them and try again.' },
           { status: 409 }
         )
       }

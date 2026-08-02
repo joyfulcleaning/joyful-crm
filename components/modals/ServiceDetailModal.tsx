@@ -27,6 +27,7 @@ const SERVICE_TYPES = [
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b',
   in_progress: '#4f8ef7',
+  reschedule: '#a78bfa',
   completed: '#38d9a9',
   cancelled: '#f87171',
 }
@@ -537,6 +538,7 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
+                  <option value="reschedule">Reschedule</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>

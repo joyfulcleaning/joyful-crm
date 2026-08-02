@@ -44,6 +44,7 @@ const DEFAULT_VISIBLE_COLS = new Set(COLS.map(c => c.key)) as Set<ColKey>
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b',
   in_progress: '#4f8ef7',
+  reschedule: '#a78bfa',
   completed: '#26BD97',
   cancelled: '#f87171',
 }
@@ -248,8 +249,8 @@ export default function ServicesPage() {
   }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter])
 
   const stats = useMemo(() => {
-    const counts:  Record<string, number> = { pending: 0, in_progress: 0, completed: 0, cancelled: 0 }
-    const amounts: Record<string, number> = { pending: 0, in_progress: 0, completed: 0, cancelled: 0 }
+    const counts:  Record<string, number> = { pending: 0, in_progress: 0, reschedule: 0, completed: 0, cancelled: 0 }
+    const amounts: Record<string, number> = { pending: 0, in_progress: 0, reschedule: 0, completed: 0, cancelled: 0 }
     let totalAmount = 0
     filtered.forEach(s => {
       const t = Number(s.total) || 0
@@ -380,6 +381,7 @@ export default function ServicesPage() {
             { statusKey: 'all',         label: t.servicesPage.totalServices, value: stats.total,               color: '#6b7280', bg: 'rgba(107,114,128,0.1)'  },
             { statusKey: 'pending',     label: t.status.pending,             value: stats.counts.pending,      color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'   },
             { statusKey: 'in_progress', label: t.status.in_progress,         value: stats.counts.in_progress,  color: '#4f8ef7', bg: 'rgba(79,142,247,0.1)'   },
+            { statusKey: 'reschedule',  label: t.status.reschedule,          value: stats.counts.reschedule,   color: '#a78bfa', bg: 'rgba(167,139,250,0.1)' },
             { statusKey: 'completed',   label: t.status.completed,           value: stats.counts.completed,    color: '#26BD97', bg: 'rgba(38,189,151,0.1)'   },
             { statusKey: 'cancelled',   label: t.status.cancelled,           value: stats.counts.cancelled,    color: '#f87171', bg: 'rgba(248,113,113,0.1)'  },
           ].map(card => (

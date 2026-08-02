@@ -1,0 +1,350 @@
+﻿Fecha,Hora inicio,Hora fin,Unit,Room Size,Service Type,Ubicación,Tipo,Regla / Notas
+2026-07-01,13:00,14:05,Upstairs/Bathroms,Residential,Dusting,"3649 Glenbarry Cir, Fayetteville  NC, United States",Modificado,Reemplaza ocurrencia 20260701
+2026-07-01,08:00,09:00,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Modificado,Reemplaza ocurrencia 20260630
+2026-07-01,17:15,19:00,Apt 3,1BR,Standard Cleaning,"South Main Apartments, 4003 William M Bill Luther St, Hope Mills, NC  28348, United States",Único,
+2026-07-01,10:30,11:30,3561-205,3BR,Deep Clean,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-01,10:30,11:30,3451-306,2BR,Deep Clean,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-01,17:00,18:00,3055-202,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-01,14:00,14:40,,Office/Amenities,Standard Cleaning,"South Main Apartments, 4003 William M Bill Luther St, Hope Mills, NC  28348, United States",Único,
+2026-07-02,11:00,12:15,,Office/Amenities,Deep Clean,"Bristol Park, 1141 Glen Iris Dr, Fayetteville, NC  28314, United States",Único,
+2026-07-02,12:00,13:00,Apt 56,1BR,Standard Cleaning,"Buckhead Apartments, 4428 Kinkead Ct, Fayetteville, NC  28314, United States",Único,
+2026-07-02,18:00,19:00,851-303,2BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-02,18:00,19:00,3120-106,2BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-02,12:00,13:00,2318-102,1BR,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Único,
+2026-07-02,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-07-03,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-07-03,14:10,15:15,Apt 82,2BR,Standard Cleaning,"Austin Creek, 1131 Capeharbor Ct, Fayetteville, NC  28314, United States",Único,
+2026-07-03,15:00,16:00,3611-103 - 7/3,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-03,13:20,14:40,3025-208,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-03,17:00,18:00,150,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-03,10:00,11:00,12,2BR,Standard Cleaning,"South Main Apartments, 4003 William M Bill Luther St, Hope Mills, NC  28348, United States",Único,
+2026-07-06,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-06,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-07-06,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-07-06,16:00,17:00,169.1666667,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-06,16:00,17:00,103.1666667,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-07,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-07,14:10,15:15,Apt 03,2BR,Standard Cleaning,"Austin Creek, 1131 Capeharbor Ct, Fayetteville, NC  28314, United States",Único,
+2026-07-07,15:30,16:30,3071-104,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-07,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-07,17:00,18:00,190,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-08,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-07-08,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-07-08,11:20,12:20,851-102,3BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-08,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-07-08,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-08,15:00,16:00,3430-303 - 7/8,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-08,15:00,16:00,3430-101,2BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-08,11:00,12:00,1085-305,2BR,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Único,
+2026-07-08,16:00,17:00,208,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-09,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-07-09,14:00,15:00,Apt 06,2BR,Standard Cleaning,"Austin Creek, 1131 Capeharbor Ct, Fayetteville, NC  28314, United States",Único,
+2026-07-09,15:15,17:15,3720-4,2BR,Standard Cleaning,"Karen Lake, 3605 Sapphire Rd, Fayetteville, NC  28303, United States",Único,
+2026-07-09,12:00,13:00,3070-104,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-09,15:00,16:00,248,1BR,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Único,
+2026-07-09,15:00,16:00,129,2BR,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Único,
+2026-07-09,12:00,13:00,34,3BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-10,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-07-10,09:25,10:25,Modelo,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-07-10,10:15,11:50,859-302,3BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-10,14:30,16:20,3135-108,2BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-10,11:45,13:05,3040-307,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-10,17:00,18:00,145,2BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-10,17:00,18:00,94,2BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-13,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-07-13,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-07-13,17:00,18:00,3720-2,2BR,Standard Cleaning,"Karen Lake, 3605 Sapphire Rd, Fayetteville, NC  28303, United States",Único,
+2026-07-13,17:00,18:00,3705-1,2BR,Standard Cleaning,"Karen Lake, 3605 Sapphire Rd, Fayetteville, NC  28303, United States",Único,
+2026-07-13,11:00,12:00,3045-201,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-14,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-14,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-14,10:00,11:00,3020-101,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-14,12:00,13:00,2811-101,2BR,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Único,
+2026-07-14,15:00,16:00,(vacia),Residential,Deep Clean,"398 Winnsboro Road Raeford, NC 28376",Único,
+2026-07-14,10:00,11:00,21,2BR,Standard Cleaning,"South Main Apartments, 4003 William M Bill Luther St, Hope Mills, NC  28348, United States",Único,
+2026-07-15,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-07-15,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-15,15:00,16:00,3621-303,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-15,15:00,16:00,49,2BR,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Único,
+2026-07-15,15:00,16:00,34,1BR,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Único,
+2026-07-16,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-07-16,12:00,13:00,Apt 24,1BR,Standard Cleaning,"Buckhead Apartments, 4428 Kinkead Ct, Fayetteville, NC  28314, United States",Único,
+2026-07-16,09:15,09:55,3070-107,Modelo ,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-07-17,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-07-17,,,1170-102,3BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-20,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-20,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-07-20,13:45,14:20,3071-105,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-20,15:00,16:00,126,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-21,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-21,14:30,15:05,3040-104,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-21,15:30,16:30,1523-3,2BR,Standard Cleaning,"Village Chase Apartments, 2737 Kentberry Ave, Fayetteville, NC  28301, United States",Único,
+2026-07-21,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-22,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-07-22,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-07-22,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-22,12:00,13:00,3071-304,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-22,11:30,12:30,3011-105,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-07-22,12:00,13:00,189,1BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-07-23,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-07-23,15:50,16:50,4870-B,3BR,Standard Cleaning,Rim Creek Apartments,Único,
+2026-07-23,14:00,15:00,1511-4,2BR,Standard Cleaning,"Village Chase Apartments, 2737 Kentberry Ave, Fayetteville, NC  28301, United States",Único,
+2026-07-24,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-07-24,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-07-24,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-07-24,18:00,19:00,3124-302,3BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-07-27,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-07-28,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-28,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-07-29,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-07-29,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-07-29,15:00,16:00,3421-302,2BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-07-30,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-07-30,12:00,13:00,106 (Wayside apts),2BR,Standard Cleaning,"106 Dotson Dr, Raeford, NC, United States",Único,
+2026-07-31,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-07-31,10:05,11:05,3070-301,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-03,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-03,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-08-03,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-08-03,18:00,19:00,854-305,2BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-08-03,10:45,11:45,3045-202,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-03,15:00,16:00,73,2BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-08-04,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-04,13:00,14:00,3431-203,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-08-04,13:00,14:00,3040-303,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-04,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-05,12:00,13:00,Upstairs Mrs Franklin,Residential,Dusting,"Mr. Franklin Cleaning Clientâ€™s Home, 3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=1WE
+2026-08-05,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-08-05,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-08-05,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-05,13:00,14:00,3430-106,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-08-05,14:00,15:00,2711-11,2BR,Standard Cleaning,"Village Chase Apartments, 2737 Kentberry Ave, Fayetteville, NC  28301, United States",Único,
+2026-08-05,13:00,14:00,1065-302,2BR,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Único,
+2026-08-06,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-08-06,12:30,13:30,3071-301,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-07,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-08-07,13:45,15:30,3010-308,3BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-07,15:00,16:00,126,1BR,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Único,
+2026-08-10,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-08-10,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-08-10,10:15,11:15,3120-301,1BR,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Único,
+2026-08-10,15:25,16:25,3071-307,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-11,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-11,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-11,14:00,15:00,3035-302,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-12,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-08-12,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-12,15:20,16:30,3025-201,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-12,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-08-13,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-08-14,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-08-14,09:25,10:25,Modelo,Office/Amenities,Modelo Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-08-17,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-17,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-08-17,13:45,14:45,3045-302,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-17,15:00,16:00,3020-103,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-18,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-18,17:00,18:00,3060-102,3BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-18,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-19,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-08-19,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-08-19,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-19,10:30,11:20,3025-102,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-20,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-08-20,09:15,09:55,3070-107,,Modelo Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-08-21,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-08-21,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-08-24,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-08-24,13:00,14:00,3055-107,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-08-25,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-25,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-08-26,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-08-26,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-27,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-08-28,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-08-28,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-08-31,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-08-31,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-08-31,13:10,14:00,3045-303,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-01,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-01,15:40,16:25,3055-104,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-01,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-01,15:00,16:00,186,3BR,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Único,
+2026-09-02,12:00,13:00,Upstairs Mrs Franklin,Residential,Dusting,"Mr. Franklin Cleaning Clientâ€™s Home, 3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=1WE
+2026-09-02,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-09-02,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-09-02,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-02,12:40,13:30,3035-107,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-03,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-09-03,10:00,11:00,3025-305,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-04,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-09-04,11:40,12:40,3070-108,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-04,10:55,12:30,3025-205,1BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-07,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-09-07,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-09-08,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-08,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-08,14:00,15:00,3071-103,2BR,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Único,
+2026-09-09,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-09-09,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-09,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-09-10,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-09-11,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-09-11,09:25,10:25,Modelo,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-09-14,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-14,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-09-14,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-09-15,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-15,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-16,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-09-16,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-09-16,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-17,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-09-17,09:15,09:55,3070-107,Modelo,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-09-18,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-09-18,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-09-21,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-09-22,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-22,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-23,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-09-23,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-24,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-09-25,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-09-25,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-09-28,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-28,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-09-29,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-09-29,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-09-30,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-09-30,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-09-30,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-01,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-10-02,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-10-05,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-10-05,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-10-05,15:00,16:00,3451-104,1BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-10-05,15:00,16:00,3440-105,3BR,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Único,
+2026-10-06,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-06,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-07,12:00,13:00,Upstairs Mrs Franklin,Residential,Dusting,"Mr. Franklin Cleaning Clientâ€™s Home, 3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=1WE
+2026-10-07,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-10-07,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-08,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-10-09,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-10-09,09:25,10:25,Modelo,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-10-12,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-12,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-10-12,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-10-13,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-13,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-14,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-10-14,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-10-14,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-14,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-10-15,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-10-15,09:15,09:55,3070-107,Modelo,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-10-16,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-10-19,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-10-20,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-20,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-21,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-10-21,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-22,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-10-23,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-10-23,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-10-23,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-10-26,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-26,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-10-27,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-10-27,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-28,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-10-28,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-10-28,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-10-29,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-10-30,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-11-02,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-11-02,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-11-03,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-03,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-04,12:00,13:00,Upstairs Mrs Franklin,Residential,Dusting,"Mr. Franklin Cleaning Clientâ€™s Home, 3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=1WE
+2026-11-04,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-11-04,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-05,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-11-06,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-11-09,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-09,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-11-09,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-11-10,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-10,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-11,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-11-11,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-11-11,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-11,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-11-12,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-11-13,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-11-13,09:25,10:25,Modelo,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-11-16,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-11-17,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-17,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-18,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-11-18,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-19,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-11-19,09:15,09:55,3070-107,Modelo,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-11-20,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-11-20,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-11-23,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-23,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-11-24,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-11-24,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-25,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-11-25,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-11-25,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-11-26,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-11-27,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-11-27,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-11-30,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-12-01,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-01,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-02,12:00,13:00,Upstairs Mrs Franklin,Residential,Dusting,"Mr. Franklin Cleaning Clientâ€™s Home, 3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=1WE
+2026-12-02,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-12-02,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-03,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-12-04,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-12-07,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-07,08:00,09:15,Office/baños Cumberland,Office/Amenities,Standard Cleaning,"Cumberland Towers Apartments, 2580 Cumberland Creek Dr, Fayetteville, NC 28306, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1
+2026-12-07,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-12-08,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-08,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-09,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-12-09,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-12-09,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-09,09:20,09:50,Modelo,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=MONTHLY;BYDAY=2WE
+2026-12-10,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-12-11,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-12-11,09:25,10:25,Modelo,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2
+2026-12-14,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-12-14,10:40,11:50,Annette,Residential,Standard Cleaning,"1170 Morganton Rd, Pinehurst, NC, United States",Serie,FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2
+2026-12-15,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-15,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-16,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-12-16,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-17,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-12-17,09:15,09:55,3070-107,Modelo,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3
+2026-12-18,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-12-18,13:00,14:00,Amy (habitada),Residential,Standard Cleaning,"5813 Dobson Drive, Fayetteville, NC 28311",Serie,FREQ=MONTHLY;BYDAY=-2FR
+2026-12-21,09:30,10:30,Susie (habitado),Residential,Standard Cleaning,"270 Mckenzie Rd W, Pinehurst, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-21,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-12-22,08:00,09:15,Modelo,Office/Amenities,Standard Cleaning,"Waterford, 801 Shell Dr, Spring Lake, NC  28390, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-22,10:30,11:30,(Jill) habitada,Residential,Standard Cleaning,"52 Hunters Ridge Trail Dunn, NC 28334, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-23,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-12-23,09:30,09:45,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
+2026-12-23,09:30,10:00,847-303 Corporativa,2BR,Standard Cleaning,"847 Scotch Hall Way, Fayetteville, NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-24,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY
+2026-12-25,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Hope Mills, 3680 Elk Rd, Fayetteville, NC  28348, United States",Serie,FREQ=WEEKLY;BYDAY=FR
+2026-12-25,15:30,16:30,Michael (habitada),Residential,Standard Cleaning,"4447 Dudley Road, Fayetteville  NC, United States",Serie,FREQ=MONTHLY;BYDAY=4FR
+2026-12-28,08:00,09:15,,Office/Amenities,Standard Cleaning,"Southern Pines Reserve, 800 Churchill Downs Dr, Aberdeen, NC  28315, United States",Serie,FREQ=WEEKLY;BYDAY=MO
+2026-12-29,09:30,10:30,Office/Gym/bathrooms,Office/Amenities,Standard Cleaning,"The Summit on 401, 3325 Oak Forest Dr, Fayetteville, NC  28304, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-29,08:00,09:15,Clubhouse/fitness/pool bathrooms,Office/Amenities,Standard Cleaning,"Jamestown Commons, 1429 Bozeman Loop, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+2026-12-30,08:00,09:15,,Office/Amenities,Standard Cleaning,"West End at Fayetteville, 3050 Plantation Garden Blvd, Fayetteville, NC  28303, United States",Serie,FREQ=WEEKLY
+2026-12-30,13:00,14:05,Bathrooms,Residential,Standard Cleaning,"3649 Glenbarry Cir, Fayetteville  NC, United States",Serie,FREQ=WEEKLY;INTERVAL=2
+2026-12-31,08:00,09:15,,Office/Amenities,Standard Cleaning,"The One at Fayetteville Apartments, 3010 Valentina Way, Fayetteville NC 28303, United States",Serie,FREQ=WEEKLY

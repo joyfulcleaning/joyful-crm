@@ -888,6 +888,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
               >
                 <option value="pending">Pending</option>
                 <option value="in_progress">In Progress</option>
+                <option value="reschedule">Reschedule</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>

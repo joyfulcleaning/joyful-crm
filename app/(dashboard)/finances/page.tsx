@@ -2103,7 +2103,7 @@ export default function FinancesPage() {
                             if (!invExpanded.has(client.id) && !invClientSelected[client.id]) {
                               setInvClientSelected(prev => ({
                                 ...prev,
-                                [client.id]: new Set(services.filter((s: any) => !s.invoicedAt && s.status !== 'cancelled').map((s: any) => s.id))
+                                [client.id]: new Set(services.filter((s: any) => !s.invoicedAt && s.status === 'completed').map((s: any) => s.id))
                               }))
                             }
                             toggleBatchExpand(client.id)
@@ -2142,18 +2142,18 @@ export default function FinancesPage() {
                             </thead>
                             <tbody>
                               {services.map((s: any) => {
-                                const invoiced   = !!s.invoicedAt
-                                const cancelled  = s.status === 'cancelled'
-                                const checked    = cSelected.has(s.id)
-                                const invNum_svc = s.invoiceItems?.[0]?.invoice?.invoiceNumber ?? null
+                                const invoiced    = !!s.invoicedAt
+                                const invoiceable = s.status === 'completed'
+                                const checked     = cSelected.has(s.id)
+                                const invNum_svc  = s.invoiceItems?.[0]?.invoice?.invoiceNumber ?? null
                                 return (
-                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced || cancelled ? 'opacity-60' : ''}`}>
+                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced || !invoiceable ? 'opacity-60' : ''}`}>
                                     <td className="px-3 py-2">
                                       <input
                                         type="checkbox"
                                         checked={checked}
-                                        disabled={invoiced || cancelled}
-                                        title={cancelled ? t.financesPage.invoices.cancelledCannotBeInvoiced : undefined}
+                                        disabled={invoiced || !invoiceable}
+                                        title={!invoiceable ? t.financesPage.invoices.notCompletedCannotBeInvoiced : undefined}
                                         onChange={() => toggleClientService(client.id, s.id)}
                                         className="accent-[#4f8ef7] disabled:opacity-30"
                                       />
@@ -2180,8 +2180,8 @@ export default function FinancesPage() {
                                     {batchSvcVisibleCols.has('status')  && (
                                       <td className="px-3 py-2">
                                         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize"
-                                          style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.12)' : s.status === 'pending' ? 'rgba(245,158,11,0.12)' : 'rgba(100,116,139,0.12)',
-                                            color: s.status === 'completed' ? '#38d9a9' : s.status === 'pending' ? '#f59e0b' : '#9ca3af' }}>
+                                          style={{ backgroundColor: s.status === 'completed' ? 'rgba(56,217,169,0.12)' : s.status === 'pending' ? 'rgba(245,158,11,0.12)' : s.status === 'reschedule' ? 'rgba(167,139,250,0.12)' : 'rgba(100,116,139,0.12)',
+                                            color: s.status === 'completed' ? '#38d9a9' : s.status === 'pending' ? '#f59e0b' : s.status === 'reschedule' ? '#a78bfa' : '#9ca3af' }}>
                                           {t.status[s.status] || s.status}
                                         </span>
                                       </td>

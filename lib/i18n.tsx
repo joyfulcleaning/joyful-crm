@@ -35,6 +35,7 @@ const en = {
     in_progress: 'in progress',
     completed:   'completed',
     cancelled:   'cancelled',
+    reschedule:  'reschedule',
   } as Record<string, string>,
 
   dashboard: {
@@ -905,7 +906,7 @@ const en = {
       worked:                    'Worked',
       markAsWorked:              'Mark as Worked',
       viewServices:              'View Services',
-      cancelledCannotBeInvoiced: 'Cancelled services cannot be invoiced',
+      notCompletedCannotBeInvoiced: 'Only completed services can be invoiced',
       invoiceDetailsFor:         (name: string) => `Invoice Details · ${name}`,
       invoiceNumHash:            'Invoice #',
       manualIdPlaceholder:       'e.g. INV-2026-TC-008',
@@ -1307,6 +1308,7 @@ const es: typeof en = {
     in_progress: 'en progreso',
     completed:   'completado',
     cancelled:   'cancelado',
+    reschedule:  'reprogramado',
   } as Record<string, string>,
 
   dashboard: {
@@ -2177,7 +2179,7 @@ const es: typeof en = {
       worked:                    'Trabajado',
       markAsWorked:              'Marcar como trabajado',
       viewServices:              'Ver servicios',
-      cancelledCannotBeInvoiced: 'Los servicios cancelados no se pueden facturar',
+      notCompletedCannotBeInvoiced: 'Solo los servicios completados se pueden facturar',
       invoiceDetailsFor:         (name: string) => `Detalles de factura · ${name}`,
       invoiceNumHash:            'Factura #',
       manualIdPlaceholder:       'ej. INV-2026-TC-008',
