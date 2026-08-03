@@ -148,7 +148,7 @@ export default function AiRequestsPage() {
               return (
                 <tr
                   key={r.id}
-                  className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                  className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.04] transition-colors cursor-pointer"
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-3 py-2.5 text-xs text-[#9ca3af] whitespace-nowrap">

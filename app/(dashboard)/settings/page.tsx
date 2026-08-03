@@ -1155,7 +1155,7 @@ export default function SettingsPage() {
                   </thead>
                   <tbody>
                     {auditLogs.map(l => (
-                      <tr key={l.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                      <tr key={l.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                         <td className="px-3 py-2.5 text-[#9ca3af] whitespace-nowrap">
                           {new Date(l.createdAt).toLocaleString(t.locale, { month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </td>

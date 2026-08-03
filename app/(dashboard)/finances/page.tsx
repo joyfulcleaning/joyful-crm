@@ -200,6 +200,8 @@ export default function FinancesPage() {
   const [invGeneratingFor, setInvGeneratingFor] = useState<string | null>(null)
   const [invClientForms, setInvClientForms] = useState<Record<string, any>>({})
   const [invClientSelected, setInvClientSelected] = useState<Record<string, Set<string>>>({})
+  // ── Row being reviewed (click a row to keep it highlighted across all its columns; independent of the invoice checkbox selection) ──
+  const [invReviewRowId, setInvReviewRowId] = useState<string | null>(null)
   const [invClientGenerating, setInvClientGenerating] = useState<Record<string, boolean>>({})
   const [invClientErrors, setInvClientErrors] = useState<Record<string, string>>({})
   const [invClientCreatedInvoices, setInvClientCreatedInvoices] = useState<Record<string, any>>({})
@@ -1897,7 +1899,7 @@ export default function FinancesPage() {
                     const balanceDue = Number(inv.balanceDue ?? inv.total)
                     const overdue    = inv.dueDate && inv.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10)
                     return (
-                      <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                      <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                         <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
                         <td className="px-4 py-2.5 text-xs text-[#e8eaf0]">{inv.client?.name}</td>
                         <td className="px-4 py-2.5 text-xs font-bold text-[#38d9a9] font-mono">{fmt(Number(inv.total))}</td>
@@ -2146,8 +2148,17 @@ export default function FinancesPage() {
                                 const invoiceable = s.status === 'completed'
                                 const checked     = cSelected.has(s.id)
                                 const invNum_svc  = s.invoiceItems?.[0]?.invoice?.invoiceNumber ?? null
+                                const reviewing = invReviewRowId === s.id
                                 return (
-                                  <tr key={s.id} className={`border-t border-[#2a2f3d]/50 ${invoiced || !invoiceable ? 'opacity-60' : ''}`}>
+                                  <tr
+                                    key={s.id}
+                                    onClick={() => setInvReviewRowId(prev => prev === s.id ? null : s.id)}
+                                    style={{
+                                      backgroundColor: reviewing ? 'rgba(74,63,176,0.16)' : undefined,
+                                      borderLeft: reviewing ? '3px solid #4A3FB0' : '3px solid transparent',
+                                    }}
+                                    className={`border-t border-[#2a2f3d]/50 cursor-pointer transition-colors hover:bg-[var(--surface3)] ${invoiced || !invoiceable ? 'opacity-60' : ''}`}
+                                  >
                                     <td className="px-3 py-2">
                                       <input
                                         type="checkbox"
@@ -2497,7 +2508,7 @@ export default function FinancesPage() {
                       const amountPaid = Number(inv.amountPaid || 0)
                       const balanceDue = Math.max(0, Number(inv.total || 0) - amountPaid)
                       return (
-                        <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                        <tr key={inv.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                           <td className="px-4 py-2.5 text-xs text-[#4f8ef7] font-mono">{inv.invoiceNumber}</td>
                           <td className="px-4 py-2.5 text-xs text-[#e8eaf0]">{inv.client?.name}</td>
                           <td className="px-4 py-2.5 text-xs text-[#6b7280]">{formatDate(inv.periodFrom)} — {formatDate(inv.periodTo)}</td>
@@ -2645,7 +2656,7 @@ export default function FinancesPage() {
                 </thead>
                 <tbody>
                   {recurring.map((rec: any) => (
-                    <tr key={rec.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                    <tr key={rec.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                       <td className="px-4 py-2.5 text-xs text-[#e8eaf0] font-semibold">{rec.name}</td>
                       <td className="px-4 py-2.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgba(79,142,247,0.1)] text-[#4f8ef7]">{t.financesPage.expenseCategories[rec.category] || rec.category}</span>
@@ -2727,7 +2738,7 @@ export default function FinancesPage() {
                 {filteredExpenses.length === 0 ? (
                   <tr><td colSpan={9} className="text-center py-10 text-[#6b7280] text-xs">{t.financesPage.expenses.noExpensesFound}</td></tr>
                 ) : filteredExpenses.map((exp: any) => (
-                  <tr key={exp.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                  <tr key={exp.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                     <td className="px-4 py-2.5 text-[10px] text-[#6b7280] font-mono">#{exp.expenseNumber}</td>
                     <td className="px-4 py-2.5 text-xs text-[#9ca3af]">{formatDate(exp.expenseDate)}</td>
                     <td className="px-4 py-2.5 text-xs text-[#e8eaf0] max-w-[180px] truncate">{exp.description}</td>
@@ -3127,7 +3138,7 @@ export default function FinancesPage() {
                   const totalVal = Number(prod.unitCost) * prod.currentStock
                   const catEmoji: Record<string, string> = { Chemicals: '🧴', Equipment: '🧰', PPE: '🧤', Accessories: '🧹' }
                   return (
-                    <tr key={prod.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                    <tr key={prod.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                       <td className="px-3 py-2.5 font-mono text-[#4f8ef7]">{prod.sku}</td>
                       <td className="px-3 py-2.5 font-semibold text-[#e8eaf0]">{prod.name}</td>
                       <td className="px-3 py-2.5 text-[#9ca3af]">{catEmoji[prod.category] || '📦'} {t.financesPage.inventoryCategories[prod.category] || prod.category}</td>
@@ -3185,7 +3196,7 @@ export default function FinancesPage() {
                   {invMovements.length === 0 ? (
                     <tr><td colSpan={6} className="text-center py-8 text-[#6b7280] text-xs">{t.financesPage.inventory.noMovementsYet}</td></tr>
                   ) : invMovements.map(m => (
-                    <tr key={m.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                    <tr key={m.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                       <td className="px-3 py-2 text-[#9ca3af] whitespace-nowrap">{formatDate(m.date)}</td>
                       <td className="px-3 py-2 font-semibold text-[#e8eaf0]">{m.productName} <span className="text-[#6b7280] font-mono font-normal">({m.sku})</span></td>
                       <td className="px-3 py-2">
@@ -3479,7 +3490,7 @@ export default function FinancesPage() {
                     ? ((1 - Number(asset.currentValue) / Number(asset.purchaseValue)) * 100).toFixed(0)
                     : '0'
                   return (
-                    <tr key={asset.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.02]">
+                    <tr key={asset.id} className="border-t border-[#2a2f3d]/50 hover:bg-white/[0.04]">
                       <td className="px-3 py-2.5 font-semibold text-[#e8eaf0]">{asset.name}</td>
                       <td className="px-3 py-2.5 text-[#9ca3af]">{typeEmoji[asset.type] || '📦'} {t.financesPage.assetTypes[asset.type] || asset.type}</td>
                       <td className="px-3 py-2.5 font-mono text-[#6b7280]">{asset.serialNumber || '—'}</td>

@@ -115,6 +115,9 @@ export default function ServicesPage() {
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
 
+  // ── Row being reviewed (click a row to keep it highlighted across all its columns) ──
+  const [reviewRowId, setReviewRowId] = useState<string | null>(null)
+
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -384,19 +387,25 @@ export default function ServicesPage() {
             { statusKey: 'reschedule',  label: t.status.reschedule,          value: stats.counts.reschedule,   color: '#a78bfa', bg: 'rgba(167,139,250,0.1)' },
             { statusKey: 'completed',   label: t.status.completed,           value: stats.counts.completed,    color: '#26BD97', bg: 'rgba(38,189,151,0.1)'   },
             { statusKey: 'cancelled',   label: t.status.cancelled,           value: stats.counts.cancelled,    color: '#f87171', bg: 'rgba(248,113,113,0.1)'  },
-          ].map(card => (
-            <div key={card.statusKey}
-              className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-opacity-60 transition-all"
-              style={{ borderColor: `${card.color}40` }}
-              onClick={() => setFilter(card.statusKey)}
-            >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
-                style={{ background: card.bg, color: card.color }}>
-                <CountUp value={card.value} />
+          ].map(card => {
+            const isActive = filter === card.statusKey
+            return (
+              <div key={card.statusKey}
+                className={`bg-[#161922] rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'border-2' : 'border border-[#2a2f3d] hover:border-opacity-60'}`}
+                style={{ borderColor: isActive ? card.color : `${card.color}40`, boxShadow: isActive ? `0 0 0 3px ${card.color}26` : undefined, background: isActive ? card.bg : '#161922' }}
+                onClick={() => setFilter(card.statusKey)}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold"
+                  style={{ background: card.bg, color: card.color }}>
+                  <CountUp value={card.value} />
+                </div>
+                <div className={`text-[10px] font-bold uppercase tracking-wider leading-tight ${isActive ? '' : 'text-[#6b7280]'}`}
+                  style={isActive ? { color: card.color } : undefined}>
+                  {card.label}
+                </div>
               </div>
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider leading-tight">{card.label}</div>
-            </div>
-          ))}
+            )
+          })}
           {/* Completed not invoiced */}
           <div className="bg-[#161922] border border-[#2a2f3d] rounded-xl px-4 py-3 flex items-center gap-3"
             style={{ borderColor: 'rgba(167,139,250,0.3)' }}>
@@ -566,7 +575,12 @@ export default function ServicesPage() {
                   <tr
                     key={s.id}
                     ref={el => { if (el) rowRefs.current.set(s.id, el); else rowRefs.current.delete(s.id) }}
-                    className="border-b border-[#2a2f3d]/50 hover:bg-white/[0.02] transition-colors whitespace-nowrap"
+                    onClick={() => setReviewRowId(prev => prev === s.id ? null : s.id)}
+                    style={{
+                      backgroundColor: reviewRowId === s.id ? 'rgba(74,63,176,0.16)' : undefined,
+                      borderLeft: reviewRowId === s.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                    }}
+                    className="border-b border-[#2a2f3d]/50 whitespace-nowrap cursor-pointer transition-colors hover:bg-[var(--surface3)]"
                   >
                     <td className="px-3 py-2.5 w-8">
                       <input

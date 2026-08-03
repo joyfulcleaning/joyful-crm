@@ -126,6 +126,9 @@ export default function CalendarPage() {
   const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [editService, setEditService] = useState<any>(null)
   const [editOpen, setEditOpen] = useState(false)
+  // ── Row being reviewed (click a row to keep it highlighted across all its columns) ──
+  const [reviewRowId, setReviewRowId] = useState<string | null>(null)
+  const [reviewVisitId, setReviewVisitId] = useState<string | null>(null)
   const [newServiceOpen, setNewServiceOpen] = useState(false)
   const [newServiceDate, setNewServiceDate] = useState('')
   const servicesRef = useRef<any[]>([])
@@ -691,7 +694,15 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {selectedServices.map((s: any) => (
-                  <tr key={s.id} className="border-b border-[var(--border)] hover:bg-[var(--surface2)]">
+                  <tr
+                    key={s.id}
+                    onClick={() => setReviewRowId(prev => prev === s.id ? null : s.id)}
+                    style={{
+                      backgroundColor: reviewRowId === s.id ? 'rgba(74,63,176,0.16)' : undefined,
+                      borderLeft: reviewRowId === s.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                    }}
+                    className="border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--surface3)]"
+                  >
                     {ccol('id')       && <td className="py-2 text-xs text-[#4f8ef7]" style={{ fontFamily: 'var(--font-mono)' }}>#{s.serviceNumber}</td>}
                     {ccol('time')     && <td className="py-2 text-[var(--muted2)]">{fmt12h(s.serviceTime)}</td>}
                     {ccol('client')   && <td className="py-2 text-[var(--text)]">{s.client?.name}</td>}
@@ -749,7 +760,15 @@ export default function CalendarPage() {
             </thead>
             <tbody>
               {selectedVisits.map(v => (
-                <tr key={v.id} className="border-b border-[var(--border)] hover:bg-[var(--surface2)]">
+                <tr
+                  key={v.id}
+                  onClick={() => setReviewVisitId(prev => prev === v.id ? null : v.id)}
+                  style={{
+                    backgroundColor: reviewVisitId === v.id ? 'rgba(74,63,176,0.16)' : undefined,
+                    borderLeft: reviewVisitId === v.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                  }}
+                  className="border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--surface3)]"
+                >
                   <td className="py-2 text-[var(--muted2)]">{v.visitTime}</td>
                   <td className="py-2 text-[var(--text)]">{v.name}</td>
                   <td className="py-2 text-[var(--muted)] text-xs">{v.phone || '—'}</td>
