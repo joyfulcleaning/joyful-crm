@@ -146,6 +146,7 @@ const en = {
         overdue:           { label: 'Invoice overdue',                sub: 'When an invoice passes its due date' },
         newClient:         { label: 'New client registered',          sub: 'When a client is added to the system' },
         aiRequest:         { label: 'AI phone assistant request',     sub: "When a caller's request needs your approval" },
+        quoteRequest:      { label: 'Website quote request',          sub: 'When someone submits the "Get a Quote" form on the website' },
         lowStock:          { label: 'Low inventory alert',            sub: 'When a product falls below minimum stock' },
         weekly:            { label: 'Weekly summary (every Monday)',  sub: 'Performance report for the previous week' },
         schedulePublished: { label: 'Schedule published',             sub: "When you publish tomorrow's service schedule to staff" },
@@ -429,6 +430,7 @@ const en = {
     typeSqftEstimate:          'SQFT Estimate',
     typeEstimateVisit:         'Estimate Visit',
     typeNeedsFollowup:         'Needs Follow-up',
+    typeQuoteRequest:          'Quote Request',
   },
 
   mapPage: {
@@ -1419,6 +1421,7 @@ const es: typeof en = {
         overdue:           { label: 'Factura vencida',                  sub: 'Cuando una factura pasa su fecha de vencimiento' },
         newClient:         { label: 'Nuevo cliente registrado',         sub: 'Cuando se agrega un cliente al sistema' },
         aiRequest:         { label: 'Solicitud del asistente telefónico IA', sub: 'Cuando la solicitud de un llamante necesita tu aprobación' },
+        quoteRequest:      { label: 'Solicitud de cotización web',      sub: 'Cuando alguien envía el formulario "Get a Quote" de la página web' },
         lowStock:          { label: 'Alerta de inventario bajo',        sub: 'Cuando un producto cae por debajo del stock mínimo' },
         weekly:            { label: 'Resumen semanal (cada lunes)',     sub: 'Informe de desempeño de la semana anterior' },
         schedulePublished: { label: 'Calendario publicado',             sub: 'Cuando publicas el calendario de servicios de mañana para el personal' },
@@ -1702,6 +1705,7 @@ const es: typeof en = {
     typeSqftEstimate:          'Estimado de pies cuadrados',
     typeEstimateVisit:         'Visita de estimado',
     typeNeedsFollowup:         'Necesita seguimiento',
+    typeQuoteRequest:          'Solicitud de cotización',
   },
 
   mapPage: {

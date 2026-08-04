@@ -36,6 +36,7 @@ export default function AiRequestsPage() {
     create_sqft_estimate: t.aiRequestsPage.typeSqftEstimate,
     schedule_estimate_visit: t.aiRequestsPage.typeEstimateVisit,
     needs_followup: t.aiRequestsPage.typeNeedsFollowup,
+    quote_request: t.aiRequestsPage.typeQuoteRequest,
   }
 
   const STATUS_LABELS: Record<string, string> = {

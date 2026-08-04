@@ -14,6 +14,19 @@ export function isAiAuthorized(request: Request): boolean {
 }
 
 /**
+ * Auth for /api/quote-requests — the "Get a Quote" form on the public
+ * website POSTs here. Separate shared secret from AI_API_KEY since it's a
+ * different external caller (the website builder, not the phone assistant).
+ */
+export function isQuoteFormAuthorized(request: Request): boolean {
+  const apiKey = process.env.QUOTE_FORM_API_KEY
+  if (!apiKey) return false
+
+  const authHeader = request.headers.get('authorization') || ''
+  return authHeader === `Bearer ${apiKey}`
+}
+
+/**
  * Auth for Retell's `call_analyzed` webhook event (app/api/ai/retell-webhook).
  * Retell signs this delivery itself rather than letting us set a custom
  * header, so it can't reuse isAiAuthorized()'s bearer-token check — instead

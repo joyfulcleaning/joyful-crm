@@ -10,6 +10,7 @@ const TYPE_LABELS: Record<string, string> = {
   create_sqft_estimate: 'SQFT Estimate',
   schedule_estimate_visit: 'Estimate Visit',
   needs_followup: 'Needs Follow-up',
+  quote_request: 'Quote Request',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -67,6 +68,8 @@ function approveMessage(type: string, payload: any, callerName?: string | null):
         default:
           return ''
       }
+    case 'quote_request':
+      return `Hi ${name}! Thanks for requesting a quote from Joyful Cleaning Services. We'll follow up shortly with pricing.`
     default:
       return ''
   }
@@ -287,6 +290,12 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
       return [['Estimated price', payload.estimatedPrice != null ? `$${payload.estimatedPrice}` : 'N/A'], ['Notes', payload.notes || '—']]
     case 'schedule_estimate_visit':
       return [['Full address', payload.address || '—'], ['Notes', payload.notes || '—']]
+    case 'quote_request':
+      return [
+        ['Service needed', payload.serviceNeeded || '—'],
+        ['Preferred date', payload.preferredDate || '—'],
+        ['Notes', payload.notes || '—'],
+      ]
     case 'needs_followup': {
       const p = payload || {}
       const fmtDate = (v: any) => /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? isoToMMDDYYYY(String(v)) : v

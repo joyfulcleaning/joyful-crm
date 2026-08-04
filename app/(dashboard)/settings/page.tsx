@@ -55,6 +55,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.lowStock':  'true',
   'notif.weekly':    'true',
   'notif.aiRequest': 'true',
+  'notif.quoteRequest': 'true',
   'notif.schedulePublished': 'false',
   'notif.businessPhoneOffline': 'true',
   // Push notifications (per event) — off by default, admin-only when enabled
@@ -66,6 +67,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.lowStock.push':  'false', 'notif.lowStock.roles':  'admin',
   'notif.weekly.push':    'false', 'notif.weekly.roles':    'admin',
   'notif.aiRequest.push': 'true',  'notif.aiRequest.roles': 'admin',
+  'notif.quoteRequest.push': 'true', 'notif.quoteRequest.roles': 'admin',
   'notif.schedulePublished.push': 'true', 'notif.schedulePublished.roles': 'user',
   'notif.businessPhoneOffline.push': 'true', 'notif.businessPhoneOffline.roles': 'admin',
   // Integrations
@@ -672,6 +674,7 @@ export default function SettingsPage() {
                 { k: 'notif.overdue',   ...t.settings.notifications.events.overdue },
                 { k: 'notif.newClient', ...t.settings.notifications.events.newClient },
                 { k: 'notif.aiRequest', ...t.settings.notifications.events.aiRequest },
+                { k: 'notif.quoteRequest', ...t.settings.notifications.events.quoteRequest },
                 { k: 'notif.lowStock',  ...t.settings.notifications.events.lowStock },
                 { k: 'notif.weekly',    ...t.settings.notifications.events.weekly },
                 { k: 'notif.schedulePublished', ...t.settings.notifications.events.schedulePublished },

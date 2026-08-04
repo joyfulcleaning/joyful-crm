@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer'
 import { prisma } from '@/lib/prisma'
+import { sendPlainEmail } from '@/lib/email'
 import { normalizePhone } from '@/lib/phone'
 import { HOURLY_SLOTS, isWorkingDay } from '@/lib/scheduling'
 import { calcPrices, calcPrivatePrices, calcSqftEstimate, SQFT_RATES, PRIVATE_CUSTOMER_NAME } from '@/lib/pricing'
@@ -26,17 +26,6 @@ function prettyTime(hhmm?: string): string {
   const period = h < 12 ? 'AM' : 'PM'
   const h12 = h % 12 === 0 ? 12 : h % 12
   return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`
-}
-
-async function sendPlainEmail(to: string, subject: string, html: string) {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-  })
-  await transporter.sendMail({
-    from: `"Joyful Cleaning Services Corp." <${process.env.GMAIL_USER}>`,
-    to, subject, html,
-  })
 }
 
 async function notifyAdmin(request: { id: string; type: string; summary: string; callerName: string | null; callerPhone: string | null; callerEmail: string | null }) {
@@ -385,6 +374,9 @@ export async function resolveAiRequest(id: string, args: {
         // Informational record only by default — nothing was ever confirmed
         // enough to create automatically. Use action "complete" instead once
         // staff has filled in whatever was missing.
+        break
+      case 'quote_request':
+        // Informational — nothing to book, just marks the lead as reviewed.
         break
       default:
         return { status: 400, body: { error: `Unknown request type: ${request.type}` } }
