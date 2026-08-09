@@ -292,6 +292,7 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
       return [['Full address', payload.address || '—'], ['Notes', payload.notes || '—']]
     case 'quote_request':
       return [
+        ['Address', payload.address || '—'],
         ['Service needed', payload.serviceNeeded || '—'],
         ['Preferred date', payload.preferredDate || '—'],
         ['Notes', payload.notes || '—'],

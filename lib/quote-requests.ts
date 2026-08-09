@@ -31,6 +31,7 @@ export type CreateQuoteRequestArgs = {
   name?: unknown
   phone?: unknown
   email?: unknown
+  address?: unknown
   serviceNeeded?: unknown
   preferredDate?: unknown
   notes?: unknown
@@ -43,6 +44,7 @@ export async function createQuoteRequest(args: CreateQuoteRequestArgs): Promise<
   const name = str(args.name)
   const phone = str(args.phone)
   const email = str(args.email)
+  const address = str(args.address)
   const serviceNeeded = str(args.serviceNeeded)
   const preferredDate = str(args.preferredDate)
   const notes = str(args.notes)
@@ -61,6 +63,7 @@ export async function createQuoteRequest(args: CreateQuoteRequestArgs): Promise<
       callerEmail: email || null,
       summary,
       payload: {
+        address: address || null,
         serviceNeeded: serviceNeeded || null,
         preferredDate: preferredDate || null,
         notes: notes || null,
