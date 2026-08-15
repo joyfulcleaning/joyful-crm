@@ -7,7 +7,7 @@ import {
   type HandlerResult, findServiceForCaller,
   createService, rescheduleOrCancelService, createSqftEstimate, scheduleEstimateVisit,
 } from '@/lib/ai-handlers'
-import { sendPushToRoles } from '@/lib/push'
+import { sendPushToRoles, pendingRequestCount, REQUEST_SOUND, REQUEST_THREAD } from '@/lib/push'
 
 // Approval queue in front of the AI phone assistant's write actions. Instead
 // of executing immediately, schedule_service/reschedule_or_cancel_service/
@@ -50,7 +50,11 @@ async function notifyAdmin(request: { id: string; type: string; summary: string;
     console.error('Error notifying admin of AI request:', err)
   }
 
-  await sendPushToRoles('aiRequest', 'New AI request', request.summary, { type: 'aiRequest', requestId: request.id })
+  await sendPushToRoles(
+    'aiRequest', 'New AI request', request.summary,
+    { type: 'aiRequest', requestId: request.id },
+    { sound: REQUEST_SOUND, threadId: REQUEST_THREAD, badge: await pendingRequestCount() },
+  )
 }
 
 // Fallback for the post-call extraction path (lib/ai-post-call.ts): used when

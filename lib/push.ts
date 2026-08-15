@@ -6,7 +6,44 @@ import { prisma } from '@/lib/prisma'
 // (comma-separated, e.g. "admin,user"). Configured from Settings →
 // Notifications. Uses Expo's public push API directly — no credentials
 // needed, just valid ExponentPushToken values from registered devices.
-export async function sendPushToRoles(eventKey: string, title: string, body: string, data?: Record<string, any>) {
+// Per-event delivery tweaks. `sound` picks a bundled sound file (must exist in
+// the app binary — see the expo-notifications plugin config in app.json);
+// `threadId` groups related notifications together in iOS Notification Center
+// so one kind can't get buried between unrelated ones; `badge` sets the count
+// on the app icon.
+export type PushOptions = {
+  sound?: string
+  threadId?: string
+  badge?: number
+}
+
+// Must match ANDROID_CHANNEL_ID in the mobile app's lib/push.ts.
+const ANDROID_CHANNEL_ID = 'alerts_v2'
+
+// Review-queue notifications (phone assistant + website quote form) share a
+// sound and a thread: they stack together instead of scattering between
+// invoice/service alerts, and the custom chime makes them recognizable
+// without looking at the screen.
+export const REQUEST_SOUND = 'joyful-alert.wav'
+export const REQUEST_THREAD = 'requests'
+
+// Badge shown on the app icon — the count of requests still awaiting review,
+// so it clears itself as they get resolved.
+export async function pendingRequestCount(): Promise<number> {
+  try {
+    return await prisma.aiRequest.count({ where: { status: 'pending' } })
+  } catch {
+    return 0
+  }
+}
+
+export async function sendPushToRoles(
+  eventKey: string,
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+  options?: PushOptions,
+) {
   try {
     const [pushSetting, rolesSetting] = await Promise.all([
       prisma.setting.findUnique({ where: { key: `notif.${eventKey}.push` } }),
@@ -37,13 +74,15 @@ export async function sendPushToRoles(eventKey: string, title: string, body: str
           title,
           body,
           data: data || {},
-          // iOS plays the default sound when the ringer is on and vibrates in
-          // silent mode; without `sound` the notification arrives muted.
-          sound: 'default',
+          // iOS plays this when the ringer is on and vibrates in silent mode;
+          // without `sound` the notification arrives muted.
+          sound: options?.sound || 'default',
           // Android: heads-up delivery through the high-importance channel
           // the app creates on startup (sound + vibration enabled).
           priority: 'high',
-          channelId: 'alerts',
+          channelId: ANDROID_CHANNEL_ID,
+          ...(options?.threadId ? { threadId: options.threadId } : {}),
+          ...(options?.badge != null ? { badge: options.badge } : {}),
         }))),
       })
       const json = await res.json().catch(() => null)

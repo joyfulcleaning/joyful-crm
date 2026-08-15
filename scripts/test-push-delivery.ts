@@ -23,7 +23,7 @@ async function main() {
       data: { type: 'test' },
       sound: 'default',
       priority: 'high',
-      channelId: 'alerts',
+      channelId: 'alerts_v2',
     }))),
   })
   const json: any = await res.json()

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
 import { sendPlainEmail } from '@/lib/email'
-import { sendPushToRoles } from '@/lib/push'
+import { sendPushToRoles, pendingRequestCount, REQUEST_SOUND, REQUEST_THREAD } from '@/lib/push'
 
 async function notifyAdminOfQuoteRequest(request: { id: string; summary: string; callerName: string | null; callerPhone: string | null; callerEmail: string | null }) {
   try {
@@ -24,7 +24,11 @@ async function notifyAdminOfQuoteRequest(request: { id: string; summary: string;
     console.error('Error emailing admin of quote request:', err)
   }
 
-  await sendPushToRoles('quoteRequest', 'New quote request', request.summary, { type: 'quoteRequest', requestId: request.id })
+  await sendPushToRoles(
+    'quoteRequest', 'New quote request', request.summary,
+    { type: 'quoteRequest', requestId: request.id },
+    { sound: REQUEST_SOUND, threadId: REQUEST_THREAD, badge: await pendingRequestCount() },
+  )
 }
 
 export type CreateQuoteRequestArgs = {

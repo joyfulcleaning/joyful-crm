@@ -593,6 +593,12 @@ const en = {
     completedNotInvoiced:   'Completed not Invoiced',
     searchPlaceholder:      'Search services...',
     allClients:             'All clients',
+    allStaff:               'All staff',
+    datePresets: {
+      thisWeek:  'This week',
+      thisMonth: 'This month',
+      lastMonth: 'Last month',
+    },
     newClientOption:        '+ New Client…',
     invoiceFilter: {
       all:       'All',
@@ -1868,6 +1874,12 @@ const es: typeof en = {
     completedNotInvoiced:   'Completados sin facturar',
     searchPlaceholder:      'Buscar servicios...',
     allClients:             'Todos los clientes',
+    allStaff:               'Todo el personal',
+    datePresets: {
+      thisWeek:  'Esta semana',
+      thisMonth: 'Este mes',
+      lastMonth: 'Mes pasado',
+    },
     newClientOption:        '+ Nuevo cliente…',
     invoiceFilter: {
       all:       'Todos',

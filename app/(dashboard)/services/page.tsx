@@ -61,6 +61,7 @@ export default function ServicesPage() {
   const [clientFilter, setClientFilter] = useState('')
   const [dateFrom, setDateFrom]       = useState('')
   const [dateTo, setDateTo]           = useState('')
+  const [staffFilter, setStaffFilter] = useState('')
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'uninvoiced' | 'invoiced'>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<any>(null)
@@ -214,6 +215,18 @@ export default function ServicesPage() {
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
   }, [services])
 
+  // Built from the loaded services rather than /api/staff — no extra request,
+  // and it only lists people who actually have services here, which is what
+  // you'd filter by. Keyed on userId: the services API includes the staff
+  // relation with `user: { select: { name: true } }`, so there's no user.id.
+  const uniqueStaff = useMemo(() => {
+    const map = new Map<string, string>()
+    services.forEach(s => s.staff?.forEach((st: any) => {
+      if (st.userId && st.user?.name) map.set(st.userId, st.user.name)
+    }))
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+  }, [services])
+
   const filtered = useMemo(() => {
     const list = services.filter(s => {
       const matchSearch = !search ||
@@ -229,7 +242,8 @@ export default function ServicesPage() {
       const matchTo      = !dateTo   || sDate <= dateTo
       const matchInvoice = invoiceFilter === 'all'
         || (invoiceFilter === 'uninvoiced' ? !s.invoicedAt : !!s.invoicedAt)
-      return matchSearch && matchStatus && matchClient && matchFrom && matchTo && matchInvoice
+      const matchStaff   = !staffFilter || s.staff?.some((st: any) => st.userId === staffFilter)
+      return matchSearch && matchStatus && matchClient && matchFrom && matchTo && matchInvoice && matchStaff
     })
     return list.sort((a, b) => {
       let av: any, bv: any
@@ -249,7 +263,7 @@ export default function ServicesPage() {
       if (av > bv) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter])
+  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter, staffFilter])
 
   const stats = useMemo(() => {
     const counts:  Record<string, number> = { pending: 0, in_progress: 0, reschedule: 0, completed: 0, cancelled: 0 }
@@ -478,6 +492,53 @@ export default function ServicesPage() {
             />
           </div>
 
+          {/* Date range presets */}
+          <div className="flex items-center gap-1">
+            {[
+              { label: t.servicesPage.datePresets.thisWeek, fn: () => {
+                const d = new Date(); const day = d.getDay()
+                const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+                const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+                setDateFrom(localDateStr(mon)); setDateTo(localDateStr(sun))
+              }},
+              { label: t.servicesPage.datePresets.thisMonth, fn: () => {
+                const d = new Date()
+                setDateFrom(localDateStr(new Date(d.getFullYear(), d.getMonth(), 1)))
+                setDateTo(localDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0)))
+              }},
+              { label: t.servicesPage.datePresets.lastMonth, fn: () => {
+                const d = new Date()
+                setDateFrom(localDateStr(new Date(d.getFullYear(), d.getMonth() - 1, 1)))
+                setDateTo(localDateStr(new Date(d.getFullYear(), d.getMonth(), 0)))
+              }},
+            ].map(p => (
+              <button
+                key={p.label}
+                onClick={p.fn}
+                className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] hover:border-[#4f8ef7] transition-all whitespace-nowrap"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Staff dropdown */}
+          {uniqueStaff.length > 0 && (
+            <div className="relative">
+              <select
+                value={staffFilter}
+                onChange={e => setStaffFilter(e.target.value)}
+                className="pl-3 pr-7 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] transition-colors appearance-none w-40"
+              >
+                <option value="">{t.servicesPage.allStaff}</option>
+                {uniqueStaff.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] text-[10px]">▾</span>
+            </div>
+          )}
+
           {/* Invoice filter toggle */}
           <div className="flex items-center bg-[#1e2330] border border-[#2a2f3d] rounded-lg overflow-hidden">
             {([
@@ -500,9 +561,9 @@ export default function ServicesPage() {
           </div>
 
           {/* Clear filters */}
-          {(clientFilter || dateFrom || dateTo || invoiceFilter !== 'all') && (
+          {(clientFilter || dateFrom || dateTo || invoiceFilter !== 'all' || staffFilter) && (
             <button
-              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all') }}
+              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all'); setStaffFilter('') }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-[#6b7280] hover:text-[#f87171] border border-[#2a2f3d] hover:border-[#f87171] transition-all"
             >
               <X size={11} />{t.servicesPage.clear}
