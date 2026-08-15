@@ -293,8 +293,11 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
     case 'quote_request':
       return [
         ['Address', payload.address || '—'],
+        ['City', payload.city || '—'],
         ['Service needed', payload.serviceNeeded || '—'],
-        ['Preferred date', payload.preferredDate || '—'],
+        // Comes off the form as YYYY-MM-DD; show it the way every other date
+        // in the app reads.
+        ['Preferred date', payload.preferredDate ? isoToMMDDYYYY(String(payload.preferredDate)) : '—'],
         ['Notes', payload.notes || '—'],
       ]
     case 'needs_followup': {

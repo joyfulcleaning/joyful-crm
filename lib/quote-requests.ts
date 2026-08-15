@@ -36,6 +36,7 @@ export type CreateQuoteRequestArgs = {
   phone?: unknown
   email?: unknown
   address?: unknown
+  city?: unknown
   serviceNeeded?: unknown
   preferredDate?: unknown
   notes?: unknown
@@ -49,6 +50,7 @@ export async function createQuoteRequest(args: CreateQuoteRequestArgs): Promise<
   const phone = str(args.phone)
   const email = str(args.email)
   const address = str(args.address)
+  const city = str(args.city)
   const serviceNeeded = str(args.serviceNeeded)
   const preferredDate = str(args.preferredDate)
   const notes = str(args.notes)
@@ -56,7 +58,7 @@ export async function createQuoteRequest(args: CreateQuoteRequestArgs): Promise<
   if (!name) return { status: 400, body: { error: 'name is required' } }
   if (!phone && !email) return { status: 400, body: { error: 'phone or email is required' } }
 
-  const summary = `${name} wants a quote${serviceNeeded ? ` for ${serviceNeeded}` : ''}`
+  const summary = `${name} wants a quote${serviceNeeded ? ` for ${serviceNeeded}` : ''}${city ? ` in ${city}` : ''}`
 
   const aiRequest = await prisma.aiRequest.create({
     data: {
@@ -68,6 +70,7 @@ export async function createQuoteRequest(args: CreateQuoteRequestArgs): Promise<
       summary,
       payload: {
         address: address || null,
+        city: city || null,
         serviceNeeded: serviceNeeded || null,
         preferredDate: preferredDate || null,
         notes: notes || null,
