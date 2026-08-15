@@ -292,8 +292,9 @@ function readOnlyRowsFor(type: string, payload: any): [string, any][] {
       return [['Full address', payload.address || '—'], ['Notes', payload.notes || '—']]
     case 'quote_request':
       return [
-        ['Address', payload.address || '—'],
-        ['City', payload.city || '—'],
+        // The form sends street and city separately; show them joined so this
+        // reads as a real address instead of a bare street line.
+        ['Full address', composeAddress(payload.address, payload.city) || '—'],
         ['Service needed', payload.serviceNeeded || '—'],
         // Comes off the form as YYYY-MM-DD; show it the way every other date
         // in the app reads.
