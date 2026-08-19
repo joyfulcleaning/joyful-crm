@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bot, Check, X, Calendar as CalendarIcon } from 'lucide-react'
+import { Bot, Check, Globe, X, Calendar as CalendarIcon } from 'lucide-react'
 import { HOURLY_SLOTS } from '@/lib/scheduling'
+import { useI18n } from '@/lib/i18n'
 
 const TYPE_LABELS: Record<string, string> = {
   schedule_service: 'Schedule Service',
@@ -69,7 +70,7 @@ function approveMessage(type: string, payload: any, callerName?: string | null):
           return ''
       }
     case 'quote_request':
-      return `Hi ${name}! Thanks for requesting a quote from Joyful Cleaning Services. We'll follow up shortly with pricing.`
+      return `Hi ${name}! Thanks for reaching out to Joyful Cleaning Services. We'll give you a call shortly with a few extra questions so we can quote you the best possible price. If you can, please send us a few photos of the areas that need cleaning — it helps us be as accurate as possible.`
     default:
       return ''
   }
@@ -384,6 +385,13 @@ export default function AiRequestModal({
   const [customerMessage, setCustomerMessage] = useState('')
   const [notifyCustomer, setNotifyCustomer] = useState(true)
   const [saving, setSaving] = useState(false)
+  const { t } = useI18n()
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending: t.aiRequestsPage.filterPending,
+    approved: t.aiRequestsPage.filterApproved,
+    rejected: t.aiRequestsPage.filterRejected,
+  }
 
   useEffect(() => {
     if (!request) return
@@ -433,16 +441,20 @@ export default function AiRequestModal({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(79,142,247,0.15)' }}>
-              <Bot size={18} color="#4f8ef7" />
+              {request.platform === 'website'
+                ? <Globe size={18} color="#4f8ef7" />
+                : <Bot size={18} color="#4f8ef7" />}
             </div>
             <div>
               <div className="text-sm font-bold text-[#e8eaf0]">{TYPE_LABELS[request.type] || request.type}</div>
-              <div className="text-[10px] text-[#6b7280]">{request.platform === 'vapi' ? 'Vapi' : request.platform === 'retell' ? 'Retell' : ''}</div>
+              <div className="text-[10px] text-[#6b7280]">
+                {request.platform === 'website' ? t.aiRequestsPage.sourceWebsite : request.platform ? t.aiRequestsPage.sourceAi : ''}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${color}20`, color }}>
-              {request.status}
+              {STATUS_LABELS[request.status] || request.status}
             </span>
             <button onClick={onClose} className="p-1 rounded text-[#6b7280] hover:text-[#e8eaf0] hover:bg-white/5 transition-all">
               <X size={16} />
@@ -463,9 +475,9 @@ export default function AiRequestModal({
               <p className="text-[10px] text-[#6b7280] mb-2">
                 {request.type === 'needs_followup'
                   ? (COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]
-                      ? `Confirm/adjust below, then "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" once it's all there — or Approve to just mark it handled without creating anything.`
+                      ? `Confirm/adjust below, then "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" once it's all there — or Complete to just mark it handled without creating anything.`
                       : "Whatever the caller confirmed during the call — call them back to take it from here.")
-                  : "Adjust anything below before approving — what gets booked is exactly what's shown here."}
+                  : "Adjust anything below before completing — what gets booked is exactly what's shown here."}
               </p>
               <EditableFields type={request.type} payload={editedPayload} onChange={updateField} />
             </>
@@ -510,7 +522,7 @@ export default function AiRequestModal({
                       onClick={() => setCustomerMessage(rejectMessage(request.callerName))}
                       className="text-[10px] text-[#6b7280] hover:text-[#f87171] underline"
                     >
-                      Use rejection message
+                      Use cancellation message
                     </button>
                   </div>
                 </div>
@@ -535,13 +547,13 @@ export default function AiRequestModal({
               </div>
             )}
             {(request.type === 'create_sqft_estimate' || (request.type === 'needs_followup' && editedPayload.requestType === 'create_sqft_estimate')) && (
-              <p className="text-[10px] text-[#6b7280] mb-3">{request.type === 'needs_followup' ? 'Using "Create Estimate" below sends' : 'Approving this sends'} the estimate PDF directly to the customer's email — no separate message needed.</p>
+              <p className="text-[10px] text-[#6b7280] mb-3">{request.type === 'needs_followup' ? 'Using "Create Estimate" below sends' : 'Completing this sends'} the estimate PDF directly to the customer's email — no separate message needed.</p>
             )}
             {request.type === 'needs_followup' && (
               <p className="text-[10px] text-[#6b7280] mb-3">
                 {COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]
-                  ? `Approve only marks this handled — it won't create anything by itself. Use "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" below for that.`
-                  : 'Nothing to execute here — call the customer back to confirm details, then mark this Approved (handled) or Rejected (turned out to be nothing).'}
+                  ? `Complete only marks this handled — it won't create anything by itself. Use "${COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType]}" below for that.`
+                  : 'Nothing to execute here — call the customer back to confirm details, then mark this Completed (handled) or Cancelled (turned out to be nothing).'}
               </p>
             )}
 
@@ -551,14 +563,14 @@ export default function AiRequestModal({
                 disabled={saving}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold border border-[#f87171] text-[#f87171] hover:bg-[rgba(248,113,113,0.1)] transition-all disabled:opacity-50"
               >
-                <X size={13} />Reject
+                <X size={13} />{t.aiRequestsPage.cancelRequest}
               </button>
               <button
                 onClick={() => handle('approve')}
                 disabled={saving}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-white bg-[#26BD97] hover:bg-[#1fa382] transition-all disabled:opacity-50"
               >
-                <Check size={13} />Approve
+                <Check size={13} />{t.aiRequestsPage.complete}
               </button>
             </div>
             {request.type === 'needs_followup' && COMPLETABLE_FOLLOWUP_TYPES[editedPayload.requestType] && (

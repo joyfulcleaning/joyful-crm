@@ -11,7 +11,7 @@ const en = {
 
   nav: {
     dashboard:  'Dashboard',
-    aiRequests: 'AI Requests',
+    aiRequests: 'Requests',
     calendar:   'Calendar',
     map:        'Map',
     services:   'Services',
@@ -407,11 +407,13 @@ const en = {
   },
 
   aiRequestsPage: {
-    subtitle:                'Full history of requests from the AI phone assistant, newest first',
+    subtitle:                'Website quote requests and AI phone assistant requests, newest first',
     filterAll:                'Total',
     filterPending:             'Pending',
-    filterApproved:            'Approved',
-    filterRejected:            'Rejected',
+    // "approved"/"rejected" are the stored values — staff read them as the
+    // outcome of working the lead, so they're labelled Completed/Cancelled.
+    filterApproved:            'Completed',
+    filterRejected:            'Cancelled',
     colCustomer:               'Customer',
     colSummary:                'Summary',
     loading:                   'Loading...',
@@ -421,10 +423,14 @@ const en = {
     editAction:                'Edit',
     editDisabledHint:          'Only pending requests can be edited',
     deleteAction:              'Delete',
-    deleteConfirm:             'Delete this AI request? This cannot be undone.',
+    deleteConfirm:             'Delete this request? This cannot be undone.',
     updateFailed:              'Failed to update request',
     deleteFailed:              'Failed to delete request',
-    loadError:                 'Could not load AI requests.',
+    loadError:                 'Could not load requests.',
+    complete:                  'Complete',
+    cancelRequest:             'Cancel',
+    sourceWebsite:             'Website',
+    sourceAi:                  'AI assistant',
     typeScheduleService:       'Schedule Service',
     typeRescheduleOrCancel:    'Reschedule/Cancel',
     typeSqftEstimate:          'SQFT Estimate',
@@ -1292,7 +1298,7 @@ const es: typeof en = {
 
   nav: {
     dashboard:  'Panel',
-    aiRequests: 'Solicitudes IA',
+    aiRequests: 'Solicitudes',
     calendar:   'Calendario',
     map:        'Mapa',
     services:   'Servicios',
@@ -1688,11 +1694,13 @@ const es: typeof en = {
   },
 
   aiRequestsPage: {
-    subtitle:                'Historial completo de solicitudes del asistente telefónico IA, más recientes primero',
+    subtitle:                'Cotizaciones del sitio web y solicitudes del asistente telefónico IA, más recientes primero',
     filterAll:                'Total',
     filterPending:             'Pendiente',
-    filterApproved:            'Aprobada',
-    filterRejected:            'Rechazada',
+    // "approved"/"rejected" son los valores guardados — el personal los lee
+    // como el resultado de atender el lead: Completada/Cancelada.
+    filterApproved:            'Completada',
+    filterRejected:            'Cancelada',
     colCustomer:               'Cliente',
     colSummary:                'Resumen',
     loading:                   'Cargando...',
@@ -1702,10 +1710,14 @@ const es: typeof en = {
     editAction:                'Editar',
     editDisabledHint:          'Solo las solicitudes pendientes se pueden editar',
     deleteAction:              'Eliminar',
-    deleteConfirm:             '¿Eliminar esta solicitud de IA? Esta acción no se puede deshacer.',
+    deleteConfirm:             '¿Eliminar esta solicitud? Esta acción no se puede deshacer.',
     updateFailed:              'No se pudo actualizar la solicitud',
     deleteFailed:              'No se pudo eliminar la solicitud',
-    loadError:                 'No se pudieron cargar las solicitudes AI.',
+    loadError:                 'No se pudieron cargar las solicitudes.',
+    complete:                  'Completar',
+    cancelRequest:             'Cancelar',
+    sourceWebsite:             'Sitio web',
+    sourceAi:                  'Asistente IA',
     typeScheduleService:       'Agendar servicio',
     typeRescheduleOrCancel:    'Reprogramar/Cancelar',
     typeSqftEstimate:          'Estimado de pies cuadrados',

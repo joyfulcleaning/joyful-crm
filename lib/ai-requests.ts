@@ -327,7 +327,13 @@ function mapFollowUpPayload(requestType: string, p: any): any {
 }
 
 export async function resolveAiRequest(id: string, args: {
-  action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean; editedPayload?: Record<string, any>
+  action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean
+  editedPayload?: Record<string, any>
+  // Set when staff created the record by hand instead of letting the request
+  // execute itself — the mobile "Create service" flow builds the Service in
+  // the normal new-service form (it can create the Client on the way), then
+  // resolves the request with the id it got back so the two stay linked.
+  resultServiceId?: string
 }, resolvedById: string): Promise<HandlerResult> {
   const { action, adminNotes, customerMessage, notifyCustomer, editedPayload } = args
   if (action !== 'approve' && action !== 'reject' && action !== 'complete') {
@@ -341,7 +347,7 @@ export async function resolveAiRequest(id: string, args: {
     return { status: 400, body: { error: 'complete is only valid for needs_followup requests' } }
   }
 
-  let resultServiceId: string | null = null
+  let resultServiceId: string | null = args.resultServiceId || null
   let resultEstimateId: string | null = null
   let resultEstimateVisitId: string | null = null
 
