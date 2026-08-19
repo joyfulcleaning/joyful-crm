@@ -326,6 +326,28 @@ function mapFollowUpPayload(requestType: string, p: any): any {
   }
 }
 
+// Working a lead takes several sittings — call, wait, call again. This saves
+// the internal notes, the corrected details and the drafted customer message
+// without resolving anything, so the request stays pending and nothing typed
+// is lost between sittings.
+export async function saveAiRequestDraft(id: string, args: {
+  adminNotes?: string; customerMessage?: string; editedPayload?: Record<string, any>
+}): Promise<HandlerResult> {
+  const request = await prisma.aiRequest.findUnique({ where: { id } })
+  if (!request) return { status: 404, body: { error: 'Not found' } }
+  if (request.status !== 'pending') return { status: 409, body: { error: 'This request was already resolved' } }
+
+  const updated = await prisma.aiRequest.update({
+    where: { id },
+    data: {
+      adminNotes: args.adminNotes ?? request.adminNotes,
+      customerMessage: args.customerMessage ?? request.customerMessage,
+      payload: { ...(request.payload as any), ...(args.editedPayload || {}) },
+    },
+  })
+  return { status: 200, body: updated }
+}
+
 export async function resolveAiRequest(id: string, args: {
   action?: string; adminNotes?: string; customerMessage?: string; notifyCustomer?: boolean
   editedPayload?: Record<string, any>

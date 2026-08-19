@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/mobile-auth'
-import { resolveAiRequest } from '@/lib/ai-requests'
+import { resolveAiRequest, saveAiRequestDraft } from '@/lib/ai-requests'
 import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
@@ -15,7 +15,11 @@ export async function PATCH(
     const { id } = await context.params
     const body = await request.json()
 
-    const { status, body: result } = await resolveAiRequest(id, body, authUser.id)
+    // action "save" keeps the request pending — it only persists what staff
+    // has typed so far. Everything else resolves it.
+    const { status, body: result } = body?.action === 'save'
+      ? await saveAiRequestDraft(id, body)
+      : await resolveAiRequest(id, body, authUser.id)
     return NextResponse.json(result, { status })
   } catch (error) {
     console.error('PATCH /api/ai-requests/[id] error:', error)
