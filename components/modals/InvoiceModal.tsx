@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Search, FileText, Check, SlidersHorizontal, GripVertical } from 'lucide-react'
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
+import { serviceCategory, categoryColor, categoryAccent } from '@/lib/service-types'
 
 const PAYMENT_METHODS = [
   'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft'
@@ -98,6 +99,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     periodFrom: '',
     periodTo: '',
     serviceStatus: 'all',
+    category: 'all',
     taxRate: '0',
     paymentMethod: '',
     notes: '',
@@ -149,6 +151,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
       if (form.periodFrom) filtered = filtered.filter((s: any) => s.serviceDate >= form.periodFrom)
       if (form.periodTo) filtered = filtered.filter((s: any) => s.serviceDate <= form.periodTo + 'T23:59:59')
       if (form.serviceStatus !== 'all') filtered = filtered.filter((s: any) => s.status === form.serviceStatus)
+      if (form.category !== 'all') filtered = filtered.filter((s: { type?: string }) => serviceCategory(s.type) === form.category)
       setResults(filtered)
       setSelected(new Set(filtered.map((s: any) => s.id)))
       setSearched(true)
@@ -200,7 +203,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     switch (colId) {
       case 'id':      return 'px-3 py-2 text-xs text-[#4f8ef7] font-mono'
       case 'date':    return 'px-3 py-2 text-xs text-[#9ca3af]'
-      case 'type':    return 'px-3 py-2 text-xs text-[#e8eaf0]'
+      case 'type':    return 'px-3 py-2'
       case 'unit':    return 'px-3 py-2 text-xs text-[#9ca3af]'
       case 'room':    return 'px-3 py-2 text-xs text-[#9ca3af]'
       case 'time':    return 'px-3 py-2 text-xs text-[#9ca3af]'
@@ -219,7 +222,12 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     switch (colId) {
       case 'id':      return `#${s.serviceNumber}`
       case 'date':    return s.serviceDate ? (([y,m,d]) => `${m}-${d}-${y}`)(s.serviceDate.split('T')[0].split('-')) : '—'
-      case 'type':    return s.type
+      case 'type':    return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+          style={{ backgroundColor: `${categoryColor(s.type)}1f`, color: categoryColor(s.type) }}>
+          {s.type}
+        </span>
+      )
       case 'unit':    return s.unit || '—'
       case 'room':    return s.roomSize || '—'
       case 'time':    return s.serviceTime || '—'
@@ -291,7 +299,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
 
   function resetForm() {
     setPaymentTerm('')
-    setForm({ clientId: '', periodFrom: '', periodTo: '', serviceStatus: 'all', taxRate: '0', paymentMethod: '', notes: '', status: 'draft', dueDate: '' })
+    setForm({ clientId: '', periodFrom: '', periodTo: '', serviceStatus: 'all', category: 'all', taxRate: '0', paymentMethod: '', notes: '', status: 'draft', dueDate: '' })
     setResults([])
     setSelected(new Set())
     setSearched(false)
@@ -461,6 +469,15 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                 </select>
               </div>
 
+              <div>
+                <label className={labelCls}>Work Category</label>
+                <select value={form.category} onChange={e => set('category', e.target.value)} className={inputCls}>
+                  <option value="all">All work</option>
+                  <option value="cleaning">Cleaning only</option>
+                  <option value="painting">Painting only</option>
+                </select>
+              </div>
+
               <div className="border-t border-[#2a2f3d] pt-3 space-y-3">
                 <div>
                   <label className={labelCls}>Tax (%)</label>
@@ -597,7 +614,11 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                       </thead>
                       <tbody>
                         {results.map((s: any) => (
-                          <tr key={s.id} className={`border-t border-[#2a2f3d]/50 transition-colors ${selected.has(s.id) ? 'bg-[rgba(79,142,247,0.04)]' : 'hover:bg-white/[0.02]'}`}>
+                          <tr
+                            key={s.id}
+                            style={{ borderLeft: `3px solid ${categoryAccent(s.type) ?? 'transparent'}` }}
+                            className={`border-t border-[#2a2f3d]/50 transition-colors ${selected.has(s.id) ? 'bg-[rgba(79,142,247,0.04)]' : 'hover:bg-white/[0.02]'}`}
+                          >
                             <td className="px-3 py-2">
                               <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelect(s.id)} className="accent-[#4f8ef7]" />
                             </td>

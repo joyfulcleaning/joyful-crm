@@ -26,6 +26,7 @@ const TYPE_ICONS: Record<string, string> = {
   'Touch Up': '✨',
   'Construction Clean': '🏗️',
   'Airbnb Clean': '🏠',
+  'Painting': '🎨',
 }
 
 const DEFAULT_CENTER: [number, number] = [35.0527, -78.8784]

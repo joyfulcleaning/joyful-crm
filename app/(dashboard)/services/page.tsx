@@ -12,6 +12,7 @@ import CountUp from '@/components/ui/CountUp'
 import ErrorBanner from '@/components/ErrorBanner'
 import { localDateStr } from '@/lib/local-date'
 import { useI18n } from '@/lib/i18n'
+import { serviceCategory, categoryColor, categoryAccent } from '@/lib/service-types'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -49,8 +50,6 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: '#f87171',
 }
 
-const TYPE_COLOR = '#4f8ef7'
-
 export default function ServicesPage() {
   const { t } = useI18n()
   const [services, setServices] = useState<any[]>([])
@@ -62,6 +61,7 @@ export default function ServicesPage() {
   const [dateFrom, setDateFrom]       = useState('')
   const [dateTo, setDateTo]           = useState('')
   const [staffFilter, setStaffFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'cleaning' | 'painting'>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'uninvoiced' | 'invoiced'>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<any>(null)
@@ -243,7 +243,8 @@ export default function ServicesPage() {
       const matchInvoice = invoiceFilter === 'all'
         || (invoiceFilter === 'uninvoiced' ? !s.invoicedAt : !!s.invoicedAt)
       const matchStaff   = !staffFilter || s.staff?.some((st: any) => st.userId === staffFilter)
-      return matchSearch && matchStatus && matchClient && matchFrom && matchTo && matchInvoice && matchStaff
+      const matchCategory = categoryFilter === 'all' || serviceCategory(s.type) === categoryFilter
+      return matchSearch && matchStatus && matchClient && matchFrom && matchTo && matchInvoice && matchStaff && matchCategory
     })
     return list.sort((a, b) => {
       let av: any, bv: any
@@ -263,7 +264,7 @@ export default function ServicesPage() {
       if (av > bv) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter, staffFilter])
+  }, [services, search, filter, clientFilter, dateFrom, dateTo, sortKey, sortDir, invoiceFilter, staffFilter, categoryFilter])
 
   const stats = useMemo(() => {
     const counts:  Record<string, number> = { pending: 0, in_progress: 0, reschedule: 0, completed: 0, cancelled: 0 }
@@ -539,6 +540,26 @@ export default function ServicesPage() {
             </div>
           )}
 
+          {/* Category filter toggle — cleaning vs painting */}
+          <div className="flex items-center bg-[#1e2330] border border-[#2a2f3d] rounded-lg overflow-hidden">
+            {([
+              { key: 'all',      label: t.servicesPage.categoryFilter.all,      color: '#4f8ef7' },
+              { key: 'cleaning', label: t.servicesPage.categoryFilter.cleaning, color: '#4f8ef7' },
+              { key: 'painting', label: t.servicesPage.categoryFilter.painting, color: '#f97316' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setCategoryFilter(opt.key)}
+                style={categoryFilter === opt.key ? { backgroundColor: opt.color } : undefined}
+                className={`px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                  categoryFilter === opt.key ? 'text-white' : 'text-[#6b7280] hover:text-[#e8eaf0]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* Invoice filter toggle */}
           <div className="flex items-center bg-[#1e2330] border border-[#2a2f3d] rounded-lg overflow-hidden">
             {([
@@ -561,9 +582,9 @@ export default function ServicesPage() {
           </div>
 
           {/* Clear filters */}
-          {(clientFilter || dateFrom || dateTo || invoiceFilter !== 'all' || staffFilter) && (
+          {(clientFilter || dateFrom || dateTo || invoiceFilter !== 'all' || staffFilter || categoryFilter !== 'all') && (
             <button
-              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all'); setStaffFilter('') }}
+              onClick={() => { setClientFilter(''); setDateFrom(''); setDateTo(''); setInvoiceFilter('all'); setStaffFilter(''); setCategoryFilter('all') }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-[#6b7280] hover:text-[#f87171] border border-[#2a2f3d] hover:border-[#f87171] transition-all"
             >
               <X size={11} />{t.servicesPage.clear}
@@ -632,6 +653,7 @@ export default function ServicesPage() {
             ) : (
               filtered.map((s: any) => {
                 const color = STATUS_COLORS[s.status] || '#6b7280'
+                const accent = categoryAccent(s.type)
                 return (
                   <tr
                     key={s.id}
@@ -639,7 +661,11 @@ export default function ServicesPage() {
                     onClick={() => setReviewRowId(prev => prev === s.id ? null : s.id)}
                     style={{
                       backgroundColor: reviewRowId === s.id ? 'rgba(74,63,176,0.16)' : undefined,
-                      borderLeft: reviewRowId === s.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                      // The row under review keeps its purple marker; otherwise the
+                      // stripe flags non-cleaning work (painting) at a glance.
+                      borderLeft: reviewRowId === s.id
+                        ? '3px solid #4A3FB0'
+                        : `3px solid ${accent ?? 'transparent'}`,
                     }}
                     className="border-b border-[#2a2f3d]/50 whitespace-nowrap cursor-pointer transition-colors hover:bg-[var(--surface3)]"
                   >
@@ -667,7 +693,7 @@ export default function ServicesPage() {
                     {col('roomSize')  && <td className="px-3 py-2.5 text-xs text-[#6b7280]">{s.roomSize || '—'}</td>}
                     {col('type') && <td className="px-3 py-2.5">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: `${TYPE_COLOR}15`, color: TYPE_COLOR }}>
+                        style={{ backgroundColor: `${categoryColor(s.type)}15`, color: categoryColor(s.type) }}>
                         {s.type}
                       </span>
                     </td>}

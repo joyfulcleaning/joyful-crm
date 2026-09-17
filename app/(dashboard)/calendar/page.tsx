@@ -12,6 +12,7 @@ import ServiceModal from '@/components/modals/ServiceModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import ErrorBanner from '@/components/ErrorBanner'
 import { useI18n } from '@/lib/i18n'
+import { serviceCategory, categoryColor, categoryAccent, CATEGORY_COLOR } from '@/lib/service-types'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -58,7 +59,10 @@ const STATUS_PRIORITY: Record<string, number> = {
   completed:      4,
 }
 
-const TYPE_COLOR = { bg: 'rgba(79,142,247,0.12)', text: '#4f8ef7' }
+function typeBadgeStyle(type?: string | null) {
+  const c = categoryColor(type)
+  return { backgroundColor: `${c}1f`, color: c }
+}
 
 const ESTIMATE_VISIT_COLOR = '#ec4899'
 
@@ -296,6 +300,9 @@ export default function CalendarPage() {
           backgroundColor: `${STATUS_COLORS[s.status]}20` || '#6b728020',
           borderColor: STATUS_COLORS[s.status] || '#6b7280',
           textColor: STATUS_COLORS[s.status] || '#6b7280',
+          // Status still drives the event colour; painting gets an orange left
+          // edge on top of it (see the .fc-event-painting rule below).
+          classNames: serviceCategory(s.type) === 'painting' ? ['fc-event-painting'] : [],
           order: STATUS_PRIORITY[s.status] ?? 4,
           extendedProps: s,
         }))
@@ -554,6 +561,7 @@ export default function CalendarPage() {
             .fc .fc-button-primary:not(:disabled).fc-button-active { background: #4A3FB0 !important; border-color: #4A3FB0 !important; color: white !important; font-weight: 700 !important; }
             .fc .fc-toolbar-title { color: ${light ? '#1F1A3D' : '#e8eaf0'}; font-size: 16px; font-weight: 700; }
             .fc-event { border-radius: 4px !important; font-size: 10px !important; padding: 1px 5px; font-weight: 700; border-left-width: 3px !important; }
+            .fc-event-painting { border-left-width: 5px !important; border-left-color: ${CATEGORY_COLOR.painting} !important; }
             .fc-event-time { display: none !important; }
             .fc .fc-daygrid-more-link { color: ${light ? '#6B7280' : '#6b7280'}; font-size: 10px; }
             .fc .fc-daygrid-body { background: transparent; }
@@ -699,7 +707,9 @@ export default function CalendarPage() {
                     onClick={() => setReviewRowId(prev => prev === s.id ? null : s.id)}
                     style={{
                       backgroundColor: reviewRowId === s.id ? 'rgba(74,63,176,0.16)' : undefined,
-                      borderLeft: reviewRowId === s.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                      borderLeft: reviewRowId === s.id
+                        ? '3px solid #4A3FB0'
+                        : `3px solid ${categoryAccent(s.type) ?? 'transparent'}`,
                     }}
                     className="border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--surface3)]"
                   >
@@ -711,7 +721,7 @@ export default function CalendarPage() {
                     {ccol('roomSize') && <td className="py-2 text-[var(--muted)] text-xs">{s.roomSize || '—'}</td>}
                     {ccol('address')  && <td className="py-2 text-[var(--muted)] text-xs max-w-32 truncate">{s.address || '—'}</td>}
                     {ccol('type')     && <td className="py-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ backgroundColor: TYPE_COLOR.bg, color: TYPE_COLOR.text }}>{s.type}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={typeBadgeStyle(s.type)}>{s.type}</span>
                     </td>}
                     {ccol('staff')    && <td className="py-2 text-[#9ca3af] text-xs">
                       {s.staff?.length > 0 ? s.staff.map((st: any) => st.user?.name?.split(' ')[0]).join(', ') : '—'}

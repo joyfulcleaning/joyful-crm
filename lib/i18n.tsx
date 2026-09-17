@@ -611,6 +611,11 @@ const en = {
       noInvoice: 'No Invoice',
       invoiced:  'Invoiced',
     },
+    categoryFilter: {
+      all:      'All work',
+      cleaning: 'Cleaning',
+      painting: 'Painting',
+    },
     clear:                  'Clear',
     loading:                'Loading...',
     noServicesFound:        'No services found. Create your first service to get started.',
@@ -1897,6 +1902,11 @@ const es: typeof en = {
       all:       'Todos',
       noInvoice: 'Sin factura',
       invoiced:  'Facturado',
+    },
+    categoryFilter: {
+      all:      'Todo',
+      cleaning: 'Limpieza',
+      painting: 'Pintura',
     },
     clear:                  'Limpiar',
     loading:                'Cargando...',

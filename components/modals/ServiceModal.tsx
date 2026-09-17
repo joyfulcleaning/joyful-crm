@@ -6,24 +6,7 @@ import { PRIVATE_CUSTOMER_NAME } from './ManagementModal'
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import { calcPrices, calcPrivatePrices, AUTO_PRICE_TYPES } from '@/lib/pricing'
-
-const SERVICE_TYPES = [
-  'Standard Clean',
-  'Deep Clean',
-  'Heavy Deep Clean',
-  'Office Clean',
-  'Move In/Out',
-  'Touch Up',
-  'Construction Clean',
-  'Airbnb Clean',
-  'Window Cleaning',
-  'Carpet Cleaning',
-  'Cancellation Fee',
-  'Inspection Fee',
-  'Monthly Cleaning',
-  'Biweekly Cleaning',
-  'Weekly Cleaning',
-]
+import { SERVICE_TYPES } from '@/lib/service-types'
 
 const ROOM_SIZES = ['1BR', '2BR', '3BR', 'Office/Amenities', 'Other']
 

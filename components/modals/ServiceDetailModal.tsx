@@ -5,22 +5,7 @@ import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repea
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import ServiceModal from './ServiceModal'
 import { localDateStr } from '@/lib/local-date'
-
-const SERVICE_TYPES = [
-  'Standard Clean',
-  'Deep Clean',
-  'Heavy Deep Clean',
-  'Office Clean',
-  'Move In/Out',
-  'Touch Up',
-  'Construction Clean',
-  'Airbnb Clean',
-  'Cancellation Fee',
-  'Inspection Fee',
-  'Monthly Cleaning',
-  'Biweekly Cleaning',
-  'Weekly Cleaning',
-]
+import { SERVICE_TYPES } from '@/lib/service-types'
 
 
 
