@@ -57,7 +57,9 @@ export async function POST(request: Request) {
       data: { date, publishedById: authUser.id },
     })
 
-    const dateLabel = date.toLocaleDateString('en-US', { timeZone: TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' })
+    // `date` is stored as UTC midnight, so format it in UTC — reading it back
+    // in Eastern would land on the previous evening and label the wrong day.
+    const dateLabel = date.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })
     await notifyEvent('schedulePublished', {
       pushTitle: 'Schedule published',
       pushBody:  `Tomorrow's service schedule (${dateLabel}) is ready — check your calendar.`,
