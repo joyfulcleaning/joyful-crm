@@ -18,14 +18,28 @@ async function assertUserCanAccess(serviceId: string, userId: string) {
   return !!service
 }
 
+// The bucket's config can't drift within a running instance, so check it once
+// instead of on every upload — a twenty-photo batch would otherwise spend
+// forty extra round-trips re-asserting the same settings.
+let bucketReady: Promise<void> | null = null
+
 async function ensureBucket() {
-  const admin = supabaseAdmin()
-  const { data } = await admin.storage.getBucket(PHOTOS_BUCKET)
-  if (!data) {
-    await admin.storage.createBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
-  } else {
-    await admin.storage.updateBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
+  if (!bucketReady) {
+    bucketReady = (async () => {
+      const admin = supabaseAdmin()
+      const { data } = await admin.storage.getBucket(PHOTOS_BUCKET)
+      if (!data) {
+        await admin.storage.createBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
+      } else {
+        await admin.storage.updateBucket(PHOTOS_BUCKET, { public: true, fileSizeLimit: 209715200 })
+      }
+    })().catch(err => {
+      // Don't cache a failure — the next upload should retry.
+      bucketReady = null
+      throw err
+    })
   }
+  return bucketReady
 }
 
 export async function GET(
@@ -76,7 +90,10 @@ export async function POST(
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const ext  = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/${type}/${Date.now()}.${ext}`
+    // A timestamp alone collides when a batch upload lands two files in the
+    // same millisecond, and `upsert: false` turns that into a failed photo.
+    const suffix = Math.random().toString(36).slice(2, 8)
+    const path = `${id}/${type}/${Date.now()}-${suffix}.${ext}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const admin = supabaseAdmin()
