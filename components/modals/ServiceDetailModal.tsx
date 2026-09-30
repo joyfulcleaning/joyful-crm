@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2 } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
+import StaffNoteThread from '@/components/StaffNoteThread'
 import ServiceModal from './ServiceModal'
 import { localDateStr } from '@/lib/local-date'
 import { SERVICE_TYPES } from '@/lib/service-types'
@@ -588,23 +589,9 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
             )}
           </div>
 
-          {!editing && data.staffNotes && (
-            <div>
-              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Notes for Staff</label>
-              <div className="text-xs text-[var(--muted)]">{data.staffNotes}</div>
-            </div>
-          )}
-          {editing && (
-            <div>
-              <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">Notes for Staff</label>
-              <textarea
-                value={form.staffNotes || ''}
-                onChange={e => set('staffNotes', e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 bg-[var(--surface2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] resize-none"
-              />
-            </div>
-          )}
+          {/* Staff notes are a conversation, not a field: the thread stays
+              visible and writable in both view and edit mode. */}
+          {!isDuplicate && service?.id && <StaffNoteThread serviceId={service.id} />}
 
           {/* ── Photos section (non-duplicate services only) ── */}
           {!isDuplicate && (

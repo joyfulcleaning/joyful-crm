@@ -122,9 +122,18 @@ export async function POST(request: Request) {
         total: parseFloat(body.total),
         paymentMethod: body.paymentMethod,
         internalNotes: body.notes,
-        staffNotes: body.staffNotes || null,
       }
     })
+
+    // Staff-facing notes typed on the create form open the conversation
+    // thread rather than filling the retired `staffNotes` column, so the crew
+    // sees them as the first message and can reply.
+    const openingNote = typeof body.staffNotes === 'string' ? body.staffNotes.trim() : ''
+    if (openingNote) {
+      await prisma.serviceNote.create({
+        data: { serviceId: service.id, authorId: user.id, body: openingNote },
+      })
+    }
 
     if (body.staffIds && body.staffIds.length > 0) {
       await prisma.serviceStaff.createMany({

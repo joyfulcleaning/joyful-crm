@@ -37,6 +37,59 @@ export async function pendingRequestCount(): Promise<number> {
   }
 }
 
+// Delivers to a concrete list of Expo tokens. Expo caps each request at 100
+// messages; batch and collect per-message tickets so tokens Expo reports as
+// dead get pruned instead of silently eating every future notification for
+// that device. Shared by sendPushToRoles and sendPushToUsers.
+async function pushToTokens(
+  eventKey: string,
+  tokens: string[],
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+  options?: PushOptions,
+) {
+  if (tokens.length === 0) return
+
+  const stale: string[] = []
+  for (let i = 0; i < tokens.length; i += 100) {
+    const chunk = tokens.slice(i, i + 100)
+    const res = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(chunk.map(token => ({
+        to: token,
+        title,
+        body,
+        data: data || {},
+        // iOS plays this when the ringer is on and vibrates in silent mode;
+        // without `sound` the notification arrives muted.
+        sound: options?.sound || 'default',
+        // Android: heads-up delivery through the high-importance channel
+        // the app creates on startup (sound + vibration enabled).
+        priority: 'high',
+        channelId: ANDROID_CHANNEL_ID,
+        ...(options?.threadId ? { threadId: options.threadId } : {}),
+        ...(options?.badge != null ? { badge: options.badge } : {}),
+      }))),
+    })
+    const json = await res.json().catch(() => null)
+    const tickets = json?.data
+    if (Array.isArray(tickets)) {
+      tickets.forEach((ticket: any, j: number) => {
+        if (ticket?.status === 'error' && ticket?.details?.error === 'DeviceNotRegistered') {
+          stale.push(chunk[j])
+        } else if (ticket?.status === 'error') {
+          console.error(`Push ticket error for event "${eventKey}":`, ticket?.message || ticket)
+        }
+      })
+    }
+  }
+  if (stale.length > 0) {
+    await prisma.pushToken.deleteMany({ where: { token: { in: stale } } })
+  }
+}
+
 export async function sendPushToRoles(
   eventKey: string,
   title: string,
@@ -58,48 +111,50 @@ export async function sendPushToRoles(
       where: { user: { role: { in: roles as any } } },
       select: { token: true },
     })
-    if (tokens.length === 0) return
 
-    // Expo caps each request at 100 messages; batch and collect per-message
-    // tickets so tokens Expo reports as dead get pruned instead of silently
-    // eating every future notification for that device.
-    const stale: string[] = []
-    for (let i = 0; i < tokens.length; i += 100) {
-      const chunk = tokens.slice(i, i + 100)
-      const res = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(chunk.map(t => ({
-          to: t.token,
-          title,
-          body,
-          data: data || {},
-          // iOS plays this when the ringer is on and vibrates in silent mode;
-          // without `sound` the notification arrives muted.
-          sound: options?.sound || 'default',
-          // Android: heads-up delivery through the high-importance channel
-          // the app creates on startup (sound + vibration enabled).
-          priority: 'high',
-          channelId: ANDROID_CHANNEL_ID,
-          ...(options?.threadId ? { threadId: options.threadId } : {}),
-          ...(options?.badge != null ? { badge: options.badge } : {}),
-        }))),
-      })
-      const json = await res.json().catch(() => null)
-      const tickets = json?.data
-      if (Array.isArray(tickets)) {
-        tickets.forEach((ticket: any, j: number) => {
-          if (ticket?.status === 'error' && ticket?.details?.error === 'DeviceNotRegistered') {
-            stale.push(chunk[j].token)
-          } else if (ticket?.status === 'error') {
-            console.error(`Push ticket error for event "${eventKey}":`, ticket?.message || ticket)
-          }
-        })
-      }
-    }
-    if (stale.length > 0) {
-      await prisma.pushToken.deleteMany({ where: { token: { in: stale } } })
-    }
+    await pushToTokens(eventKey, tokens.map(t => t.token), title, body, data, options)
+  } catch (err) {
+    console.error(`Error sending push for event "${eventKey}":`, err)
+  }
+}
+
+/**
+ * Sends to specific people rather than to whole roles — needed when the
+ * recipients depend on the record, e.g. only the staff assigned to one
+ * service. Honours two gates:
+ *
+ *  - the company-wide `notif.{eventKey}.push` Setting (same as sendPushToRoles)
+ *  - each person's own NotificationPref row; absence of a row means enabled,
+ *    so muting is strictly opt-out and nothing needs backfilling.
+ */
+export async function sendPushToUsers(
+  eventKey: string,
+  userIds: string[],
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+  options?: PushOptions,
+) {
+  try {
+    if (userIds.length === 0) return
+
+    const pushSetting = await prisma.setting.findUnique({ where: { key: `notif.${eventKey}.push` } })
+    if (pushSetting?.value !== 'true') return
+
+    const muted = await prisma.notificationPref.findMany({
+      where: { userId: { in: userIds }, eventKey, enabled: false },
+      select: { userId: true },
+    })
+    const mutedIds = new Set(muted.map(m => m.userId))
+    const targets = userIds.filter(id => !mutedIds.has(id))
+    if (targets.length === 0) return
+
+    const tokens = await prisma.pushToken.findMany({
+      where: { userId: { in: targets } },
+      select: { token: true },
+    })
+
+    await pushToTokens(eventKey, tokens.map(t => t.token), title, body, data, options)
   } catch (err) {
     console.error(`Error sending push for event "${eventKey}":`, err)
   }

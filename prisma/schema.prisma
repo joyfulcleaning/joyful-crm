@@ -149,6 +149,8 @@ model User {
   resolvedAiRequests AiRequest[]    @relation("AiRequestResolvedBy")
   publishedSchedules PublishedSchedule[] @relation("SchedulePublishedBy")
   pushTokens       PushToken[]
+  serviceNotes     ServiceNote[]    @relation("ServiceNoteAuthor")
+  notificationPrefs NotificationPref[]
 
   @@map("users")
 }
@@ -289,8 +291,43 @@ model Service {
   staff           ServiceStaff[]
   photos          ServicePhoto[]
   invoiceItems    InvoiceItem[]
+  noteThread      ServiceNote[]
 
   @@map("services")
+}
+
+// One message in a service's staff conversation. Replaces the single
+// `Service.staffNotes` string, which had no author and was overwritten whole
+// on every save — two cleaners on the same service silently clobbered each
+// other. `staffNotes` is kept on Service so already-installed mobile builds
+// keep working until the OTA lands; nothing reads it in the UI anymore.
+model ServiceNote {
+  id        String   @id @default(uuid())
+  serviceId String
+  // Null for notes carried over from the old `staffNotes` field — the author
+  // was never recorded, so they render without an avatar.
+  authorId  String?
+  body      String
+  createdAt DateTime @default(now())
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  author    User?    @relation("ServiceNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([serviceId, createdAt])
+  @@map("service_notes")
+}
+
+// Per-person notification opt-out. The `notif.*` Setting keys are company-wide;
+// this lets one staff member mute an event for themselves without muting it for
+// everyone. Absence of a row means enabled, so nothing needs backfilling.
+model NotificationPref {
+  id       String  @id @default(uuid())
+  userId   String
+  eventKey String
+  enabled  Boolean @default(true)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventKey])
+  @@map("notification_prefs")
 }
 
 model ServiceStaff {

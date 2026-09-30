@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
-import { getVisibleServiceDates, stripPriceFields } from '@/lib/serviceVisibility'
+import { assertUserCanAccess, stripPriceFields } from '@/lib/serviceVisibility'
 import { logAudit } from '@/lib/audit'
 import { notifyEvent } from '@/lib/notify-admin'
 
@@ -24,19 +24,6 @@ function notifyCompleted(service: { serviceNumber: number | null; unit: string |
       </ul>
     `,
   }).catch(err => console.error('Error notifying service completed:', err))
-}
-
-async function assertUserCanAccess(serviceId: string, userId: string) {
-  const visibility = await getVisibleServiceDates(userId)
-  const service = await prisma.service.findFirst({
-    where: {
-      id: serviceId,
-      ...(visibility.unrestricted ? {} : { serviceDate: { in: visibility.dates.map(d => new Date(d)) } }),
-      staff: { some: { userId } },
-    },
-    select: { id: true },
-  })
-  return !!service
 }
 
 export async function GET(
@@ -71,6 +58,24 @@ export async function GET(
 
 const USER_EDITABLE_FIELDS = ['status', 'staffNotes', 'completionNotes'] as const
 
+/**
+ * Bridges mobile builds that predate the note thread. They still PATCH the
+ * retired `staffNotes` string, so mirror each change into the conversation as
+ * a real message — otherwise those notes would vanish into a column nothing
+ * reads. The column keeps being written so the old app stays self-consistent
+ * until the OTA lands; it can be dropped once no old builds remain.
+ *
+ * Only writes when the text actually changed, so the old app re-sending the
+ * same value on every save doesn't pile up duplicates.
+ */
+async function mirrorLegacyStaffNote(serviceId: string, authorId: string, incoming: unknown) {
+  const text = typeof incoming === 'string' ? incoming.trim() : ''
+  if (!text) return
+  const current = await prisma.service.findUnique({ where: { id: serviceId }, select: { staffNotes: true } })
+  if ((current?.staffNotes ?? '').trim() === text) return
+  await prisma.serviceNote.create({ data: { serviceId, authorId, body: text.slice(0, 2000) } })
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -93,6 +98,7 @@ export async function PATCH(
       const before = allowed.status === 'completed'
         ? await prisma.service.findUnique({ where: { id }, select: { status: true } })
         : null
+      await mirrorLegacyStaffNote(id, authUser.id, allowed.staffNotes)
       const service = await prisma.service.update({
         where: { id },
         data: allowed,
@@ -129,6 +135,7 @@ export async function PATCH(
     const before = data.status === 'completed'
       ? await prisma.service.findUnique({ where: { id }, select: { status: true } })
       : null
+    await mirrorLegacyStaffNote(id, authUser.id, body.staffNotes)
     const service = await prisma.service.update({
       where: { id },
       data,

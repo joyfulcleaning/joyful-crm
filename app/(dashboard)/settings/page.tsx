@@ -58,6 +58,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.quoteRequest': 'true',
   'notif.schedulePublished': 'false',
   'notif.businessPhoneOffline': 'true',
+  'notif.serviceNote': 'false',
   // Push notifications (per event) — off by default, admin-only when enabled
   'notif.newSvc.push':    'false', 'notif.newSvc.roles':    'admin',
   'notif.completed.push': 'false', 'notif.completed.roles': 'admin',
@@ -70,6 +71,9 @@ const DEFAULTS: Record<string, string> = {
   'notif.quoteRequest.push': 'true', 'notif.quoteRequest.roles': 'admin',
   'notif.schedulePublished.push': 'true', 'notif.schedulePublished.roles': 'user',
   'notif.businessPhoneOffline.push': 'true', 'notif.businessPhoneOffline.roles': 'admin',
+  // Recipients are the other side of each service conversation, not whole
+  // roles, so `.roles` is unused here — sendPushToUsers picks the targets.
+  'notif.serviceNote.push': 'true', 'notif.serviceNote.roles': 'admin,user',
   // Integrations
   'smtp.from':       'noreply@joyfulservices.com',
   // Appearance
@@ -195,6 +199,37 @@ export default function SettingsPage() {
   const [saved,   setSaved]   = useState(false)
   const [pwForm,  setPwForm]  = useState({ current: '', next: '', confirm: '' })
   const [pwMsg,   setPwMsg]   = useState('')
+
+  // Personal notification opt-out. Unlike the `notif.*` company settings in
+  // `cfg`, this belongs to the signed-in user and saves on click rather than
+  // through the page's Save button.
+  const [notePref,     setNotePref]     = useState(true)
+  const [notePrefBusy, setNotePrefBusy] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/notifications/prefs')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && typeof data.serviceNote === 'boolean') setNotePref(data.serviceNote) })
+      .catch(() => {})
+  }, [])
+
+  async function toggleNotePref() {
+    const next = !notePref
+    setNotePref(next)
+    setNotePrefBusy(true)
+    try {
+      const res = await fetch('/api/notifications/prefs', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ eventKey: 'serviceNote', enabled: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setNotePref(!next)
+    } finally {
+      setNotePrefBusy(false)
+    }
+  }
 
   // Payment credentials — write-only fields, never populated from the server
   const [payCreds, setPayCreds] = useState({
@@ -715,6 +750,34 @@ export default function SettingsPage() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Service conversation — separate from the event list above
+                because recipients are the other side of each thread rather
+                than whole roles, and it has no email channel. */}
+            <div className={cardCls}>
+              <div className={sectionTitle}>{t.settings.notifications.serviceNote.title}</div>
+              <div className="flex items-center justify-between py-1">
+                <div className="pr-4">
+                  <div className="text-xs font-semibold text-[#e8eaf0]">{t.settings.notifications.serviceNote.companyLabel}</div>
+                  <div className="text-[10px] text-[#6b7280] mt-0.5">{t.settings.notifications.serviceNote.companySub}</div>
+                </div>
+                <Toggle k="notif.serviceNote.push" />
+              </div>
+              <div className="flex items-center justify-between py-3.5 mt-1 border-t border-[#2a2f3d]/50">
+                <div className="pr-4">
+                  <div className="text-xs font-semibold text-[#e8eaf0]">{t.settings.notifications.serviceNote.personalLabel}</div>
+                  <div className="text-[10px] text-[#6b7280] mt-0.5">{t.settings.notifications.serviceNote.personalSub}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleNotePref}
+                  disabled={notePrefBusy}
+                  className={`w-10 h-5 rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${notePref ? 'bg-[#4f8ef7]' : 'bg-[#2a2f3d]'}`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${notePref ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
             </div>
 
             <div className={cardCls}>

@@ -54,6 +54,24 @@ export async function getVisibleServiceDates(userId: string, now: Date = new Dat
   return { unrestricted: false, dates: Array.from(new Set(dates)) }
 }
 
+/**
+ * Whether a 'user' role staff member may open this specific service: it has to
+ * be assigned to them AND fall inside the dates their visibility window allows.
+ * Admins bypass this entirely — callers check the role first.
+ */
+export async function assertUserCanAccess(serviceId: string, userId: string): Promise<boolean> {
+  const visibility = await getVisibleServiceDates(userId)
+  const service = await prisma.service.findFirst({
+    where: {
+      id: serviceId,
+      ...(visibility.unrestricted ? {} : { serviceDate: { in: visibility.dates.map(d => new Date(d)) } }),
+      staff: { some: { userId } },
+    },
+    select: { id: true },
+  })
+  return !!service
+}
+
 const PRICE_FIELDS = ['basePrice', 'additionalFee', 'total'] as const
 
 export function stripPriceFields<T extends Record<string, any>>(service: T): T {
