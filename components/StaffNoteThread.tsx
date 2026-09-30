@@ -55,7 +55,7 @@ export default function StaffNoteThread({ serviceId }: { serviceId: string }) {
         const data = await res.json()
         if (!cancelled) setNotes(data)
       } catch {
-        if (!cancelled) setError('Could not load the conversation.')
+        if (!cancelled) setError('Could not load the notes.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -102,7 +102,7 @@ export default function StaffNoteThread({ serviceId }: { serviceId: string }) {
   return (
     <div>
       <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-1.5">
-        Staff Conversation
+        Service Notes
       </label>
 
       <div className="border border-[var(--border)] rounded-lg overflow-hidden">
@@ -111,7 +111,7 @@ export default function StaffNoteThread({ serviceId }: { serviceId: string }) {
             <div className="text-xs text-[var(--muted)] py-2">Loading…</div>
           ) : notes.length === 0 ? (
             <div className="text-xs text-[var(--muted)] py-2">
-              No messages yet. Write the first note for the crew.
+              No notes yet. Write the first one for the crew.
             </div>
           ) : (
             notes.map((note, i) => {
