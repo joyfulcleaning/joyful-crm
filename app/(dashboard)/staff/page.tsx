@@ -29,6 +29,15 @@ const SCHEDULE_VISIBILITY_OPTIONS = [
   { value: 'full' },
 ]
 
+// How many already-worked days stay on their calendar behind today.
+const SCHEDULE_PAST_OPTIONS = [
+  { value: '0'    },
+  { value: 'week' },
+  { value: '7'    },
+  { value: '14'   },
+  { value: '30'   },
+]
+
 const PAY_METHODS = [
   { value: 'check'   },
   { value: 'zelle'   },
@@ -91,16 +100,17 @@ export default function StaffPage() {
   // ── Per-staff schedule visibility (set from each card) ───────────────────────
   const [visibilitySaving, setVisibilitySaving] = useState<string | null>(null)
 
-  async function saveScheduleVisibility(memberId: string, value: string) {
+  async function saveScheduleVisibility(memberId: string, value: string, field: 'future' | 'past' = 'future') {
     setVisibilitySaving(memberId)
     try {
       const res = await fetch(`/api/staff/${memberId}/schedule-visibility`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value }),
+        body: JSON.stringify({ value, field }),
       })
       if (!res.ok) throw new Error()
-      setStaff(prev => prev.map(m => m.id === memberId ? { ...m, scheduleVisibility: value } : m))
+      const column = field === 'past' ? 'schedulePastVisibility' : 'scheduleVisibility'
+      setStaff(prev => prev.map(m => m.id === memberId ? { ...m, [column]: value } : m))
     } catch {
       alert(t.staffPage.scheduleAccessError)
     } finally {
@@ -630,6 +640,26 @@ export default function StaffPage() {
                             <option key={opt.value} value={opt.value}>{t.staffPage.scheduleVisibilityOptions[opt.value]}</option>
                           ))}
                         </select>
+
+                        {/* 'full' already shows the whole calendar in both
+                            directions, so a past window would be a no-op. */}
+                        {(member.scheduleVisibility || '1') !== 'full' && (
+                          <>
+                            <label className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1 mt-2 text-left">
+                              {t.staffPage.pastDaysAccess}
+                            </label>
+                            <select
+                              value={member.schedulePastVisibility || '0'}
+                              disabled={visibilitySaving === member.id}
+                              onChange={e => saveScheduleVisibility(member.id, e.target.value, 'past')}
+                              className="w-full px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-50"
+                            >
+                              {SCHEDULE_PAST_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{t.staffPage.schedulePastOptions[opt.value]}</option>
+                              ))}
+                            </select>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

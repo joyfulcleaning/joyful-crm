@@ -23,23 +23,58 @@ export type ServiceVisibility =
   | { unrestricted: false; dates: string[] }
 
 /**
+ * How many days back of already-worked services this staff member keeps,
+ * per their individual User.schedulePastVisibility. Returns the dates
+ * strictly before today, newest first — today is added by the caller.
+ *
+ * 'week' means the current work week: Monday through yesterday. On a Monday
+ * that is an empty list (today is the whole week so far). The numeric
+ * settings are rolling instead — '7' is simply the last 7 calendar days.
+ *
+ * Past days carry no publish gate: they were already visible to the staff
+ * member while they were "today", so withholding them now buys nothing.
+ */
+function pastVisibleDates(setting: string, year: number, month: number, day: number): string[] {
+  if (!setting || setting === '0') return []
+
+  let daysBack: number
+  if (setting === 'week') {
+    // getUTCDay(): 0=Sunday..6=Saturday. Sunday closes the week that started
+    // the previous Monday (6 days back), it does not open a new one.
+    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+    daysBack = weekday === 0 ? 6 : weekday - 1
+  } else {
+    daysBack = Number(setting) > 0 ? Number(setting) : 0
+  }
+
+  const dates: string[] = []
+  for (let i = 1; i <= daysBack; i++) dates.push(ymd(year, month, day - i))
+  return dates
+}
+
+/**
  * How far a "user" role staff member can see into their own assigned
  * services, per their individual User.scheduleVisibility ('1'-'4', 'week',
- * or 'full' — set per-person from their card on the Staff page).
+ * or 'full') and User.schedulePastVisibility ('0', 'week', '7'/'14'/'30')
+ * — both set per-person from their card on the Staff page.
  *
  * Today is always included. Beyond today, a date only counts if an admin
  * has explicitly published it (PublishedSchedule / the mobile "Publish
  * schedule" action) AND it falls within this staff member's window.
- * 'full' skips both the window and the publish gate entirely.
+ * 'full' skips the windows and the publish gate entirely.
  */
 export async function getVisibleServiceDates(userId: string, now: Date = new Date()): Promise<ServiceVisibility> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { scheduleVisibility: true } })
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { scheduleVisibility: true, schedulePastVisibility: true },
+  })
   const setting = user?.scheduleVisibility || '1'
 
   if (setting === 'full') return { unrestricted: true }
 
   const { year, month, day } = localDateParts(now)
   const today = ymd(year, month, day)
+  const past = pastVisibleDates(user?.schedulePastVisibility || '0', year, month, day)
 
   const daysAhead = setting === 'week' ? 7 : (Number(setting) > 0 ? Number(setting) : 1)
   const windowStart = new Date(Date.UTC(year, month - 1, day + 1))
@@ -50,7 +85,7 @@ export async function getVisibleServiceDates(userId: string, now: Date = new Dat
     select: { date: true },
   })
 
-  const dates = [today, ...published.map(p => p.date.toISOString().slice(0, 10))]
+  const dates = [...past, today, ...published.map(p => p.date.toISOString().slice(0, 10))]
   return { unrestricted: false, dates: Array.from(new Set(dates)) }
 }
 

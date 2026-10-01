@@ -683,6 +683,7 @@ const en = {
     loadingEllipsis:           'Loading…',
     addMember:                 'Add Member',
     calendarAccess:            'Calendar access',
+    pastDaysAccess:            'Past days kept',
     scheduleAccessError:       'Could not update schedule access. Please try again.',
     loadStaffError:            'Could not load staff.',
     loadPayrollHistoryError:   'Could not load payroll history.',
@@ -801,6 +802,14 @@ const en = {
       '4':  '4 days',
       week: 'Full week',
       full: 'Full calendar',
+    } as Record<string, string>,
+
+    schedulePastOptions: {
+      '0':  'Today only',
+      week: 'This week (from Monday)',
+      '7':  'Last 7 days',
+      '14': 'Last 14 days',
+      '30': 'Last 30 days',
     } as Record<string, string>,
   },
 
@@ -1982,6 +1991,7 @@ const es: typeof en = {
     loadingEllipsis:           'Cargando…',
     addMember:                 'Agregar miembro',
     calendarAccess:            'Acceso al calendario',
+    pastDaysAccess:            'Días pasados visibles',
     scheduleAccessError:       'No se pudo actualizar el acceso al calendario. Inténtalo de nuevo.',
     loadStaffError:            'No se pudo cargar el personal.',
     loadPayrollHistoryError:   'No se pudo cargar el historial de nómina.',
@@ -2100,6 +2110,14 @@ const es: typeof en = {
       '4':  '4 días',
       week: 'Semana completa',
       full: 'Calendario completo',
+    } as Record<string, string>,
+
+    schedulePastOptions: {
+      '0':  'Solo hoy',
+      week: 'Esta semana (desde el lunes)',
+      '7':  'Últimos 7 días',
+      '14': 'Últimos 14 días',
+      '30': 'Últimos 30 días',
     } as Record<string, string>,
   },
 

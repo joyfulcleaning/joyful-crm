@@ -132,6 +132,11 @@ model User {
   // 'week' (7 days), or 'full' (no date restriction at all, bypasses the
   // publish gate too). Set per-person from their card on the Staff page.
   scheduleVisibility    String           @default("1")
+  // How far BACK this staff member can see their own past assigned services:
+  // '0' (only today — the original behavior), 'week' (every day of the current
+  // week, from Monday up to today), or '7'/'14'/'30' (rolling days back).
+  // Past days need no publish gate — they were already visible when current.
+  schedulePastVisibility String          @default("0")
   lastLoginAt      DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
