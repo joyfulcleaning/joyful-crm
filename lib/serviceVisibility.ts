@@ -27,9 +27,9 @@ export type ServiceVisibility =
  * per their individual User.schedulePastVisibility. Returns the dates
  * strictly before today, newest first — today is added by the caller.
  *
- * 'week' means the current work week: Monday through yesterday. On a Monday
- * that is an empty list (today is the whole week so far). The numeric
- * settings are rolling instead — '7' is simply the last 7 calendar days.
+ * 'week' means the current work week, which runs Saturday through Friday.
+ * On a Saturday that is an empty list (today is the whole week so far). The
+ * numeric settings are rolling instead — '7' is simply the last 7 days.
  *
  * Past days carry no publish gate: they were already visible to the staff
  * member while they were "today", so withholding them now buys nothing.
@@ -39,10 +39,10 @@ function pastVisibleDates(setting: string, year: number, month: number, day: num
 
   let daysBack: number
   if (setting === 'week') {
-    // getUTCDay(): 0=Sunday..6=Saturday. Sunday closes the week that started
-    // the previous Monday (6 days back), it does not open a new one.
+    // The work week runs Saturday → Friday, so walk back to the most recent
+    // Saturday. getUTCDay(): 0=Sunday..6=Saturday, hence Sat→0, Sun→1, Fri→6.
     const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
-    daysBack = weekday === 0 ? 6 : weekday - 1
+    daysBack = (weekday + 1) % 7
   } else {
     daysBack = Number(setting) > 0 ? Number(setting) : 0
   }

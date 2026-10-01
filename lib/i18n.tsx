@@ -806,7 +806,7 @@ const en = {
 
     schedulePastOptions: {
       '0':  'Today only',
-      week: 'This week (from Monday)',
+      week: 'This week (from Saturday)',
       '7':  'Last 7 days',
       '14': 'Last 14 days',
       '30': 'Last 30 days',
@@ -2114,7 +2114,7 @@ const es: typeof en = {
 
     schedulePastOptions: {
       '0':  'Solo hoy',
-      week: 'Esta semana (desde el lunes)',
+      week: 'Esta semana (desde el sábado)',
       '7':  'Últimos 7 días',
       '14': 'Últimos 14 días',
       '30': 'Últimos 30 días',
