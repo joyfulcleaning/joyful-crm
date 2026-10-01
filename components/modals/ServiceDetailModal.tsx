@@ -100,17 +100,41 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
   async function handleUploadPhoto(files: FileList | null) {
     if (!files || !service?.id) return
     setUploading(true)
+    let failed = 0
     try {
       for (const file of Array.from(files)) {
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('type', photoTab)
-        const res = await fetch(`/api/services/${service.id}/photos`, { method: 'POST', body: fd })
-        if (res.ok) {
-          const photo = await res.json()
-          setPhotos(prev => [...prev, photo])
+        try {
+          // Straight to storage: a request body of ~4.5 MB or more never
+          // reaches our function (Vercel returns 413), and photos routinely
+          // exceed that. Only the two JSON calls go through the API.
+          const prep = await fetch(`/api/services/${service.id}/photos/upload-url`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ fileName: file.name, type: photoTab }),
+          })
+          if (!prep.ok) throw new Error()
+          const { uploadUrl, storagePath } = await prep.json()
+
+          const put = await fetch(uploadUrl, {
+            method:  'PUT',
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            body:    file,
+          })
+          if (!put.ok) throw new Error()
+
+          const confirm = await fetch(`/api/services/${service.id}/photos`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ storagePath, type: photoTab }),
+          })
+          if (!confirm.ok) throw new Error()
+          const created = await confirm.json()
+          setPhotos(prev => [...prev, created])
+        } catch {
+          failed++
         }
       }
+      if (failed > 0) setError(`${failed} file${failed > 1 ? 's' : ''} failed to upload. Please try again.`)
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

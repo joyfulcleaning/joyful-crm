@@ -81,6 +81,39 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Two shapes arrive here. A JSON body confirms a file the client already
+    // uploaded straight to storage via ../photos/upload-url — the path that
+    // isn't capped by Vercel's request size limit. Multipart is the original
+    // route-the-bytes-through-here flow, kept for the web and for mobile
+    // builds that predate the direct upload.
+    if ((req.headers.get('content-type') || '').includes('application/json')) {
+      const body = await req.json().catch(() => null)
+      const storagePath = typeof body?.storagePath === 'string' ? body.storagePath : ''
+      const type = (typeof body?.type === 'string' && body.type) || 'before'
+
+      // The path is client-supplied, so it has to sit inside this service's
+      // folder — otherwise a caller could attach any object in the bucket.
+      if (!storagePath || !storagePath.startsWith(`${id}/`) || storagePath.includes('..')) {
+        return NextResponse.json({ error: 'Invalid storage path' }, { status: 400 })
+      }
+
+      const admin = supabaseAdmin()
+      // Confirm the object really landed before recording a row that would
+      // otherwise render as a broken image forever.
+      const folder = storagePath.slice(0, storagePath.lastIndexOf('/'))
+      const name   = storagePath.slice(storagePath.lastIndexOf('/') + 1)
+      const { data: listed } = await admin.storage.from(PHOTOS_BUCKET).list(folder, { search: name })
+      if (!listed?.some(f => f.name === name)) {
+        return NextResponse.json({ error: 'Upload not found in storage' }, { status: 400 })
+      }
+
+      const { data: urlData } = admin.storage.from(PHOTOS_BUCKET).getPublicUrl(storagePath)
+      const photo = await prisma.servicePhoto.create({
+        data: { serviceId: id, url: urlData.publicUrl, type },
+      })
+      return NextResponse.json(photo)
+    }
+
     await ensureBucket()
 
     const formData = await req.formData()
