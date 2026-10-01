@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { defaultPushEnabled, defaultPushRoles } from '@/lib/notification-defaults'
 
 // Sends a push notification to every registered device belonging to a user
 // whose role is allowed for this event, per the Setting keys
@@ -102,9 +103,11 @@ export async function sendPushToRoles(
       prisma.setting.findUnique({ where: { key: `notif.${eventKey}.push` } }),
       prisma.setting.findUnique({ where: { key: `notif.${eventKey}.roles` } }),
     ])
-    if (pushSetting?.value !== 'true') return
+    // A missing row means the event has never been saved from Settings, not
+    // that it's off — fall back to the declared default.
+    if (!(pushSetting ? pushSetting.value === 'true' : defaultPushEnabled(eventKey))) return
 
-    const roles = (rolesSetting?.value || 'admin').split(',').map(r => r.trim()).filter(Boolean)
+    const roles = (rolesSetting?.value || defaultPushRoles(eventKey)).split(',').map(r => r.trim()).filter(Boolean)
     if (roles.length === 0) return
 
     const tokens = await prisma.pushToken.findMany({
@@ -139,7 +142,8 @@ export async function sendPushToUsers(
     if (userIds.length === 0) return
 
     const pushSetting = await prisma.setting.findUnique({ where: { key: `notif.${eventKey}.push` } })
-    if (pushSetting?.value !== 'true') return
+    // See sendPushToRoles: absent row = never saved from Settings, not off.
+    if (!(pushSetting ? pushSetting.value === 'true' : defaultPushEnabled(eventKey))) return
 
     const muted = await prisma.notificationPref.findMany({
       where: { userId: { in: userIds }, eventKey, enabled: false },
