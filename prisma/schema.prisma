@@ -283,6 +283,10 @@ model Service {
   staffNotes      String?
   completionNotes String?
   emailSent       Boolean        @default(false)
+  // Day-before reminder to the client. Opt-in per service; the cron stamps
+  // reminderSentAt so a service can never be reminded twice.
+  sendReminder    Boolean        @default(false)
+  reminderSentAt  DateTime?
   invoicedAt      DateTime?                          // ── NUEVO: marca cuando se factura
   parentServiceId String?
   createdById     String

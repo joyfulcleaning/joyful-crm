@@ -9,6 +9,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/send-service-reminders",
+      "schedule": "0 13 * * *"
+    },
+    {
       "path": "/api/cron/cleanup-audit-log",
       "schedule": "0 7 1 * *"
     },

@@ -1,7 +1,8 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2, Bell, Download, Share2 } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import StaffNoteThread from '@/components/StaffNoteThread'
 import ServiceModal from './ServiceModal'
@@ -53,6 +54,9 @@ function fmtDate(raw: string | undefined) {
 }
 
 export default function ServiceDetailModal({ service, open, onClose, onSuccess }: Props) {
+  // Download/share of service photos is admin-only.
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === 'admin'
   const isDuplicate = service?._isDuplicate === true
   const isSeriesMember = !isDuplicate && !!(service?.parentServiceId || (service?._count?.duplicates ?? 0) > 0)
   const [editing, setEditing] = useState(false)
@@ -69,6 +73,8 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
   const [photoTab, setPhotoTab] = useState<'before' | 'after'>('before')
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState<'download' | 'share' | null>(null)
+  const [shareNote, setShareNote] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -190,6 +196,76 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
     }))
   }
 
+  // ── Photo download / share ────────────────────────────────────────────────
+  // Name the file after the service so a photo saved to disk is still
+  // identifiable later, instead of the storage key's random basename.
+  function photoFileName(url: string) {
+    const raw = url.split('?')[0].split('/').pop() || 'photo.jpg'
+    const ext = raw.includes('.') ? raw.slice(raw.lastIndexOf('.')) : '.jpg'
+    const base = raw.slice(0, raw.length - ext.length).slice(0, 40) || 'photo'
+    return service?.serviceNumber ? `service-${service.serviceNumber}-${base}${ext}` : `${base}${ext}`
+  }
+
+  // The photos live on another origin, where the <a download> attribute is
+  // ignored — the browser would just navigate to the image. Fetching the bytes
+  // and handing over a blob URL is what actually saves a file.
+  async function downloadPhoto(url: string) {
+    setPhotoBusy('download')
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href
+      a.download = photoFileName(url)
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(href)
+    } catch {
+      // Blocked or offline: at least open the image so it can be saved by hand.
+      window.open(url, '_blank')
+    } finally {
+      setPhotoBusy(null)
+    }
+  }
+
+  async function sharePhoto(url: string) {
+    const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
+    const name = photoFileName(url)
+    setPhotoBusy('share')
+    try {
+      // Share the actual image where the browser allows it (phones, Safari);
+      // otherwise share the link, and failing that copy it to the clipboard —
+      // desktop Firefox has no share sheet at all.
+      if (nav.canShare && nav.share) {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const file = new File([blob], name, { type: blob.type || 'image/jpeg' })
+        if (nav.canShare({ files: [file] })) {
+          await nav.share({ files: [file], title: name })
+          return
+        }
+      }
+      if (nav.share) {
+        await nav.share({ url, title: name })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareNote('Link copied')
+      setTimeout(() => setShareNote(''), 2000)
+    } catch (err) {
+      // Dismissing the share sheet rejects with AbortError — not a failure.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        setShareNote('Share failed')
+        setTimeout(() => setShareNote(''), 2000)
+      }
+    } finally {
+      setPhotoBusy(null)
+    }
+  }
+
   const total = form ? (parseFloat(form.basePrice) || 0) + (parseFloat(form.additionalFee) || 0) : 0
 
   function handleSaveClick() {
@@ -225,6 +301,9 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
             status: 'pending',
             notes: form.internalNotes,
             staffIds: form.staffIds || [],
+            // A duplicate inherits the reminder setting from the service it
+            // was copied from, same as the mobile duplicate flow.
+            sendReminder: !!form.sendReminder,
           })
         })
         if (!res.ok) throw new Error()
@@ -255,6 +334,10 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
   const selectedClient = clients.find(c => c.id === form?.clientId)
   const hasMgmt = editing && !!selectedClient?.management
   const mgmtName = selectedClient?.management?.name
+
+  // The service payload carries only the client's id and name, so the email
+  // the reminder would go to comes from the clients list this modal loads.
+  const canRemind = !!clients.find(c => c.id === data?.clientId)?.email
 
   const feeLabel =
     form?.type === 'Deep Clean' ? 'Deep Clean Fee' :
@@ -613,6 +696,45 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
             )}
           </div>
 
+          {/* Day-before reminder. Editable like every other field here (Edit →
+              toggle → Save); in view mode it just reports where it stands, so
+              you can tell at a glance whether the client will be reminded. */}
+          <div className={`flex items-center justify-between p-3 bg-[var(--surface2)] border border-[var(--border)] rounded-lg ${canRemind || !editing ? '' : 'opacity-60'}`}>
+            <div className="flex items-center gap-3">
+              <Bell size={14} className="text-[var(--accent)]" />
+              <div>
+                <div className="text-xs font-semibold text-[var(--text)]">Reminder the Day Before</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">
+                  {editing && !canRemind
+                    ? 'This client has no email on file'
+                    : data.reminderSentAt
+                      ? `Sent ${fmtDate(data.reminderSentAt)}`
+                      : data.sendReminder
+                        ? 'Will go out the morning before the service'
+                        : 'Off — the client gets no reminder'}
+                </div>
+              </div>
+            </div>
+            {editing ? (
+              <button
+                type="button"
+                disabled={!canRemind}
+                onClick={() => set('sendReminder', !form.sendReminder)}
+                className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 disabled:cursor-not-allowed ${
+                  form.sendReminder ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
+                }`}
+              >
+                <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
+                  form.sendReminder ? 'left-5' : 'left-0.5'
+                }`} />
+              </button>
+            ) : (
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${data.sendReminder ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
+                {data.sendReminder ? 'On' : 'Off'}
+              </div>
+            )}
+          </div>
+
           {/* Staff notes are a conversation, not a field: the thread stays
               visible and writable in both view and edit mode. */}
           {!isDuplicate && service?.id && <StaffNoteThread serviceId={service.id} />}
@@ -775,12 +897,42 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
               className="max-w-full max-h-full object-contain rounded-xl"
               onClick={e => e.stopPropagation()}
             />
-            <button
-              onClick={() => setLightbox(null)}
-              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
-            >
-              <X size={20} className="text-white" />
-            </button>
+            <div className="absolute top-4 right-4 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              {/* Admins only: staff view the photos but can't take them off
+                  the device. */}
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => downloadPhoto(lightbox)}
+                    disabled={photoBusy !== null}
+                    title="Download photo"
+                    className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-full transition-all disabled:opacity-50"
+                  >
+                    <Download size={16} className="text-white" />
+                    <span className="text-xs font-semibold text-white">
+                      {photoBusy === 'download' ? 'Downloading...' : 'Download'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => sharePhoto(lightbox)}
+                    disabled={photoBusy !== null}
+                    title="Share photo"
+                    className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-full transition-all disabled:opacity-50"
+                  >
+                    <Share2 size={16} className="text-white" />
+                    <span className="text-xs font-semibold text-white">
+                      {photoBusy === 'share' ? 'Sharing...' : shareNote || 'Share'}
+                    </span>
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setLightbox(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+              >
+                <X size={20} className="text-white" />
+              </button>
+            </div>
           </div>
         )}
 

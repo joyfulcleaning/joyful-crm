@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { X, Plus, Mail, Layers, DollarSign, Info } from 'lucide-react'
+import { X, Plus, Mail, Bell, Layers, DollarSign, Info } from 'lucide-react'
 import { PRIVATE_CUSTOMER_NAME } from './ManagementModal'
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
@@ -198,6 +198,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     internalNotes: '',
     staffNotes: '',
     sendEmail: false,
+    sendReminder: false,
     staffIds: [] as string[],
   })
 
@@ -285,6 +286,11 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
   useEffect(() => {
     const client = clients.find(c => c.id === form.clientId)
     if (client?.address) setForm(f => ({ ...f, address: client.address }))
+    // Switching to a client with no email on file can't leave the
+    // confirmation or the reminder armed — there'd be nowhere to send them.
+    if (form.clientId && !client?.email) {
+      setForm(f => (f.sendEmail || f.sendReminder) ? { ...f, sendEmail: false, sendReminder: false } : f)
+    }
   }, [form.clientId, clients])
 
   // Auto-price only for NEW services (not edits) — only Base Price, never Additional Fee
@@ -348,7 +354,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
       serviceTime: '', address: '', unit: '', numericKey: '', roomSize: '',
       frequency: 'one_time', basePrice: '', additionalFee: '',
       paymentMethod: 'zelle', status: 'pending',
-      internalNotes: '', staffNotes: '', sendEmail: false, staffIds: [],
+      internalNotes: '', staffNotes: '', sendEmail: false, sendReminder: false, staffIds: [],
     })
     setPricedFromMgmt(false)
     setRecurDays([])
@@ -375,6 +381,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     try {
       const dates = isRecurring ? generatedDates : [form.serviceDate]
       let firstId: string | undefined
+      const createdIds: string[] = []
       for (const date of dates) {
         const res = await fetch('/api/services', {
           method: 'POST',
@@ -390,8 +397,26 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
           })
         })
         if (!res.ok) throw new Error()
-        if (!firstId) { const d = await res.json(); firstId = d.id }
+        const d = await res.json()
+        if (d?.id) createdIds.push(d.id)
+        if (!firstId) firstId = d?.id
       }
+
+      // One email for the whole series, sent after every date exists so it
+      // lists all of them. The services are already saved at this point, so a
+      // failure here is reported on its own instead of failing the create.
+      if (form.sendEmail && firstId) {
+        const mailRes = await fetch(`/api/services/${firstId}/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ serviceIds: createdIds }),
+        })
+        if (!mailRes.ok) {
+          const err = await mailRes.json().catch(() => ({}))
+          alert(`The service was created, but the confirmation email was not sent: ${err.error || 'unknown error'}`)
+        }
+      }
+
       onSuccess(firstId)
       onClose()
       resetForm()
@@ -405,6 +430,7 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
   if (!open) return null
 
   const selectedClient = clients.find(c => c.id === form.clientId)
+  const canEmailClient = !!selectedClient?.email
   const hasMgmt = !!selectedClient?.management
   const mgmtName = selectedClient?.management?.name
   const isPrivateCustomer = mgmtName === PRIVATE_CUSTOMER_NAME
@@ -927,23 +953,61 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
           </div>
 
           {/* Send Email Toggle */}
-          <div className="flex items-center justify-between p-3 bg-[var(--surface2)] border border-[var(--border)] rounded-lg">
+          <div className={`flex items-center justify-between p-3 bg-[var(--surface2)] border border-[var(--border)] rounded-lg ${canEmailClient ? '' : 'opacity-60'}`}>
             <div className="flex items-center gap-3">
               <Mail size={14} className="text-[var(--accent)]" />
               <div>
                 <div className="text-xs font-semibold text-[var(--text)]">Send Confirmation Email to Client</div>
-                <div className="text-[10px] text-[var(--muted)] mt-0.5">Service details, date, time and staff will be included</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">
+                  {!form.clientId
+                    ? 'Pick a client first'
+                    : canEmailClient
+                      ? `Service number, type, date and time — goes to ${selectedClient!.email}`
+                      : 'This client has no email on file'}
+                </div>
               </div>
             </div>
             <button
               type="button"
+              disabled={!canEmailClient}
               onClick={() => set('sendEmail', !form.sendEmail)}
-              className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+              className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 disabled:cursor-not-allowed ${
                 form.sendEmail ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
               }`}
             >
               <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
                 form.sendEmail ? 'left-5' : 'left-0.5'
+              }`} />
+            </button>
+          </div>
+
+          {/* Day-before reminder — sent automatically by the morning cron, so
+              it works the same whether the service is created today or booked
+              months out. */}
+          <div className={`flex items-center justify-between p-3 bg-[var(--surface2)] border border-[var(--border)] rounded-lg ${canEmailClient ? '' : 'opacity-60'}`}>
+            <div className="flex items-center gap-3">
+              <Bell size={14} className="text-[var(--accent)]" />
+              <div>
+                <div className="text-xs font-semibold text-[var(--text)]">Send Reminder the Day Before</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">
+                  {!form.clientId
+                    ? 'Pick a client first'
+                    : canEmailClient
+                      ? `Automatic email the morning before each service${isRecurring ? ' — every date in the series' : ''}`
+                      : 'This client has no email on file'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!canEmailClient}
+              onClick={() => set('sendReminder', !form.sendReminder)}
+              className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 disabled:cursor-not-allowed ${
+                form.sendReminder ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
+              }`}
+            >
+              <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
+                form.sendReminder ? 'left-5' : 'left-0.5'
               }`} />
             </button>
           </div>

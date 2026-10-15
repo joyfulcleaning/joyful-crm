@@ -122,6 +122,7 @@ export async function POST(request: Request) {
         total: parseFloat(body.total),
         paymentMethod: body.paymentMethod,
         internalNotes: body.notes,
+        sendReminder:  !!body.sendReminder,
       }
     })
 

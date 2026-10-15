@@ -43,14 +43,21 @@ export async function GET(
     const service = await prisma.service.findUnique({
       where: { id },
       include: {
-        client: { select: { name: true } },
+        // The email is what the day-before reminder would go to — the office
+        // detail view needs it to say whether the client can be reminded at
+        // all. Cleaners never see a customer's email (stripped below).
+        client: { select: { name: true, email: true } },
         staff: { include: { user: { select: { name: true } } } },
         photos: { orderBy: { uploadedAt: 'asc' } },
         _count: { select: { duplicates: true } },
       }
     })
     if (!service) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json(authUser.role === 'user' ? stripPriceFields(service) : service)
+    if (authUser.role === 'user') {
+      const { client, ...rest } = stripPriceFields(service)
+      return NextResponse.json({ ...rest, client: { name: client?.name } })
+    }
+    return NextResponse.json(service)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch service' }, { status: 500 })
   }
@@ -131,6 +138,22 @@ export async function PATCH(
     if (body.internalNotes !== undefined) data.internalNotes = body.internalNotes
     if (body.staffNotes    !== undefined) data.staffNotes    = body.staffNotes
     if (body.clientId)                    data.client        = { connect: { id: body.clientId } }
+    // Re-arming the reminder clears the sent stamp, so moving a service to a
+    // new date can send a fresh reminder for it.
+    if (body.sendReminder  !== undefined) {
+      data.sendReminder = !!body.sendReminder
+      if (body.sendReminder) data.reminderSentAt = null
+    }
+
+    // A service that moved to another day has already been reminded for the
+    // wrong date — drop the stamp so the cron sends a fresh one for the new
+    // one. Only on an actual change, so routine edits don't re-arm it.
+    if (data.serviceDate !== undefined && data.reminderSentAt === undefined) {
+      const current = await prisma.service.findUnique({ where: { id }, select: { serviceDate: true } })
+      if (current && current.serviceDate.getTime() !== (data.serviceDate as Date).getTime()) {
+        data.reminderSentAt = null
+      }
+    }
 
     const before = data.status === 'completed'
       ? await prisma.service.findUnique({ where: { id }, select: { status: true } })
