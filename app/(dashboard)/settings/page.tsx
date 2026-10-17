@@ -59,6 +59,8 @@ const DEFAULTS: Record<string, string> = {
   'notif.schedulePublished': 'false',
   'notif.businessPhoneOffline': 'true',
   'notif.serviceNote': 'false',
+  'notif.supplyRequest': 'true',
+  'notif.supplyRequestResolved': 'false',
   // Push notifications (per event) — off by default, admin-only when enabled
   'notif.newSvc.push':    'false', 'notif.newSvc.roles':    'admin',
   'notif.completed.push': 'false', 'notif.completed.roles': 'admin',
@@ -74,6 +76,10 @@ const DEFAULTS: Record<string, string> = {
   // Recipients are the other side of each service conversation, not whole
   // roles, so `.roles` is unused here — sendPushToUsers picks the targets.
   'notif.serviceNote.push': 'true', 'notif.serviceNote.roles': 'admin,user',
+  'notif.supplyRequest.push': 'true', 'notif.supplyRequest.roles': 'admin',
+  // Same idea as service notes: the recipient is the person who asked, so
+  // `.roles` is only here to keep the Settings row shape uniform.
+  'notif.supplyRequestResolved.push': 'true', 'notif.supplyRequestResolved.roles': 'user',
   // Integrations
   'smtp.from':       'noreply@joyfulservices.com',
   // Appearance
@@ -710,6 +716,8 @@ export default function SettingsPage() {
                 { k: 'notif.newClient', ...t.settings.notifications.events.newClient },
                 { k: 'notif.aiRequest', ...t.settings.notifications.events.aiRequest },
                 { k: 'notif.quoteRequest', ...t.settings.notifications.events.quoteRequest },
+                { k: 'notif.supplyRequest', ...t.settings.notifications.events.supplyRequest },
+                { k: 'notif.supplyRequestResolved', ...t.settings.notifications.events.supplyRequestResolved },
                 { k: 'notif.lowStock',  ...t.settings.notifications.events.lowStock },
                 { k: 'notif.weekly',    ...t.settings.notifications.events.weekly },
                 { k: 'notif.schedulePublished', ...t.settings.notifications.events.schedulePublished },

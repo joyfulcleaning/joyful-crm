@@ -104,6 +104,13 @@ enum AssetStatus {
   retired
 }
 
+enum SupplyRequestStatus {
+  pending
+  fulfilled
+  rejected
+  cancelled
+}
+
 model User {
   id               String           @id @default(uuid())
   name             String
@@ -156,6 +163,8 @@ model User {
   pushTokens       PushToken[]
   serviceNotes     ServiceNote[]    @relation("ServiceNoteAuthor")
   notificationPrefs NotificationPref[]
+  supplyRequests   SupplyRequest[]  @relation("SupplyRequestedBy")
+  resolvedSupplyRequests SupplyRequest[] @relation("SupplyRequestResolvedBy")
 
   @@map("users")
 }
@@ -519,6 +528,7 @@ model InventoryProduct {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   movements     InventoryMovement[]
+  requestItems  SupplyRequestItem[]
 
   @@map("inventory_products")
 }
@@ -535,6 +545,52 @@ model InventoryMovement {
   product   InventoryProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("inventory_movements")
+}
+
+// A staff member asking the admin for products that are already in stock.
+// The admin dispatches it from the requests inbox, and whatever is actually
+// handed over gets deducted from inventory as a normal 'out' movement — the
+// delivered amount can be lower than what was asked for (not enough stock,
+// admin's call), which is why each line carries both numbers.
+model SupplyRequest {
+  id            String              @id @default(uuid())
+  requestedById String
+  requestedBy   User                @relation("SupplyRequestedBy", fields: [requestedById], references: [id])
+  status        SupplyRequestStatus @default(pending)
+  // What the staff member wrote: which job it's for, why they need it.
+  note          String?
+  // The admin's reply, shown to the staff member once it's resolved —
+  // typically why a quantity was cut or the whole request turned down.
+  adminNote     String?
+  neededBy      DateTime?           @db.Date
+  resolvedAt    DateTime?
+  resolvedById  String?
+  resolvedBy    User?               @relation("SupplyRequestResolvedBy", fields: [resolvedById], references: [id])
+  items         SupplyRequestItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([status])
+  @@index([requestedById, createdAt])
+  @@map("supply_requests")
+}
+
+model SupplyRequestItem {
+  id           String           @id @default(uuid())
+  requestId    String
+  request      SupplyRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  productId    String
+  product      InventoryProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  requestedQty Int
+  // null while pending; 0 means the admin explicitly handed over none of this
+  // line, which is what makes "fulfilled but partial" readable after the fact.
+  deliveredQty Int?
+  // The stock movement this line produced, so the deduction can be traced
+  // back to the request that caused it.
+  movementId   String?
+
+  @@unique([requestId, productId])
+  @@map("supply_request_items")
 }
 
 model Asset {

@@ -53,7 +53,9 @@ export default function Sidebar() {
         const res = await fetch('/api/sync-status')
         if (!res.ok) return
         const data = await res.json()
-        if (!cancelled) setAiPending(data.aiRequestsPending || 0)
+        // Both queues on the Requests page: inbound leads and staff supply
+        // requests. The badge is "things waiting on you", not one of the two.
+        if (!cancelled) setAiPending((data.aiRequestsPending || 0) + (data.supplyRequestsPending || 0))
       } catch {}
     }
     check()

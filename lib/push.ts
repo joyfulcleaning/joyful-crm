@@ -29,10 +29,15 @@ export const REQUEST_SOUND = 'joyful-alert.wav'
 export const REQUEST_THREAD = 'requests'
 
 // Badge shown on the app icon — the count of requests still awaiting review,
-// so it clears itself as they get resolved.
+// so it clears itself as they get resolved. Covers both inbox queues: caller /
+// website requests and staff supply requests.
 export async function pendingRequestCount(): Promise<number> {
   try {
-    return await prisma.aiRequest.count({ where: { status: 'pending' } })
+    const [ai, supplies] = await Promise.all([
+      prisma.aiRequest.count({ where: { status: 'pending' } }),
+      prisma.supplyRequest.count({ where: { status: 'pending' } }),
+    ])
+    return ai + supplies
   } catch {
     return 0
   }

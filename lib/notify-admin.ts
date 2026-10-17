@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { sendPushToRoles } from './push'
+import { sendPushToRoles, PushOptions } from './push'
 
 // Fires both channels for a Settings → Notifications event: push (via
 // sendPushToRoles, respecting notif.{eventKey}.push/.roles) and email (to
@@ -12,10 +12,13 @@ export async function notifyEvent(eventKey: string, opts: {
   pushTitle: string
   pushBody: string
   pushData?: Record<string, any>
+  // Sound/thread/badge, for events that belong to a group the app already
+  // treats specially (e.g. the review queue's own chime and badge count).
+  pushOptions?: PushOptions
   emailSubject: string
   emailHtml: string
 }) {
-  await sendPushToRoles(eventKey, opts.pushTitle, opts.pushBody, opts.pushData)
+  await sendPushToRoles(eventKey, opts.pushTitle, opts.pushBody, opts.pushData, opts.pushOptions)
 
   try {
     const [emailSetting, toSetting] = await Promise.all([

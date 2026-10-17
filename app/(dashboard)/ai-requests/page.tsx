@@ -5,6 +5,7 @@ import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import AiRequestModal from '@/components/modals/AiRequestModal'
 import ErrorBanner from '@/components/ErrorBanner'
+import SupplyRequestsPanel from '@/components/SupplyRequestsPanel'
 import { useI18n } from '@/lib/i18n'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,6 +29,11 @@ export default function AiRequestsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<any>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  // One inbox, two queues: leads coming in from outside, and staff asking for
+  // products from stock. They share nothing but the fact that both wait on the
+  // admin, so they get a tab each instead of one mixed list.
+  const [tab, setTab] = useState<'customers' | 'supplies'>('customers')
+  const [suppliesPending, setSuppliesPending] = useState(0)
   const { t } = useI18n()
 
   const TYPE_LABELS: Record<string, string> = {
@@ -61,6 +67,23 @@ export default function AiRequestsPage() {
 
   useEffect(() => { load() }, [])
   useSyncPoll(['aiRequests'], load)
+
+  // Drives the count on the Supply requests tab, so a new one is visible
+  // without having to switch tabs to find out.
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await fetch('/api/sync-status')
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setSuppliesPending(data.supplyRequestsPending || 0)
+      } catch {}
+    }
+    check()
+    const id = setInterval(check, 8000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
 
   async function handleResolve(id: string, body: any) {
     const res = await fetch(`/api/ai-requests/${id}`, {
@@ -96,13 +119,40 @@ export default function AiRequestsPage() {
 
   return (
     <div className="space-y-4">
-      {loadError && <ErrorBanner message={loadError} onRetry={load} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.aiRequests}</h1>
-          <p className="text-xs text-[#6b7280] mt-0.5">{t.aiRequestsPage.subtitle}</p>
+          {tab === 'customers' && <p className="text-xs text-[#6b7280] mt-0.5">{t.aiRequestsPage.subtitle}</p>}
         </div>
       </div>
+
+      <div className="flex gap-2">
+        {([
+          { key: 'customers' as const, label: t.supplyRequestsPanel.tabCustomers, count: pendingCount },
+          { key: 'supplies' as const, label: t.supplyRequestsPanel.tabSupplies, count: suppliesPending },
+        ]).map(tabItem => (
+          <button
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all"
+            style={{
+              borderColor: tab === tabItem.key ? '#4A3FB0' : '#2a2f3d',
+              background: tab === tabItem.key ? 'rgba(74,63,176,0.15)' : 'transparent',
+              color: tab === tabItem.key ? '#7B72D8' : '#6b7280',
+            }}
+          >
+            {tabItem.label}
+            {tabItem.count > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#f59e0b] text-white leading-none">
+                {tabItem.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'supplies' ? <SupplyRequestsPanel /> : <>
+      {loadError && <ErrorBanner message={loadError} onRetry={load} />}
 
       <div className="grid grid-cols-4 gap-2">
         {[
@@ -204,6 +254,7 @@ export default function AiRequestsPage() {
         onClose={() => setSelected(null)}
         onResolve={handleResolve}
       />
+      </>}
     </div>
   )
 }

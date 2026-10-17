@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const authUser = await getAuthUser(request)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets, estimateVisits, aiRequests, aiRequestsPending] = await Promise.all([
+  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets, estimateVisits, aiRequests, aiRequestsPending, supplyRequests, supplyRequestsPending] = await Promise.all([
     prisma.service.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.expense.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.invoice.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
@@ -22,6 +22,15 @@ export async function GET(request: Request) {
     prisma.estimateVisit.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.aiRequest.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.aiRequest.count({ where: { status: 'pending' } }),
+    // Staff see only their own supply requests, so the signature is scoped to
+    // the caller — otherwise another person's request would make every phone
+    // reload a list that didn't change for them.
+    prisma.supplyRequest.aggregate({
+      _count: { _all: true },
+      _max: { updatedAt: true },
+      where: authUser.role === 'admin' ? undefined : { requestedById: authUser.id },
+    }),
+    prisma.supplyRequest.count({ where: { status: 'pending' } }),
   ])
 
   return NextResponse.json({
@@ -35,5 +44,7 @@ export async function GET(request: Request) {
     estimateVisits: sig(estimateVisits),
     aiRequests: sig(aiRequests),
     aiRequestsPending,
+    supplyRequests: sig(supplyRequests),
+    supplyRequestsPending,
   })
 }

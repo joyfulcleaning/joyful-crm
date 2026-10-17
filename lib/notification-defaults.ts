@@ -16,6 +16,8 @@ const PUSH_DEFAULTS: Record<string, boolean> = {
   quoteRequest:         true,
   schedulePublished:    true,
   businessPhoneOffline: true,
+  supplyRequest:         true,
+  supplyRequestResolved: true,
 }
 
 export function defaultPushEnabled(eventKey: string): boolean {
@@ -26,6 +28,9 @@ export function defaultPushEnabled(eventKey: string): boolean {
 const ROLE_DEFAULTS: Record<string, string> = {
   schedulePublished: 'user',
   serviceNote:       'admin,user',
+  // Recipients are the one staff member who asked, not a whole role —
+  // sendPushToUsers picks the target, so `.roles` is unused here.
+  supplyRequestResolved: 'user',
 }
 
 export function defaultPushRoles(eventKey: string): string {
