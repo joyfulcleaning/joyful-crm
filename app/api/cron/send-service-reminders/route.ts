@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendPlainEmail } from '@/lib/email'
 import { reminderHtml, reminderSubject } from '@/lib/service-emails'
+import { rejectUnauthorizedCron } from '@/lib/cron-auth'
 
 /**
  * Day-before reminder to the client, for services with the reminder toggle on.
@@ -28,12 +29,8 @@ function businessDatePlusDays(days: number): string {
 }
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
-    const auth = request.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const rejected = rejectUnauthorizedCron(request, 'send-service-reminders')
+  if (rejected) return rejected
 
   try {
     const target = businessDatePlusDays(1)

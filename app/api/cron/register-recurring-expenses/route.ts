@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { rejectUnauthorizedCron } from '@/lib/cron-auth'
 
 function calcNextDueDate(from: Date, frequency: string, dayOfMonth?: number | null): Date {
   const d = new Date(from)
@@ -77,12 +78,8 @@ async function registerDueExpenses() {
 
 // Vercel Cron calls GET — protected by CRON_SECRET in production
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
-    const auth = request.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const rejected = rejectUnauthorizedCron(request, 'register-recurring-expenses')
+  if (rejected) return rejected
   try {
     const result = await registerDueExpenses()
     return NextResponse.json({ ok: true, ...result })

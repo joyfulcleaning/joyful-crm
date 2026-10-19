@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { rejectUnauthorizedCron } from '@/lib/cron-auth'
 
 const RETENTION_DAYS = 400 // ~13 months — enough to compare against last year
 
@@ -13,12 +14,8 @@ async function cleanupAuditLog() {
 
 // Vercel Cron calls GET — protected by CRON_SECRET in production
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
-    const auth = request.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const rejected = rejectUnauthorizedCron(request, 'cleanup-audit-log')
+  if (rejected) return rejected
   try {
     const result = await cleanupAuditLog()
     return NextResponse.json({ ok: true, ...result })

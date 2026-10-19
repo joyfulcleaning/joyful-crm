@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notifyEvent } from '@/lib/notify-admin'
+import { rejectUnauthorizedCron } from '@/lib/cron-auth'
 
 const STALE_AFTER_MS = 2 * 60 * 60 * 1000 // 2 hours
 
@@ -37,12 +38,8 @@ async function checkBusinessPhone() {
 
 // Vercel Cron calls GET — protected by CRON_SECRET in production
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
-    const auth = request.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const rejected = rejectUnauthorizedCron(request, 'check-business-phone')
+  if (rejected) return rejected
   try {
     const result = await checkBusinessPhone()
     return NextResponse.json({ ok: true, ...result })
