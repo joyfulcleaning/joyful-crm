@@ -7,6 +7,7 @@ import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import StaffNoteThread from '@/components/StaffNoteThread'
 import ServiceModal from './ServiceModal'
 import { localDateStr } from '@/lib/local-date'
+import { thumbUrl, viewUrl } from '@/lib/photo-url'
 import { SERVICE_TYPES } from '@/lib/service-types'
 
 
@@ -834,8 +835,9 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
                     {visible.map(photo => (
                       <div key={photo.id} className="relative group rounded-xl overflow-hidden aspect-square bg-[var(--surface2)]">
                         <img
-                          src={photo.url}
+                          src={thumbUrl(photo.url)}
                           alt={`${photoTab} photo`}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
@@ -891,8 +893,11 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
             className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
             onClick={() => setLightbox(null)}
           >
+            {/* `lightbox` holds the original URL so the download button below
+                still saves the full-resolution file; only the on-screen copy
+                is scaled. */}
             <img
-              src={lightbox}
+              src={viewUrl(lightbox)}
               alt="Full size"
               className="max-w-full max-h-full object-contain rounded-xl"
               onClick={e => e.stopPropagation()}
