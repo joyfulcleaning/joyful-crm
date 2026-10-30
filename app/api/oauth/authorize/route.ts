@@ -33,13 +33,35 @@ export async function POST(request: Request) {
     )
   }
 
+  // Safe to redirect from here on: this URI came out of the signed ticket, so
+  // the consent page already matched it against the client's registered URIs.
   const redirect = new URL(ticket.redirectUri)
   if (ticket.state) redirect.searchParams.set('state', ticket.state)
 
-  if (action !== 'approve') {
-    redirect.searchParams.set('error', 'access_denied')
-    redirect.searchParams.set('error_description', 'The administrator declined the request')
+  const bounce = (error: string, description: string) => {
+    redirect.searchParams.set('error', error)
+    redirect.searchParams.set('error_description', description)
     return NextResponse.redirect(redirect.toString(), { status: 303 })
+  }
+
+  // Three distinct outcomes. Collapsing "no action" into "denied" is what made
+  // the original consent-form defect so hard to diagnose: the form silently
+  // stopped sending `action`, and ChatGPT reported a cancellation that nobody
+  // had performed. An absent or unrecognized action is a fault on our side and
+  // now says so, which also keeps a real denial honest.
+  const missingAction = action === null || (typeof action === 'string' && action.trim() === '')
+  if (missingAction) {
+    console.error('[oauth/authorize] consent POST carried no action — the consent form is not submitting it')
+    return bounce('invalid_request', 'No consent decision was submitted. Please start the authorization again.')
+  }
+
+  if (action !== 'approve' && action !== 'deny') {
+    console.error(`[oauth/authorize] unrecognized consent action: ${String(action)}`)
+    return bounce('invalid_request', 'The consent decision was not recognized. Please start the authorization again.')
+  }
+
+  if (action === 'deny') {
+    return bounce('access_denied', 'The administrator declined the request')
   }
 
   const session = await getServerSession(authOptions)
@@ -49,9 +71,7 @@ export async function POST(request: Request) {
     : null
 
   if (!user || user.status !== 'active' || user.role !== 'admin') {
-    redirect.searchParams.set('error', 'access_denied')
-    redirect.searchParams.set('error_description', 'Session expired or not an active admin')
-    return NextResponse.redirect(redirect.toString(), { status: 303 })
+    return bounce('access_denied', 'Session expired or not an active admin')
   }
 
   // The checkbox may narrow the grant to read-only, but can never widen it
