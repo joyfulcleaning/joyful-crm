@@ -165,6 +165,8 @@ model User {
   notificationPrefs NotificationPref[]
   supplyRequests   SupplyRequest[]  @relation("SupplyRequestedBy")
   resolvedSupplyRequests SupplyRequest[] @relation("SupplyRequestResolvedBy")
+  oauthAuthCodes   OAuthAuthCode[]
+  oauthTokens      OAuthToken[]
 
   @@map("users")
 }
@@ -735,4 +737,81 @@ model PushToken {
   updatedAt DateTime @updatedAt
 
   @@map("push_tokens")
+}
+
+// ─────────────────────────────────────────────
+// OAuth 2.1 authorization server
+//
+// Exists only to let ChatGPT (and any other MCP client) reach
+// /api/assistant/mcp. ChatGPT refuses plain API keys for MCP servers — it
+// requires an OAuth 2.1 flow conforming to the MCP authorization spec — so the
+// CRM has to issue its own tokens. Unrelated to how staff log in: the resource
+// owner here is always an existing admin User, authenticated through the
+// normal NextAuth session on the consent screen.
+// ─────────────────────────────────────────────
+
+model OAuthClient {
+  id           String   @id @default(uuid())
+  clientId     String   @unique
+  // Null for public clients (token_endpoint_auth_method "none"), which is what
+  // ChatGPT registers as — it relies on PKCE instead of a secret.
+  secretHash   String?
+  name         String
+  redirectUris String[]
+  grantTypes   String[]
+  authMethod   String   @default("none")
+  // Dynamic registration (RFC 7591) is open by necessity — clients must be able
+  // to register before any user interaction. Registering grants nothing on its
+  // own; an admin still has to approve the consent screen for a token to exist.
+  createdAt    DateTime @default(now())
+  codes        OAuthAuthCode[]
+  tokens       OAuthToken[]
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthCode {
+  id            String      @id @default(uuid())
+  codeHash      String      @unique
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redirectUri   String
+  codeChallenge String
+  scope         String
+  // RFC 8707 resource indicator. Carried from the authorization request through
+  // to the token so the access token is bound to this MCP server as audience.
+  resource      String?
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([expiresAt])
+  @@map("oauth_auth_codes")
+}
+
+model OAuthToken {
+  id        String      @id @default(uuid())
+  // Tokens are high-entropy random strings stored only as a SHA-256 digest, so
+  // a leak of this table does not hand over working credentials.
+  tokenHash String      @unique
+  kind      String // 'access' | 'refresh'
+  clientId  String
+  client    OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope     String
+  resource  String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  // Set when a refresh token is rotated, so the whole chain can be revoked if a
+  // already-used refresh token is replayed (OAuth 2.1 §4.3.1).
+  replacedById String?
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, kind])
+  @@index([expiresAt])
+  @@map("oauth_tokens")
 }

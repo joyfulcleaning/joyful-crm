@@ -103,7 +103,7 @@ function MoonIcon() {
   )
 }
 
-export default function LoginForm() {
+export default function LoginForm({ callbackUrl = '/dashboard' }: { callbackUrl?: string }) {
   const router = useRouter()
   const [mode,     setMode]     = useState<Mode>('light')
   const [email,    setEmail]    = useState('')
@@ -127,7 +127,7 @@ export default function LoginForm() {
       setError('Invalid email or password')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(callbackUrl)
       router.refresh()
     }
   }
