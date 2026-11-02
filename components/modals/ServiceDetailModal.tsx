@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { X, Pencil, Save, Copy, Layers, Camera, Trash2, ZoomIn, ImagePlus, Repeat2, Bell, Download, Share2 } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import StaffNoteThread from '@/components/StaffNoteThread'
+import StaffGroupPicker from '@/components/StaffGroupPicker'
 import ServiceModal from './ServiceModal'
 import { localDateStr } from '@/lib/local-date'
 import { thumbUrl, viewUrl } from '@/lib/photo-url'
@@ -86,12 +87,9 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
       fetch('/api/staff').then(r => r.json()).catch(() => []),
     ]).then(([c, s]) => {
       setClients(c)
-      const ORDER = ['Taymie', 'Jenifer', 'Lizyanis', 'Melsy', 'Nathasha', 'Admin', 'Seidy', 'Seydi']
-      setStaff([...s].sort((a, b) => {
-        const ai = ORDER.findIndex(n => a.name?.startsWith(n))
-        const bi = ORDER.findIndex(n => b.name?.startsWith(n))
-        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-      }))
+      // Ordering now comes from the groups themselves (sortOrder, then name),
+      // which replaces the old hardcoded list of first names.
+      setStaff(Array.isArray(s) ? s : [])
     })
   }, [open])
 
@@ -186,15 +184,6 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
 
   function set(field: string, value: any) {
     setForm((f: any) => ({ ...f, [field]: value }))
-  }
-
-  function toggleStaff(id: string) {
-    setForm((f: any) => ({
-      ...f,
-      staffIds: f.staffIds.includes(id)
-        ? f.staffIds.filter((s: string) => s !== id)
-        : [...f.staffIds, id]
-    }))
   }
 
   // ── Photo download / share ────────────────────────────────────────────────
@@ -651,25 +640,11 @@ export default function ServiceDetailModal({ service, open, onClose, onSuccess }
           {editing ? (
             <div>
               <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-2">Assign Staff</label>
-              <div className="flex flex-wrap gap-2">
-                {staff.map(member => {
-                  const selected = form.staffIds?.includes(member.id)
-                  return (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => toggleStaff(member.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                        selected
-                          ? 'bg-[rgba(74,63,176,0.12)] border-[var(--accent)] text-[var(--accent)]'
-                          : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                      }`}
-                    >
-                      {member.name.split(' ')[0]}
-                    </button>
-                  )
-                })}
-              </div>
+              <StaffGroupPicker
+                staff={staff}
+                value={form.staffIds || []}
+                onChange={ids => set('staffIds', ids)}
+              />
             </div>
           ) : (
             <div>

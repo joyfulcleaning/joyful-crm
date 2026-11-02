@@ -5,10 +5,11 @@ import { useSession } from 'next-auth/react'
 import {
   Plus, UserCheck, Mail, Phone, CheckCircle2, DollarSign,
   CalendarDays, Loader2, Search, ChevronDown, ChevronUp,
-  Eye, Pencil, Trash2, X, Check,
+  Eye, Pencil, Trash2, X, Check, Users,
 } from 'lucide-react'
 import StaffModal from '@/components/modals/StaffModal'
 import StaffDetailModal from '@/components/modals/StaffDetailModal'
+import StaffGroupsModal from '@/components/modals/StaffGroupsModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
 import ErrorBanner from '@/components/ErrorBanner'
@@ -94,6 +95,7 @@ export default function StaffPage() {
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [activeTab, setActiveTab]   = useState('team')
   const [modalOpen, setModalOpen]   = useState(false)
+  const [groupsOpen, setGroupsOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
@@ -549,12 +551,20 @@ export default function StaffPage() {
           <h1 className="text-lg font-bold text-[#e8eaf0]">{t.nav.staff}</h1>
           <p className="text-xs text-[#6b7280] mt-0.5">{t.staffPage.subtitle}</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          <Plus size={15} />{t.staffPage.newStaffMember}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setGroupsOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] hover:border-[#343c52] text-sm font-semibold rounded-lg transition-colors"
+          >
+            <Users size={15} />{t.staffPage.groups.manage}
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <Plus size={15} />{t.staffPage.newStaffMember}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -604,6 +614,17 @@ export default function StaffPage() {
                     </div>
                     <div className="text-sm font-semibold text-[#e8eaf0]">{member.name}</div>
                     <div className="text-[10px] font-bold mt-1 capitalize" style={{ color: roleColor }}>● {member.role}</div>
+                    {member.staffGroup && (
+                      <div
+                        className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                        style={{
+                          backgroundColor: `${member.staffGroup.color || '#4f8ef7'}1f`,
+                          color:           member.staffGroup.color || '#4f8ef7',
+                        }}
+                      >
+                        {member.staffGroup.name}
+                      </div>
+                    )}
                     <div className="mt-3 pt-3 border-t border-[#2a2f3d] space-y-1">
                       {member.email && (
                         <div className="flex items-center gap-1.5 text-[10px] text-[#6b7280]">
@@ -1272,6 +1293,10 @@ export default function StaffPage() {
         member={selectedMember} open={detailOpen}
         onClose={() => { setDetailOpen(false); setSelectedMember(null) }}
         onSuccess={loadStaff}
+      />
+      <StaffGroupsModal
+        open={groupsOpen} onClose={() => setGroupsOpen(false)}
+        staff={staff} onSuccess={loadStaff}
       />
 
       {/* Payroll Edit Modal */}

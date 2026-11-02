@@ -19,7 +19,10 @@ export async function GET(request: Request) {
     }
 
     const staff = await prisma.user.findMany({
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
+      // The group travels with the person so the staffing pickers and the
+      // staff cards can label it without a second round trip.
+      include: { staffGroup: { select: { id: true, name: true, color: true, sortOrder: true, isActive: true } } },
     })
     // Never ship password hashes to the browser, even for admins
     return NextResponse.json(staff.map(({ password, ...rest }) => rest))
@@ -56,6 +59,7 @@ export async function POST(request: Request) {
         phone: body.phone || null,
         status: body.status || 'active',
         scheduleType:          body.scheduleType          || null,
+        staffGroupId:          body.staffGroupId          || null,
         hourlyRate:            body.hourlyRate ? parseFloat(body.hourlyRate) : null,
         payRates:              body.payRates              ?? null,
         taxId:                 body.taxId                 || null,

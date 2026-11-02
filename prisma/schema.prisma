@@ -139,6 +139,9 @@ model User {
   // 'week' (7 days), or 'full' (no date restriction at all, bypasses the
   // publish gate too). Set per-person from their card on the Staff page.
   scheduleVisibility    String           @default("1")
+  // Team this person works with. Picking a group when staffing a service
+  // selects everyone in it at once; see StaffGroup.
+  staffGroupId          String?
   // How far BACK this staff member can see their own past assigned services:
   // '0' (only today — the original behavior), 'week' (every day of the current
   // work week, which runs Saturday → Friday), or '7'/'14'/'30' (days back).
@@ -167,8 +170,30 @@ model User {
   resolvedSupplyRequests SupplyRequest[] @relation("SupplyRequestResolvedBy")
   oauthAuthCodes   OAuthAuthCode[]
   oauthTokens      OAuthToken[]
+  staffGroup       StaffGroup?      @relation(fields: [staffGroupId], references: [id], onDelete: SetNull)
 
+  @@index([staffGroupId])
   @@map("users")
+}
+
+// Teams the crew is organized into, so staffing a service means picking a group
+// instead of tapping one person at a time. A member belongs to at most one
+// group, and the group is only a selection shortcut — assignments are still
+// stored one row per person in ServiceStaff, so nothing downstream (payroll,
+// the mobile calendar, the assistant tools) has to know groups exist.
+model StaffGroup {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  // Hex color for the group's pill in the staffing UI. Null falls back to the
+  // app accent, so a group is never unusable just because none was picked.
+  color     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   User[]
+
+  @@map("staff_groups")
 }
 
 model Account {

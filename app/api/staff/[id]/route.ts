@@ -31,6 +31,7 @@ export async function PATCH(
         status: body.status,
         ...(hashedPassword ? { password: hashedPassword } : {}),
         scheduleType:          body.scheduleType          ?? null,
+        staffGroupId:          body.staffGroupId          || null,
         hourlyRate:            body.hourlyRate != null ? parseFloat(body.hourlyRate) : null,
         payRates:              body.payRates              ?? null,
         taxId:                 body.taxId                 ?? null,

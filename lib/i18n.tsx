@@ -864,6 +864,31 @@ const en = {
       '14': 'Last 14 days',
       '30': 'Last 30 days',
     } as Record<string, string>,
+
+    groups: {
+      manage:          'Groups',
+      title:           'Staff Groups',
+      subtitle:        'Teams you can assign to a service in one tap',
+      newGroup:        'Add',
+      namePlaceholder: 'Group name…',
+      empty:           'No groups yet. Create one and add the people who usually work together.',
+      membersLabel:    'Members',
+      memberCount:     (n: number) => `${n} ${n === 1 ? 'member' : 'members'}`,
+      movesFrom:       (from: string) => `moves from ${from}`,
+      archived:        'archived',
+      archive:         'Archive',
+      unarchive:       'Unarchive',
+      delete:          'Delete',
+      save:            'Save',
+      saving:          'Saving…',
+      noGroup:         'No group',
+      loadError:       'Could not load groups.',
+      saveError:       'Could not save the group. Please try again.',
+      deleteConfirm:   (name: string, n: number) =>
+        n > 0
+          ? `Delete the group "${name}"? Its ${n} ${n === 1 ? 'member' : 'members'} stay in the system and keep every service already assigned to them — they just end up with no group.`
+          : `Delete the group "${name}"?`,
+    },
   },
 
   financesPage: {
@@ -2225,6 +2250,31 @@ const es: typeof en = {
       '14': 'Últimos 14 días',
       '30': 'Últimos 30 días',
     } as Record<string, string>,
+
+    groups: {
+      manage:          'Grupos',
+      title:           'Grupos de personal',
+      subtitle:        'Equipos que puedes asignar a un servicio de un toque',
+      newGroup:        'Agregar',
+      namePlaceholder: 'Nombre del grupo…',
+      empty:           'Todavía no hay grupos. Crea uno y agrega a las personas que suelen trabajar juntas.',
+      membersLabel:    'Integrantes',
+      memberCount:     (n: number) => `${n} ${n === 1 ? 'integrante' : 'integrantes'}`,
+      movesFrom:       (from: string) => `se mueve de ${from}`,
+      archived:        'archivado',
+      archive:         'Archivar',
+      unarchive:       'Desarchivar',
+      delete:          'Eliminar',
+      save:            'Guardar',
+      saving:          'Guardando…',
+      noGroup:         'Sin grupo',
+      loadError:       'No se pudieron cargar los grupos.',
+      saveError:       'No se pudo guardar el grupo. Intenta de nuevo.',
+      deleteConfirm:   (name: string, n: number) =>
+        n > 0
+          ? `¿Eliminar el grupo "${name}"? Sus ${n} ${n === 1 ? 'integrante' : 'integrantes'} siguen en el sistema y conservan todos los servicios que ya tienen asignados — solo quedan sin grupo.`
+          : `¿Eliminar el grupo "${name}"?`,
+    },
   },
 
   financesPage: {

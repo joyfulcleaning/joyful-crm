@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Pencil, Save, Mail, Phone, UserCheck, DollarSign, ShieldCheck, Calendar, AlertTriangle } from 'lucide-react'
+import { X, Pencil, Save, Mail, Phone, UserCheck, DollarSign, ShieldCheck, Calendar, AlertTriangle, Users } from 'lucide-react'
 import { PAY_FREQUENCIES } from './StaffModal'
+import StaffGroupSelect from '@/components/StaffGroupSelect'
 
 const ROLE_COLORS: Record<string, string>   = { admin: '#4f8ef7', user: '#a78bfa' }
 const STATUS_COLORS: Record<string, string> = { active: '#38d9a9', invited: '#f59e0b', inactive: '#6b7280' }
@@ -194,6 +195,22 @@ export default function StaffDetailModal({ member, open, onClose, onSuccess }: P
               </div>
             ) : (
               <div className="text-xs font-bold capitalize" style={{ color: statusColor }}>{data.status}</div>
+            )}
+          </div>
+
+          {/* Group */}
+          <div>
+            <label className={LABEL}><Users size={9} className="inline mr-1" />Group</label>
+            {editing ? (
+              <StaffGroupSelect
+                value={form.staffGroupId}
+                onChange={id => set('staffGroupId', id)}
+                className={INPUT}
+              />
+            ) : (
+              <div className="text-xs font-bold" style={{ color: data.staffGroup?.color || '#e8eaf0' }}>
+                {data.staffGroup?.name || '—'}
+              </div>
             )}
           </div>
 

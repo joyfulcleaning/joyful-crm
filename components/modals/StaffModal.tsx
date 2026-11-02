@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { X, Plus } from 'lucide-react'
+import StaffGroupSelect from '@/components/StaffGroupSelect'
 
 interface Props {
   open: boolean
@@ -31,6 +32,7 @@ const IMMIGRATION_OPTIONS = [
 const BLANK = {
   name: '', email: '', phone: '',
   role: 'user', status: 'active', password: '',
+  staffGroupId: null as string | null,
   scheduleType: 'weekly', hourlyRate: '',
   payRates: { per1BR: '', per2BR: '', per3BR: '', extraFee: '' },
   taxIdType: 'SSN', taxId: '',
@@ -199,6 +201,19 @@ export default function StaffModal({ open, onClose, onSuccess }: Props) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Group */}
+          <div>
+            <label className={LABEL}>Group</label>
+            <StaffGroupSelect
+              value={form.staffGroupId}
+              onChange={id => set('staffGroupId', id)}
+              className={INPUT}
+            />
+            <p className="text-[10px] text-[#6b7280] mt-1">
+              Lets you staff a service by picking this whole team at once.
+            </p>
           </div>
 
           {/* ── Employee Info ── */}

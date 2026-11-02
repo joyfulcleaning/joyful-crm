@@ -5,6 +5,7 @@ import { X, Plus, Mail, Bell, Layers, DollarSign, Info } from 'lucide-react'
 import { PRIVATE_CUSTOMER_NAME } from './ManagementModal'
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
+import StaffGroupPicker from '@/components/StaffGroupPicker'
 import { calcPrices, calcPrivatePrices, AUTO_PRICE_TYPES } from '@/lib/pricing'
 import { SERVICE_TYPES } from '@/lib/service-types'
 
@@ -271,14 +272,9 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
       fetch('/api/staff').then(r => r.json()).catch(() => []),
     ]).then(([c, s]) => {
       setClients(c)
-      const ORDER = ['Taymie', 'Jenifer', 'Lizyanis', 'Melsy', 'Nathasha', 'Admin', 'Seidy', 'Seydi']
-      setStaff([...s].sort((a, b) => {
-        const ai = ORDER.findIndex(n => a.name?.startsWith(n))
-        const bi = ORDER.findIndex(n => b.name?.startsWith(n))
-        const ar = ai === -1 ? 999 : ai
-        const br = bi === -1 ? 999 : bi
-        return ar - br
-      }))
+      // Ordering now comes from the groups themselves (sortOrder, then name),
+      // which replaces the old hardcoded list of first names.
+      setStaff(Array.isArray(s) ? s : [])
     })
   }, [open])
 
@@ -337,15 +333,6 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
 
   function set(field: string, value: any) {
     setForm(f => ({ ...f, [field]: value }))
-  }
-
-  function toggleStaff(id: string) {
-    setForm(f => ({
-      ...f,
-      staffIds: f.staffIds.includes(id)
-        ? f.staffIds.filter(s => s !== id)
-        : [...f.staffIds, id]
-    }))
   }
 
   function resetForm() {
@@ -907,25 +894,11 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
           {/* Staff Assignment */}
           <div>
             <label className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block mb-2">Assign Staff</label>
-            <div className="flex flex-wrap gap-2">
-              {staff.map(member => {
-                const selected = form.staffIds.includes(member.id)
-                return (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => toggleStaff(member.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      selected
-                        ? 'bg-[rgba(74,63,176,0.12)] border-[var(--accent)] text-[var(--accent)]'
-                        : 'bg-transparent border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]'
-                    }`}
-                  >
-                    {member.name.split(' ')[0]}
-                  </button>
-                )
-              })}
-            </div>
+            <StaffGroupPicker
+              staff={staff}
+              value={form.staffIds}
+              onChange={ids => set('staffIds', ids)}
+            />
           </div>
 
           {/* Internal Notes */}
