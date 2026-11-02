@@ -38,6 +38,9 @@ const DEFAULTS: Record<string, string> = {
   'inv.dueDays':     '15',
   'inv.taxRate':     '0',
   'inv.lateFeePct':  '0',
+  // Pre-fills the per-invoice card fee toggle. Storing the rate here keeps it
+  // in one place if the processor's cut ever changes.
+  'inv.cardFeeRate': '3',
   'inv.autoSend':    'false',
   'inv.footer':      'Thank you for choosing Joyful Cleaning Services Corp.! We appreciate your business.',
   'inv.methods':     'cash,zelle,venmo,check',
@@ -595,6 +598,11 @@ export default function SettingsPage() {
                 <div>
                   <label className={labelCls}>{t.settings.invoicing.lateFeePct}</label>
                   <input type="number" step="0.01" min="0" max="30" value={val('inv.lateFeePct', '0')} onChange={e => set('inv.lateFeePct', e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>{t.settings.invoicing.cardFeeRatePct}</label>
+                  <input type="number" step="0.01" min="0" max="30" value={val('inv.cardFeeRate', '3')} onChange={e => set('inv.cardFeeRate', e.target.value)} className={inputCls} />
+                  <div className="text-[10px] text-[#6b7280] mt-1">{t.settings.invoicing.cardFeeRateDesc}</div>
                 </div>
                 <div className="flex items-center gap-3 pt-5">
                   <Toggle k="inv.autoSend" />

@@ -358,6 +358,11 @@ export async function getInvoice(args: { invoiceId?: unknown; invoiceNumber?: un
     additionalFees: num(invoice.additionalFees),
     taxRate: num(invoice.taxRate),
     taxAmount: num(invoice.taxAmount),
+    // Shown in the invoice totals block, not as line items — so the model has
+    // to read them here or its figures won't add up to the total.
+    cardFeeRate: num(invoice.cardFeeRate),
+    cardFeeAmount: num(invoice.cardFeeAmount),
+    tipAmount: num(invoice.tipAmount),
     total: num(invoice.total),
     amountPaid: num(invoice.amountPaid),
     balanceDue: num(invoice.balanceDue),
@@ -400,7 +405,7 @@ export async function businessSummary(args: { period?: unknown; from?: unknown; 
   const lte = dateOnly(range.to)
   const lteEnd = new Date(`${range.to}T23:59:59.999Z`)
 
-  const [services, payments, expenses, newClients, openInvoices] = await Promise.all([
+  const [services, payments, expenses, newClients, openInvoices, tips] = await Promise.all([
     prisma.service.findMany({
       where: { serviceDate: { gte, lte } },
       select: { status: true, total: true, type: true },
@@ -417,6 +422,13 @@ export async function businessSummary(args: { period?: unknown; from?: unknown; 
     prisma.invoice.aggregate({
       where: { status: { in: ['draft', 'sent', 'overdue'] } },
       _sum: { balanceDue: true },
+      _count: true,
+    }),
+    // Tips invoiced in the period. Reported on their own because the money
+    // belongs to the crew, not the business — it is handed over at payroll.
+    prisma.invoice.aggregate({
+      where: { issuedAt: { gte, lte: lteEnd }, tipAmount: { gt: 0 } },
+      _sum: { tipAmount: true },
       _count: true,
     }),
   ])
@@ -462,6 +474,10 @@ export async function businessSummary(args: { period?: unknown; from?: unknown; 
     outstanding: {
       openInvoices: openInvoices._count,
       balanceDue: Number(num(openInvoices._sum.balanceDue).toFixed(2)),
+    },
+    tips: {
+      invoiced: Number(num(tips._sum.tipAmount).toFixed(2)),
+      invoiceCount: tips._count,
     },
   })
 }

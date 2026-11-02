@@ -5,6 +5,7 @@ import { getAuthUser } from '@/lib/mobile-auth'
 import { businessToday } from '@/lib/business-date'
 import { logAudit } from '@/lib/audit'
 import { notifyEvent } from '@/lib/notify-admin'
+import { recalcInvoiceBalance } from '@/lib/invoice-totals'
 
 export async function GET(
   request: Request,
@@ -60,20 +61,11 @@ export async function POST(
       }
     })
 
-    // Recalcula amountPaid y balanceDue
-    const allPayments = await prisma.invoicePayment.findMany({ where: { invoiceId: id } })
-    const amountPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-    const balanceDue = Math.max(0, Number(invoice.total) - amountPaid)
+    // Recalcula amountPaid / balanceDue / status / paidAt en un solo lugar
+    const balance = await recalcInvoiceBalance(id)
 
-    // Actualiza el invoice — si balance = 0 → status paid
-    const updatedInvoice = await prisma.invoice.update({
+    const updatedInvoice = await prisma.invoice.findUniqueOrThrow({
       where: { id },
-      data: {
-        amountPaid,
-        balanceDue,
-        status:  balanceDue === 0 ? 'paid' : invoice.status === 'paid' ? 'sent' : invoice.status,
-        paidAt:  balanceDue === 0 ? businessToday() : null,
-      },
       include: {
         client: { select: { name: true } },
         payments: {
@@ -107,7 +99,7 @@ export async function POST(
     // Notify admins when this payment settles the invoice in full. The
     // webhook flow (recordAutomaticPayment) already does this for Stripe/
     // Square; this covers manually recorded payments (cash, Zelle, etc.).
-    if (balanceDue === 0 && invoice.status !== 'paid') {
+    if (balance?.justSettled) {
       const money = paymentAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
       const clientName = updatedInvoice.client?.name ?? 'client'
       notifyEvent('paid', {
@@ -154,22 +146,10 @@ export async function DELETE(
     })
 
     // Recalcula después de borrar
-    const invoice = await prisma.invoice.findUnique({ where: { id } })
-    if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+    const balance = await recalcInvoiceBalance(id)
+    if (!balance) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
 
-    const allPayments = await prisma.invoicePayment.findMany({ where: { invoiceId: id } })
-    const amountPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-    const balanceDue = Math.max(0, Number(invoice.total) - amountPaid)
-
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id },
-      data: {
-        amountPaid,
-        balanceDue,
-        status: balanceDue === 0 ? 'paid' : 'sent',
-        paidAt: balanceDue === 0 ? businessToday() : null,
-      }
-    })
+    const updatedInvoice = await prisma.invoice.findUniqueOrThrow({ where: { id } })
 
     return NextResponse.json({ invoice: updatedInvoice })
   } catch (error) {

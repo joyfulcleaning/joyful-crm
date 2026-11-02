@@ -5,6 +5,7 @@ import { X, Search, FileText, Check, SlidersHorizontal, GripVertical } from 'luc
 import ClientModal from './ClientModal'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import { serviceCategory, categoryColor, categoryAccent } from '@/lib/service-types'
+import { computeInvoiceAmounts } from '@/lib/invoice-amounts'
 
 const PAYMENT_METHODS = [
   'cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft'
@@ -101,6 +102,9 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
     serviceStatus: 'all',
     category: 'all',
     taxRate: '0',
+    cardFeeOn: false,
+    cardFeeRate: '3',
+    tipAmount: '',
     paymentMethod: '',
     notes: '',
     status: 'draft',
@@ -110,6 +114,15 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
   useEffect(() => {
     if (!open) return
     fetch('/api/clients').then(r => r.json()).then(setClients).catch(() => [])
+    // The card fee rate lives in Settings so it is configured once. The
+    // toggle itself stays off until the admin turns it on for this invoice.
+    fetch('/api/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(cfg => {
+        const rate = cfg?.['inv.cardFeeRate']
+        if (rate) setForm(f => ({ ...f, cardFeeRate: String(rate) }))
+      })
+      .catch(() => {})
   }, [open])
 
   // Auto-calculate due date from payment term
@@ -248,10 +261,16 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
   }
 
   const selectedServices = results.filter(s => selected.has(s.id))
-  const subtotal = selectedServices.reduce((sum, s) => sum + Number(s.basePrice || 0), 0)
-  const additionalFees = selectedServices.reduce((sum, s) => sum + Number(s.additionalFee || 0), 0)
-  const taxAmount = (subtotal + additionalFees) * (parseFloat(form.taxRate) / 100)
-  const total = subtotal + additionalFees + taxAmount
+  // Same function the server uses, so this preview can't disagree with what
+  // actually gets stored.
+  const amounts = computeInvoiceAmounts({
+    subtotal:       selectedServices.reduce((sum, s) => sum + Number(s.basePrice || 0), 0),
+    additionalFees: selectedServices.reduce((sum, s) => sum + Number(s.additionalFee || 0), 0),
+    taxRate:        form.taxRate,
+    cardFeeRate:    form.cardFeeOn ? form.cardFeeRate : 0,
+    tipAmount:      form.tipAmount,
+  })
+  const { subtotal, additionalFees, taxAmount, cardFeeAmount, tipAmount, total } = amounts
 
   async function handleGenerate() {
     if (selectedServices.length === 0) { setError('Select at least one service.'); return }
@@ -268,11 +287,13 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
           issuedAt: new Date().toLocaleDateString('en-CA'),
           periodFrom: form.periodFrom || new Date().toLocaleDateString('en-CA'),
           periodTo: form.periodTo || new Date().toLocaleDateString('en-CA'),
+          // Only the inputs — the server derives taxAmount, cardFeeAmount
+          // and total itself.
           subtotal,
           additionalFees,
-          taxRate: parseFloat(form.taxRate) || 0,
-          taxAmount,
-          total,
+          taxRate:     parseFloat(form.taxRate) || 0,
+          cardFeeRate: form.cardFeeOn ? (parseFloat(form.cardFeeRate) || 0) : 0,
+          tipAmount:   parseFloat(form.tipAmount) || 0,
           paymentMethod: form.paymentMethod,
           status: form.status,
           dueDate: form.dueDate,
@@ -299,7 +320,7 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
 
   function resetForm() {
     setPaymentTerm('')
-    setForm({ clientId: '', periodFrom: '', periodTo: '', serviceStatus: 'all', category: 'all', taxRate: '0', paymentMethod: '', notes: '', status: 'draft', dueDate: '' })
+    setForm({ clientId: '', periodFrom: '', periodTo: '', serviceStatus: 'all', category: 'all', taxRate: '0', cardFeeOn: false, cardFeeRate: '3', tipAmount: '', paymentMethod: '', notes: '', status: 'draft', dueDate: '' })
     setResults([])
     setSelected(new Set())
     setSearched(false)
@@ -484,6 +505,58 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                   <input type="number" value={form.taxRate} onChange={e => set('taxRate', e.target.value)}
                     placeholder="0" className={inputCls} />
                 </div>
+
+                {/* Card fee — shown in the totals block, never as a line item */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => set('cardFeeOn', !form.cardFeeOn)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all ${
+                      form.cardFeeOn
+                        ? 'bg-[rgba(245,158,11,0.1)] border-[#f59e0b]'
+                        : 'bg-transparent border-[#2a2f3d] hover:border-[#343c52]'
+                    }`}
+                  >
+                    <span
+                      className="w-4 h-4 rounded-md border flex items-center justify-center shrink-0"
+                      style={form.cardFeeOn
+                        ? { backgroundColor: '#f59e0b', borderColor: '#f59e0b' }
+                        : { borderColor: '#2a2f3d' }}
+                    >
+                      {form.cardFeeOn && <Check size={11} className="text-white" strokeWidth={3} />}
+                    </span>
+                    <span className={`text-xs font-semibold ${form.cardFeeOn ? 'text-[#f59e0b]' : 'text-[#6b7280]'}`}>
+                      Card / electronic fee
+                    </span>
+                  </button>
+                  {form.cardFeeOn && (
+                    <div className="mt-2">
+                      <div className="relative">
+                        <input type="number" step="0.01" min="0" value={form.cardFeeRate}
+                          onChange={e => set('cardFeeRate', e.target.value)}
+                          placeholder="3" className={inputCls} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6b7280]">%</span>
+                      </div>
+                      <p className="text-[10px] text-[#6b7280] mt-1">
+                        Charged on the work plus tax. Adds ${cardFeeAmount.toFixed(2)} to the total.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tip — counts toward the total and is tracked for payroll */}
+                <div>
+                  <label className={labelCls}>Tip</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#6b7280]">$</span>
+                    <input type="number" step="0.01" min="0" value={form.tipAmount}
+                      onChange={e => set('tipAmount', e.target.value)}
+                      placeholder="0.00" className={`${inputCls} pl-7`} />
+                  </div>
+                  <p className="text-[10px] text-[#6b7280] mt-1">
+                    Goes to the crew. You can also add it later when the client pays.
+                  </p>
+                </div>
                 <div>
                   <label className={labelCls}>Payment Method</label>
                   <SelectWithAdd
@@ -657,6 +730,24 @@ export default function InvoiceModal({ open, onClose, onSuccess }: Props) {
                         <div className="text-center">
                           <div className="text-lg font-bold text-[#9ca3af]">${taxAmount.toFixed(2)}</div>
                           <div className="text-[10px] text-[#6b7280]">Tax ({form.taxRate}%)</div>
+                        </div>
+                      </>
+                    )}
+                    {cardFeeAmount > 0 && (
+                      <>
+                        <div className="w-px h-8 bg-[#2a2f3d]" />
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-[#f59e0b]">+${cardFeeAmount.toFixed(2)}</div>
+                          <div className="text-[10px] text-[#6b7280]">Card fee ({form.cardFeeRate}%)</div>
+                        </div>
+                      </>
+                    )}
+                    {tipAmount > 0 && (
+                      <>
+                        <div className="w-px h-8 bg-[#2a2f3d]" />
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-[#a78bfa]">+${tipAmount.toFixed(2)}</div>
+                          <div className="text-[10px] text-[#6b7280]">Tip</div>
                         </div>
                       </>
                     )}

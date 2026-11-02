@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { notifyEvent } from '@/lib/notify-admin'
+import { computeInvoiceAmounts } from '@/lib/invoice-amounts'
+import { recalcInvoiceBalance } from '@/lib/invoice-totals'
 
 export async function GET(
   request: Request,
@@ -61,13 +63,37 @@ export async function PATCH(
       ...(body.paymentMethod      !== undefined && { paymentMethod:      body.paymentMethod }),
       ...(body.dueDate            !== undefined && { dueDate:            body.dueDate ? new Date(body.dueDate) : null }),
       ...(body.notes              !== undefined && { notes:              body.notes }),
-      ...(body.additionalFees     !== undefined && { additionalFees:     parseFloat(body.additionalFees) }),
-      ...(body.taxRate            !== undefined && { taxRate:            parseFloat(body.taxRate) }),
       ...(body.paymentLinkStripe  !== undefined && { paymentLinkStripe:  body.paymentLinkStripe }),
       ...(body.paymentLinkSquare  !== undefined && { paymentLinkSquare:  body.paymentLinkSquare }),
       ...(body.paymentLinkVisible !== undefined && { paymentLinkVisible: !!body.paymentLinkVisible }),
       ...(body.emailSentAt        !== undefined && { emailSentAt:        body.emailSentAt ? new Date(body.emailSentAt) : null }),
       ...(body.issuedAt           !== undefined && { issuedAt:           body.issuedAt ? new Date(body.issuedAt + 'T12:00:00.000Z') : new Date() }),
+    }
+
+    // Any edit to a money input re-derives every money field. This used to be
+    // missing entirely: taxRate and additionalFees were stored while `total`
+    // kept its old value, so changing either silently left the invoice
+    // disagreeing with its own arithmetic.
+    const MONEY_INPUTS = ['additionalFees', 'taxRate', 'cardFeeRate', 'tipAmount'] as const
+    const moneyEdited  = MONEY_INPUTS.some(k => body[k] !== undefined)
+
+    if (moneyEdited) {
+      const current = await prisma.invoice.findUnique({
+        where:  { id },
+        select: { subtotal: true, additionalFees: true, taxRate: true, cardFeeRate: true, tipAmount: true },
+      })
+      if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+      const pick = (key: typeof MONEY_INPUTS[number], fallback: unknown) =>
+        body[key] !== undefined ? body[key] : fallback
+
+      Object.assign(updateData, computeInvoiceAmounts({
+        subtotal:       current.subtotal,
+        additionalFees: pick('additionalFees', current.additionalFees),
+        taxRate:        pick('taxRate',        current.taxRate),
+        cardFeeRate:    pick('cardFeeRate',    current.cardFeeRate),
+        tipAmount:      pick('tipAmount',      current.tipAmount),
+      }))
     }
 
     // When marking as sent: auto-set dueDate 30 days from issuedAt if not already set
@@ -92,7 +118,10 @@ export async function PATCH(
       updateData.paidAt      = body.paidAt
         ? new Date(body.paidAt + 'T12:00:00')
         : (current?.paidAt ?? new Date())
-      updateData.amountPaid  = current?.total
+      // "Mark as paid" settles the invoice without writing a payment row, so
+      // amountPaid is set straight from the total. Use the recomputed total
+      // when this same request also moved the money, not the stale stored one.
+      updateData.amountPaid  = updateData.total ?? current?.total
       updateData.balanceDue  = 0
     }
     // When moving away from paid: clear the stamp
@@ -100,11 +129,22 @@ export async function PATCH(
       updateData.paidAt = null
     }
 
-    const invoice = await prisma.invoice.update({
+    let invoice = await prisma.invoice.update({
       where: { id },
       data: updateData,
       include: { client: { select: { name: true } } },
     })
+
+    // A changed total has to flow through to the balance. Basis 'recorded'
+    // keeps whatever was already paid — including a manual "mark as paid",
+    // which leaves no payment row to sum.
+    if (moneyEdited && body.status !== 'paid') {
+      await recalcInvoiceBalance(id, { basis: 'recorded' })
+      invoice = await prisma.invoice.findUniqueOrThrow({
+        where: { id },
+        include: { client: { select: { name: true } } },
+      })
+    }
 
     logAudit(authUser, 'update', 'invoice', invoice.id, {
       invoiceNumber: invoice.invoiceNumber,

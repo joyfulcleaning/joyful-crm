@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { transitionOverdueInvoices } from '@/lib/invoice-overdue'
+import { computeInvoiceAmounts } from '@/lib/invoice-amounts'
 
 export async function GET(request: Request) {
   try {
@@ -73,6 +74,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Money is derived here, not taken from the browser: the client sends the
+    // inputs an admin chose and the server owns the arithmetic. balanceDue is
+    // seeded too — it used to fall back to its default of 0, which is why
+    // every never-paid invoice reported owing nothing.
+    const amounts = computeInvoiceAmounts({
+      subtotal:       body.subtotal,
+      additionalFees: body.additionalFees,
+      taxRate:        body.taxRate,
+      cardFeeRate:    body.cardFeeRate,
+      tipAmount:      body.tipAmount,
+    })
+
     const invoice = await prisma.invoice.create({
       data: {
         invoiceNumber: body.invoiceNumber,
@@ -81,11 +94,16 @@ export async function POST(request: Request) {
         createdBy:     { connect: { id: user.id } },
         periodFrom:    new Date(body.periodFrom),
         periodTo:      new Date(body.periodTo),
-        subtotal:      body.subtotal,
-        additionalFees: body.additionalFees || 0,
-        taxRate:       body.taxRate   || 0,
-        taxAmount:     body.taxAmount || 0,
-        total:         body.total,
+        subtotal:       amounts.subtotal,
+        additionalFees: amounts.additionalFees,
+        taxRate:        amounts.taxRate,
+        taxAmount:      amounts.taxAmount,
+        cardFeeRate:    amounts.cardFeeRate,
+        cardFeeAmount:  amounts.cardFeeAmount,
+        tipAmount:      amounts.tipAmount,
+        total:          amounts.total,
+        amountPaid:     0,
+        balanceDue:     amounts.total,
         paymentMethod: body.paymentMethod || null,
         status:        body.status || 'draft',
         dueDate:       body.dueDate ? new Date(body.dueDate) : null,

@@ -148,6 +148,8 @@ async function generateInvoicePDF(invoice: any): Promise<Buffer> {
   </table>
   <div class="totals">
     ${Number(invoice.taxRate) > 0 ? `<div class="total-row"><span>Tax (${invoice.taxRate}%)</span><span>$${fmt(Number(invoice.taxAmount))}</span></div>` : ''}
+    ${Number(invoice.cardFeeAmount) > 0 ? `<div class="total-row"><span>Card processing fee (${fmt(Number(invoice.cardFeeRate))}%)</span><span>$${fmt(Number(invoice.cardFeeAmount))}</span></div>` : ''}
+    ${Number(invoice.tipAmount) > 0 ? `<div class="total-row"><span>Tip</span><span>$${fmt(Number(invoice.tipAmount))}</span></div>` : ''}
     <div class="total-final"><span>TOTAL</span><span class="total-amount">$${fmt(Number(invoice.total))}</span></div>
   </div>
   <div class="payment-box">

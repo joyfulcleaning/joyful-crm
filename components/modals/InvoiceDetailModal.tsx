@@ -51,6 +51,8 @@ export default function InvoiceDetailModal({ invoice, open, onClose, onSuccess }
       notes:          localInvoice.notes || '',
       additionalFees: String(localInvoice.additionalFees || 0),
       taxRate:        String(localInvoice.taxRate || 0),
+      cardFeeRate:    String(localInvoice.cardFeeRate || 0),
+      tipAmount:      String(localInvoice.tipAmount || 0),
     })
     setEditing(true)
   }
@@ -285,6 +287,44 @@ export default function InvoiceDetailModal({ invoice, open, onClose, onSuccess }
                 <span className="text-[#e8eaf0]">${Number(localInvoice.taxAmount).toFixed(2)}</span>
               </div>
             )}
+
+            {/* Card fee and tip: shown here, never as line items. Editable
+                after the fact, because a tip usually turns up when the client
+                actually pays. */}
+            {editing ? (
+              <>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[#6b7280] shrink-0">Card fee (%)</span>
+                  <input type="number" step="0.01" min="0" value={form.cardFeeRate}
+                    onChange={e => set('cardFeeRate', e.target.value)}
+                    placeholder="0"
+                    className="w-24 px-2 py-1 bg-[#161922] border border-[#2a2f3d] rounded-md text-xs text-right text-[#e8eaf0] focus:outline-none focus:border-[#f59e0b]" />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[#6b7280] shrink-0">Tip ($)</span>
+                  <input type="number" step="0.01" min="0" value={form.tipAmount}
+                    onChange={e => set('tipAmount', e.target.value)}
+                    placeholder="0.00"
+                    className="w-24 px-2 py-1 bg-[#161922] border border-[#2a2f3d] rounded-md text-xs text-right text-[#e8eaf0] focus:outline-none focus:border-[#a78bfa]" />
+                </div>
+              </>
+            ) : (
+              <>
+                {Number(localInvoice.cardFeeAmount) > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#6b7280]">Card processing fee ({Number(localInvoice.cardFeeRate)}%)</span>
+                    <span className="text-[#f59e0b]">${Number(localInvoice.cardFeeAmount).toFixed(2)}</span>
+                  </div>
+                )}
+                {Number(localInvoice.tipAmount) > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#6b7280]">Tip</span>
+                    <span className="text-[#a78bfa]">${Number(localInvoice.tipAmount).toFixed(2)}</span>
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="border-t border-[#2a2f3d] pt-2 flex justify-between">
               <span className="text-sm font-bold text-[#e8eaf0]">Total</span>
               <span className="text-sm font-bold text-[#38d9a9]">${Number(localInvoice.total).toFixed(2)}</span>

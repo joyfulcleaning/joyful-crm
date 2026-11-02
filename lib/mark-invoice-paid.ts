@@ -1,6 +1,7 @@
 import { prisma } from './prisma'
 import { businessToday } from './business-date'
 import { notifyEvent } from './notify-admin'
+import { recalcInvoiceBalance } from './invoice-totals'
 
 function fmtMoney(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
@@ -44,21 +45,9 @@ export async function recordAutomaticPayment(params: {
     },
   })
 
-  const allPayments = await prisma.invoicePayment.findMany({ where: { invoiceId } })
-  const amountPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-  const balanceDue = Math.max(0, Number(invoice.total) - amountPaid)
+  const balance = await recalcInvoiceBalance(invoiceId)
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: {
-      amountPaid,
-      balanceDue,
-      status: balanceDue === 0 ? 'paid' : invoice.status,
-      paidAt: balanceDue === 0 ? paidAt : invoice.paidAt,
-    },
-  })
-
-  if (balanceDue === 0) {
+  if (balance?.justSettled) {
     const platformLabel = platform === 'stripe' ? 'Stripe' : 'Square'
     await notifyEvent('paid', {
       pushTitle: 'Payment received',
