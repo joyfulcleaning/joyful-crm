@@ -16,6 +16,7 @@ import ServiceModal, { TIME_SLOTS } from '@/components/modals/ServiceModal'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ErrorBanner from '@/components/ErrorBanner'
 import { useI18n } from '@/lib/i18n'
+import { computeInvoiceAmounts } from '@/lib/invoice-amounts'
 
 const INV_COL_DEFS = [
   { id: 'id',      label: 'ID',       defaultOn: true  },
@@ -42,6 +43,10 @@ const INVOICE_COLORS: Record<string, string> = {
 }
 
 const PAYMENT_METHODS = ['cash', 'zelle', 'venmo', 'paypal', 'cashapp', 'check', 'ach', 'card', 'credit_card', 'eft']
+
+// Card payments carry the processing fee: batch invoices pre-check it for
+// these methods, and the admin can still untick it per invoice.
+const isCardMethod = (m?: string | null) => m === 'card' || m === 'credit_card'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -200,6 +205,14 @@ export default function FinancesPage() {
   const [invGeneratingFor, setInvGeneratingFor] = useState<string | null>(null)
   const [invClientForms, setInvClientForms] = useState<Record<string, any>>({})
   const [invClientSelected, setInvClientSelected] = useState<Record<string, Set<string>>>({})
+  // Card fee rate configured once in Settings → Invoicing.
+  const [cardFeeRateSetting, setCardFeeRateSetting] = useState('3')
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(cfg => { if (cfg?.['inv.cardFeeRate']) setCardFeeRateSetting(String(cfg['inv.cardFeeRate'])) })
+      .catch(() => {})
+  }, [])
   // ── Row being reviewed (click a row to keep it highlighted across all its columns; independent of the invoice checkbox selection) ──
   const [invReviewRowId, setInvReviewRowId] = useState<string | null>(null)
   const [invClientGenerating, setInvClientGenerating] = useState<Record<string, boolean>>({})
@@ -1344,6 +1357,8 @@ export default function FinancesPage() {
         dueDate,
         taxRate: client.defaultTaxRate != null ? String(client.defaultTaxRate) : '',
         paymentMethod: client.defaultPaymentMethod || '',
+        cardFeeOn: isCardMethod(client.defaultPaymentMethod),
+        cardFeeRate: cardFeeRateSetting,
         status: 'draft',
         notes: '',
       }
@@ -1356,7 +1371,9 @@ export default function FinancesPage() {
   }
 
   function setClientFormField(clientId: string, field: string, value: any) {
-    setInvClientForms(prev => ({ ...prev, [clientId]: { ...prev[clientId], [field]: value } }))
+    // Switching the payment method re-decides the card fee; the admin can still override it after.
+    const extra = field === 'paymentMethod' ? { cardFeeOn: isCardMethod(value) } : {}
+    setInvClientForms(prev => ({ ...prev, [clientId]: { ...prev[clientId], [field]: value, ...extra } }))
     if (field === 'paymentTermsDays' || field === 'issuedAt') {
       setInvClientForms(prev => {
         const f = prev[clientId]
@@ -1410,6 +1427,7 @@ export default function FinancesPage() {
           periodTo: invBatchTo,
           subtotal: sub, additionalFees: fees,
           taxRate: rate, taxAmount: tax, total: tot,
+          cardFeeRate: form.cardFeeOn ? (parseFloat(form.cardFeeRate) || 0) : 0,
           paymentMethod: form.paymentMethod,
           status: form.status,
           dueDate: form.dueDate || null,
@@ -1496,6 +1514,7 @@ export default function FinancesPage() {
           periodTo: invBatchTo,
           subtotal: sub, additionalFees: fees,
           taxRate: rate, taxAmount: tax, total: tot,
+          cardFeeRate: isCardMethod(client.defaultPaymentMethod) ? (parseFloat(cardFeeRateSetting) || 0) : 0,
           paymentMethod: client.defaultPaymentMethod || null,
           status: 'draft',
           dueDate: dueDate || null,
@@ -2054,8 +2073,13 @@ export default function FinancesPage() {
                 const cRate  = cForm
                   ? (parseFloat(cForm.taxRate) || 0)
                   : (client.defaultTaxRate != null ? Number(client.defaultTaxRate) : 0)
-                const cTax   = (cSub + cFees) * (cRate / 100)
-                const cTotal = cSub + cFees + cTax
+                // Same arithmetic the server stores; without an open form this previews quick-generate.
+                const cCardFeeRate = cForm
+                  ? (cForm.cardFeeOn ? (parseFloat(cForm.cardFeeRate) || 0) : 0)
+                  : (isCardMethod(client.defaultPaymentMethod) ? (parseFloat(cardFeeRateSetting) || 0) : 0)
+                const { taxAmount: cTax, cardFeeAmount: cCardFee, total: cTotal } = computeInvoiceAmounts({
+                  subtotal: cSub, additionalFees: cFees, taxRate: cRate, cardFeeRate: cCardFeeRate,
+                })
 
                 const invNumForClient = cForm?.invMode === 'auto' ? `JOYFUL${invNum}` : (cForm?.invManualId || 'INV-0001')
 
@@ -2254,6 +2278,13 @@ export default function FinancesPage() {
                               <div><label className={labelCls}>{t.financesPage.invoices.taxPercent}</label><input type="number" value={cForm.taxRate} onChange={e => setClientFormField(client.id, 'taxRate', e.target.value)} placeholder="0" className={inputCls} /></div>
                               <div><label className={labelCls}>{t.financesPage.invoices.paymentMethod}</label><SelectWithAdd value={cForm.paymentMethod} onChange={v => setClientFormField(client.id, 'paymentMethod', v)} options={PAYMENT_METHODS} storageKey="paymentMethod" placeholder={t.financesPage.common.selectPlaceholder} addLabel={t.financesPage.invoices.addPaymentMethod} className={inputCls} /></div>
                               <div>
+                                <label className="flex items-center gap-1.5 mb-1 cursor-pointer select-none">
+                                  <input type="checkbox" checked={!!cForm.cardFeeOn} onChange={e => setClientFormField(client.id, 'cardFeeOn', e.target.checked)} className="accent-[#f59e0b]" />
+                                  <span className={labelCls + ' !mb-0'}>{t.financesPage.invoices.cardFeeLabel}</span>
+                                </label>
+                                <input type="number" step="0.01" min="0" value={cForm.cardFeeRate} disabled={!cForm.cardFeeOn} onChange={e => setClientFormField(client.id, 'cardFeeRate', e.target.value)} className={inputCls + ' disabled:opacity-40'} />
+                              </div>
+                              <div>
                                 <label className={labelCls}>{t.financesPage.invoices.invoiceStatus}</label>
                                 <select value={cForm.status} onChange={e => setClientFormField(client.id, 'status', e.target.value)} className={inputCls}>
                                   <option value="draft">{t.financesPage.invoiceStatus.draft}</option>
@@ -2277,6 +2308,7 @@ export default function FinancesPage() {
                             <div className="w-px h-5 bg-[#2a2f3d]" />
                             <div><div className="text-base font-bold text-[#f59e0b]">+${cFees.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.addFees}</div></div>
                             {cRate > 0 && <><div className="w-px h-5 bg-[#2a2f3d]" /><div><div className="text-base font-bold text-[#9ca3af]">${cTax.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.taxPctParen(cRate)}</div></div></>}
+                            {cCardFee > 0 && <><div className="w-px h-5 bg-[#2a2f3d]" /><div><div className="text-base font-bold text-[#f59e0b]">+${cCardFee.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.cardFeePctParen(cCardFeeRate)}</div></div></>}
                             <div className="w-px h-5 bg-[#2a2f3d]" />
                             <div><div className="text-lg font-bold text-[#38d9a9]">${cTotal.toFixed(2)}</div><div className="text-[9px] text-[#6b7280]">{t.financesPage.invoices.totalUpper}</div></div>
                           </div>
