@@ -567,17 +567,43 @@ export default function InvoicePDFModal({ invoice, open, onClose }: Props) {
             </table>
 
             {/* ══ TOTALS ══ */}
+            {/* Anything on top of the work (tax, card fee, tip) gets its own line
+                under a Subtotal, so the client can see why the total differs. */}
+            {(() => {
+              const hasExtras = Number(invoice.taxRate) > 0 || Number(invoice.cardFeeAmount) > 0 || Number(invoice.tipAmount) > 0
+              const rowStyle = { display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#4b5563', padding: '3px 0' } as const
+              return (
             <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 14px', width: 240, marginLeft: 'auto', marginBottom: 18 }}>
+              {hasExtras && (
+                <div style={rowStyle}>
+                  <span>Subtotal</span><span>${fmt(Number(invoice.subtotal) + Number(invoice.additionalFees || 0))}</span>
+                </div>
+              )}
               {Number(invoice.taxRate) > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#4b5563', padding: '3px 0' }}>
+                <div style={rowStyle}>
                   <span>Tax ({invoice.taxRate}%)</span><span>${fmt(Number(invoice.taxAmount))}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: Number(invoice.taxRate) > 0 ? '2px solid #e5e7eb' : 'none', marginTop: Number(invoice.taxRate) > 0 ? 5 : 0, paddingTop: Number(invoice.taxRate) > 0 ? 8 : 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>
+              {Number(invoice.cardFeeAmount) > 0 && (
+                <>
+                  <div style={rowStyle}>
+                    <span>Card processing fee ({fmt(Number(invoice.cardFeeRate))}%)</span><span>${fmt(Number(invoice.cardFeeAmount))}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#9ca3af', paddingBottom: 4, lineHeight: 1.3 }}>Added for paying by card / electronic payment</div>
+                </>
+              )}
+              {Number(invoice.tipAmount) > 0 && (
+                <div style={rowStyle}>
+                  <span>Tip</span><span>${fmt(Number(invoice.tipAmount))}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: hasExtras ? '2px solid #e5e7eb' : 'none', marginTop: hasExtras ? 5 : 0, paddingTop: hasExtras ? 8 : 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>
                 <span>TOTAL</span>
                 <span style={{ color: '#059669', fontSize: 16 }}>${fmt(Number(invoice.total))}</span>
               </div>
             </div>
+              )
+            })()}
 
             {/* ══ PAYMENT INSTRUCTIONS ══ */}
             <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 7, padding: '8px 12px', marginBottom: 16 }}>

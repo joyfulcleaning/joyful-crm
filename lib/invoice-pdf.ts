@@ -148,6 +148,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
     .totals { margin-left: auto; width: 240px; background: transparent; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
     .total-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #4b5563; padding: 3px 0; }
+    .total-note { font-size: 10px; color: #9ca3af; padding: 0 0 4px; line-height: 1.3; }
     .total-final { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
     .total-amount { color: #059669; font-size: 16px; font-weight: 700; }
     .payment-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; margin-top: auto; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
@@ -201,8 +202,9 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
     <tbody>${itemsRows}</tbody>
   </table>
   <div class="totals">
-    ${Number(invoice.taxRate) > 0 ? `<div class="total-row"><span>Tax (${invoice.taxRate}%)</span><span>$${fmt(Number(invoice.taxAmount))}</span></div>` : ''}
-    ${Number(invoice.cardFeeAmount) > 0 ? `<div class="total-row"><span>Card processing fee (${fmt(Number(invoice.cardFeeRate))}%)</span><span>$${fmt(Number(invoice.cardFeeAmount))}</span></div>` : ''}
+    ${Number(invoice.taxRate) > 0 || Number(invoice.cardFeeAmount) > 0 || Number(invoice.tipAmount) > 0 ? `<div class="total-row"><span>Subtotal</span><span>${fmt(Number(invoice.subtotal) + Number(invoice.additionalFees || 0))}</span></div>` : ''}
+    ${Number(invoice.taxRate) > 0 ? `<div class="total-row"><span>Tax (${invoice.taxRate}%)</span><span>${fmt(Number(invoice.taxAmount))}</span></div>` : ''}
+    ${Number(invoice.cardFeeAmount) > 0 ? `<div class="total-row"><span>Card processing fee (${fmt(Number(invoice.cardFeeRate))}%)</span><span>${fmt(Number(invoice.cardFeeAmount))}</span></div><div class="total-note">Added for paying by card / electronic payment</div>` : ''}
     ${Number(invoice.tipAmount) > 0 ? `<div class="total-row"><span>Tip</span><span>$${fmt(Number(invoice.tipAmount))}</span></div>` : ''}
     <div class="total-final"><span>TOTAL</span><span class="total-amount">$${fmt(Number(invoice.total))}</span></div>
   </div>
