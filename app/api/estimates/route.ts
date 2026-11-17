@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { asLang } from '@/lib/estimate-flow'
 
 export async function GET(request: Request) {
   try {
@@ -32,8 +33,16 @@ export async function POST(req: Request) {
       estimateNumber, issueDate, validUntil,
       clientName, clientEmail, clientPhone, clientAddress,
       notes, taxRate, subtotal, tax, total, items,
-      clientId, visitDate, visitTime,
+      clientId, visitDate, visitTime, estimateVisitId, lang,
     } = body
+
+    // Created from a visit that already exists (the calendar's visit screen):
+    // link the two, and default the client's language to the visit's.
+    const fromVisit = estimateVisitId
+      ? await prisma.estimateVisit.findUnique({ where: { id: estimateVisitId }, select: { id: true, estimateId: true, lang: true } })
+      : null
+    if (estimateVisitId && !fromVisit) return NextResponse.json({ error: 'Estimate visit not found' }, { status: 404 })
+    if (fromVisit?.estimateId) return NextResponse.json({ error: 'This visit already has an estimate' }, { status: 409 })
 
     const estimate = await prisma.estimate.create({
       data: {
@@ -51,6 +60,7 @@ export async function POST(req: Request) {
         total:         Number(total)     || 0,
         items:         items ?? [],
         clientId:      clientId         || null,
+        lang:          asLang(lang ?? fromVisit?.lang),
       },
       include: {
         client:  { select: { id: true, name: true } },
@@ -59,7 +69,9 @@ export async function POST(req: Request) {
     })
 
     let estimateVisit = null
-    if (visitDate) {
+    if (fromVisit) {
+      estimateVisit = await prisma.estimateVisit.update({ where: { id: fromVisit.id }, data: { estimateId: estimate.id } })
+    } else if (visitDate) {
       estimateVisit = await prisma.estimateVisit.create({
         data: {
           clientId: estimate.clientId,

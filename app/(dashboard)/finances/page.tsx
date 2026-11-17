@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import CountUp from '@/components/ui/CountUp'
 import { DollarSign, TrendingUp, TrendingDown, Search, Check, CheckCircle, Plus, RefreshCw, ReceiptText, X, ChevronDown, SlidersHorizontal, GripVertical } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
@@ -96,6 +97,9 @@ const labelCls = "text-[10px] font-bold text-[#6b7280] uppercase tracking-wider 
 
 export default function FinancesPage() {
   const { t } = useI18n()
+  const { data: session } = useSession()
+  // Only an admin books the service an estimate turns into.
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === 'admin'
   const paymentTermLabel = (label: string) => t.financesPage.paymentTerms[label] || label
   const [activeTab, setActiveTab] = useState('summary')
   const [invoices, setInvoices] = useState<any[]>([])
@@ -392,6 +396,9 @@ export default function FinancesPage() {
     { description: '', qty: 1, unitPrice: 0, total: 0 },
   ])
   const [estScheduleVisit, setEstScheduleVisit] = useState(false)
+  // Booking a visit with the estimate: tell the client by email, in their language.
+  const [estConfirmVisit, setEstConfirmVisit] = useState(true)
+  const [estLang, setEstLang] = useState<'en' | 'es'>('en')
   const [estVisitDate, setEstVisitDate] = useState(new Date().toISOString().split('T')[0])
   const [estVisitTime, setEstVisitTime] = useState(TIME_SLOTS[0]?.value || '')
   const [estPDFOpen, setEstPDFOpen] = useState(false)
@@ -511,7 +518,7 @@ export default function FinancesPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, clientId: registeredClientId, ...visitFields }),
+        body: JSON.stringify({ ...data, clientId: registeredClientId, ...visitFields, ...(!estEditId ? { lang: estLang } : {}) }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -519,6 +526,13 @@ export default function FinancesPage() {
         return
       }
       const saved = await res.json()
+      if (!estEditId && saved.estimateVisit && estConfirmVisit && saved.clientEmail) {
+        await fetch(`/api/estimate-visits/${saved.estimateVisit.id}/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ via: 'email', lang: estLang }),
+        }).catch(() => {})
+      }
       setEstimates(prev =>
         estEditId
           ? prev.map(e => e.id === saved.id ? saved : e)
@@ -548,6 +562,8 @@ export default function FinancesPage() {
     setEstClientMode('manual')
     setEstSaveError('')
     setEstScheduleVisit(false)
+    setEstConfirmVisit(true)
+    setEstLang('en')
     setEstVisitDate(new Date().toISOString().split('T')[0])
     setEstVisitTime(TIME_SLOTS[0]?.value || '')
   }
@@ -617,14 +633,16 @@ export default function FinancesPage() {
 
   async function handleServiceCreatedFromEstimate(serviceId?: string) {
     if (estFromEstimate && serviceId) {
-      const res = await fetch(`/api/estimates/${estFromEstimate.id}`, {
-        method: 'PUT',
+      // Links the service to the estimate (so the client's link shows it as
+      // booked) and closes the estimate visit.
+      const res = await fetch(`/api/estimates/${estFromEstimate.id}/flow`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'service_created' }),
+        body: JSON.stringify({ action: 'link_service', serviceId }),
       })
       if (res.ok) {
-        const updated = await res.json()
-        setEstimates(prev => prev.map(e => e.id === updated.id ? updated : e))
+        const { estimate: updated } = await res.json()
+        setEstimates(prev => prev.map(e => e.id === updated.id ? { ...e, ...updated } : e))
       }
     }
     setEstServiceModalOpen(false)
@@ -637,6 +655,8 @@ export default function FinancesPage() {
     const tax = Number(est.tax) || 0
     const total = Number(est.total) || 0
     setEstPDFData({
+      id:             est.id,
+      lang:           est.lang === 'es' ? 'es' : 'en',
       estimateNumber: est.estimateNumber,
       issueDate:      est.issueDate?.split('T')[0] ?? '',
       validUntil:     est.validUntil?.split('T')[0] ?? '',
@@ -3710,6 +3730,9 @@ export default function FinancesPage() {
           service_created: 'bg-[#a78bfa]/10 text-[#a78bfa] border-[#a78bfa]/30',
           cancelled:       'bg-[#f87171]/10 text-[#f87171] border-[#f87171]/30',
         }
+        const RESPONSE_COLORS: Record<string, string> = {
+          sent: 'text-[#9ca3af]', viewed: 'text-[#4f8ef7]', accepted: 'text-[#26BD97]', changes: 'text-[#f59e0b]', declined: 'text-[#f87171]',
+        }
         return (
           <div className="space-y-6">
             {/* ── Form header ── */}
@@ -3834,6 +3857,19 @@ export default function FinancesPage() {
                           </div>
                         </div>
                       )}
+                      {estScheduleVisit && (
+                        <label className={`flex items-center gap-2 text-xs font-semibold mt-3 cursor-pointer ${estForm.clientEmail ? 'text-[#9ca3af]' : 'text-[#6b7280]'}`}>
+                          <input type="checkbox" checked={estConfirmVisit && !!estForm.clientEmail} disabled={!estForm.clientEmail} onChange={e => setEstConfirmVisit(e.target.checked)} className="w-3.5 h-3.5" />
+                          {estForm.clientEmail ? t.financesPage.estimates.sendVisitConfirmation : t.financesPage.estimates.sendVisitConfirmationNoEmail}
+                        </label>
+                      )}
+                      <div className="mt-3">
+                        <label className={labelCls}>{t.financesPage.estimates.clientLanguage}</label>
+                        <select className={inputCls} value={estLang} onChange={e => setEstLang(e.target.value === 'es' ? 'es' : 'en')}>
+                          <option value="en">English</option>
+                          <option value="es">Español</option>
+                        </select>
+                      </div>
                     </div>
                   )}
                   <div>
@@ -3954,12 +3990,19 @@ export default function FinancesPage() {
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${STATUS_COLORS[est.status] ?? STATUS_COLORS.pending}`}>
                               {t.financesPage.estimateStatus[est.status] || est.status}
                             </span>
+                            {est.status !== 'service_created' && (est.response || est.viewedAt || est.sentAt) && (
+                              <div className={`mt-1 text-[10px] font-semibold ${RESPONSE_COLORS[est.response ?? (est.viewedAt ? 'viewed' : 'sent')]}`}>
+                                {t.financesPage.estimateResponse[est.response ?? (est.viewedAt ? 'viewed' : 'sent')]}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {est.status === 'service_created' ? (
                               <span className="text-[10px] font-semibold text-[#a78bfa]">✓ {t.financesPage.estimates.serviceCreated}</span>
                             ) : est.status === 'converted' && est.invoice ? (
                               <span className="text-[#26BD97] font-mono font-semibold text-[10px]">{est.invoice.invoiceNumber}</span>
+                            ) : !isAdmin ? (
+                              <span className="text-[10px] text-[#6b7280]">—</span>
                             ) : (
                               <button onClick={() => openCreateServiceFromEstimate(est)}
                                 className="text-[10px] px-2.5 py-1 bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/30 rounded-lg font-semibold transition-colors">

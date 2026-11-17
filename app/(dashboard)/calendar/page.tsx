@@ -458,17 +458,20 @@ export default function CalendarPage() {
           <p className="text-[var(--muted)] text-sm mt-1">{t.calendarPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showEstimateVisits}
-              onChange={toggleShowEstimateVisits}
-              className="w-3 h-3"
-              style={{ accentColor: ESTIMATE_VISIT_COLOR }}
-            />
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
-            {t.calendarPage.estimateVisits}
-          </label>
+          {/* Estimate visits are admin-only; the API sends staff none. */}
+          {sessionUser?.role === 'admin' && (
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showEstimateVisits}
+                onChange={toggleShowEstimateVisits}
+                className="w-3 h-3"
+                style={{ accentColor: ESTIMATE_VISIT_COLOR }}
+              />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
+              {t.calendarPage.estimateVisits}
+            </label>
+          )}
           {sessionUser?.role === 'admin' && (
             <div className="relative" ref={shareMenuRef}>
               <button

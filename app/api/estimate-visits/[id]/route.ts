@@ -2,6 +2,38 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { asLang } from '@/lib/estimate-flow'
+
+// Everything the visit screen in the app shows: contact, the linked
+// estimate with its full client-flow history, and the service it became.
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authUser = await getAuthUser(request)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authUser.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { id } = await context.params
+    const visit = await prisma.estimateVisit.findUnique({
+      where: { id },
+      include: {
+        client: { select: { id: true, name: true, email: true, phone: true } },
+        estimate: {
+          include: {
+            service: { select: { id: true, serviceNumber: true, serviceDate: true, serviceTime: true, type: true, status: true } },
+          },
+        },
+      },
+    })
+    if (!visit) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json(visit)
+  } catch (error) {
+    console.error('GET /api/estimate-visits/[id] error:', error)
+    return NextResponse.json({ error: 'Failed to load estimate visit' }, { status: 500 })
+  }
+}
 
 export async function PATCH(
   request: Request,
@@ -10,6 +42,7 @@ export async function PATCH(
   try {
     const authUser = await getAuthUser(request)
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authUser.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id } = await context.params
     const body = await request.json()
@@ -24,6 +57,7 @@ export async function PATCH(
     if (body.notes        !== undefined) data.notes        = body.notes || null
     if (body.status       !== undefined) data.status       = body.status
     if (body.clientId     !== undefined) data.clientId     = body.clientId || null
+    if (body.lang         !== undefined) data.lang         = asLang(body.lang)
 
     const visit = await prisma.estimateVisit.update({
       where: { id },
@@ -44,6 +78,7 @@ export async function DELETE(
   try {
     const authUser = await getAuthUser(request)
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authUser.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id } = await context.params
     await prisma.estimateVisit.delete({ where: { id } })

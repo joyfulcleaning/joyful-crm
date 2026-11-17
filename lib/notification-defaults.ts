@@ -14,6 +14,7 @@ const PUSH_DEFAULTS: Record<string, boolean> = {
   serviceNote:          true,
   aiRequest:            true,
   quoteRequest:         true,
+  estimateResponse:     true,
   schedulePublished:    true,
   businessPhoneOffline: true,
   supplyRequest:         true,

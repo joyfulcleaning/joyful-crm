@@ -28,9 +28,52 @@ export interface EstimateData {
   subtotal:       number
   tax:            number
   total:          number
+  lang?:          'en' | 'es'
+}
+
+const PDF_LABELS = {
+  en: { estimate: 'ESTIMATE', preparedFor: 'Prepared For', details: 'Estimate Details', number: 'Number', issueDate: 'Issue Date', validUntil: 'Valid Until',
+        description: 'Description', qty: 'Qty', unitPrice: 'Unit Price', amount: 'Amount', subtotal: 'Subtotal', tax: 'Tax', total: 'TOTAL', notes: 'Notes',
+        payment: 'Payment Methods', card: 'Debit / Credit Card', cardFee: '3% service fee applies', cash: 'Cash or Check', accepted: 'accepted',
+        validNote: 'This estimate is valid until', thanks: 'Thank you for choosing Joyful Cleaning Services Corp.' },
+  es: { estimate: 'COTIZACIÓN', preparedFor: 'Preparada para', details: 'Detalles de la cotización', number: 'Número', issueDate: 'Fecha de emisión', validUntil: 'Válida hasta',
+        description: 'Descripción', qty: 'Cant.', unitPrice: 'Precio unitario', amount: 'Importe', subtotal: 'Subtotal', tax: 'Impuesto', total: 'TOTAL', notes: 'Notas',
+        payment: 'Formas de pago', card: 'Tarjeta de débito / crédito', cardFee: 'aplica un cargo de servicio del 3%', cash: 'Efectivo o cheque', accepted: 'aceptados',
+        validNote: 'Esta cotización es válida hasta el', thanks: 'Gracias por elegir Joyful Cleaning Services Corp.' },
+}
+
+// The PDF/email shape of a saved Estimate row.
+export function estimateDataFrom(est: {
+  estimateNumber: string; issueDate: Date; validUntil: Date; clientName: string | null; clientEmail: string | null
+  clientPhone: string | null; clientAddress: string | null; notes: string | null; taxRate: unknown; subtotal: unknown
+  tax: unknown; total: unknown; items: unknown; lang?: string | null
+}, lang?: 'en' | 'es'): EstimateData {
+  const rawItems = (Array.isArray(est.items) ? est.items : []) as Array<Record<string, unknown>>
+  return {
+    estimateNumber: est.estimateNumber,
+    issueDate:      est.issueDate?.toISOString() ?? '',
+    validUntil:     est.validUntil?.toISOString() ?? '',
+    clientName:     est.clientName ?? '',
+    clientEmail:    est.clientEmail ?? '',
+    clientPhone:    est.clientPhone ?? '',
+    clientAddress:  est.clientAddress ?? '',
+    notes:          est.notes ?? '',
+    taxRate:        Number(est.taxRate),
+    subtotal:       Number(est.subtotal),
+    tax:            Number(est.tax),
+    total:          Number(est.total),
+    items: rawItems.map(it => ({
+      description: String(it.description ?? ''),
+      qty:         Number(it.qty ?? 1),
+      unitPrice:   Number(it.unitPrice ?? it.unit_price ?? 0),
+      total:       Number(it.total ?? (Number(it.qty ?? 1) * Number(it.unitPrice ?? it.unit_price ?? 0))),
+    })),
+    lang: (lang ?? est.lang) === 'es' ? 'es' : 'en',
+  }
 }
 
 export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffer> {
+  const L = PDF_LABELS[estimate.lang === 'es' ? 'es' : 'en']
   const fontBase64  = fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful.ttf')).toString('base64')
   const logoDataUrl = `data:image/png;base64,${fs.readFileSync(nodePath.join(process.cwd(), 'public', 'Joyful_logo_transparent.png')).toString('base64')}`
 
@@ -44,12 +87,12 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   `).join('')
 
   const totalsHtml = estimate.taxRate > 0 ? `
-    <div class="total-row"><span>Subtotal</span><span>$${Number(estimate.subtotal).toFixed(2)}</span></div>
-    <div class="total-row"><span>Tax (${estimate.taxRate}%)</span><span>$${Number(estimate.tax).toFixed(2)}</span></div>
+    <div class="total-row"><span>${L.subtotal}</span><span>$${Number(estimate.subtotal).toFixed(2)}</span></div>
+    <div class="total-row"><span>${L.tax} (${estimate.taxRate}%)</span><span>$${Number(estimate.tax).toFixed(2)}</span></div>
   ` : ''
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="${estimate.lang === 'es' ? 'es' : 'en'}">
 <head>
   <meta charset="UTF-8"/>
   <style>
@@ -90,9 +133,9 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   </style>
 </head>
 <body>
-<div class="watermark">ESTIMATE</div>
+<div class="watermark">${L.estimate}</div>
 <div class="page">
-  <div class="estimate-word">ESTIMATE</div>
+  <div class="estimate-word">${L.estimate}</div>
   <div class="header">
     <img src="${logoDataUrl}" style="width:56px;height:56px;object-fit:contain"/>
     <div>
@@ -103,7 +146,7 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   <div class="divider"></div>
   <div class="bill-section">
     <div>
-      <div class="label">Prepared For</div>
+      <div class="label">${L.preparedFor}</div>
       <div class="client-name">${estimate.clientName || '—'}</div>
       <div class="client-info">
         ${estimate.clientEmail ? estimate.clientEmail + '<br/>' : ''}
@@ -112,21 +155,21 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
       </div>
     </div>
     <div style="text-align:right">
-      <div class="label">Estimate Details</div>
-      <div class="est-number">Number: ${estimate.estimateNumber}</div>
+      <div class="label">${L.details}</div>
+      <div class="est-number">${L.number}: ${estimate.estimateNumber}</div>
       <div class="est-meta">
-        Issue Date: ${formatDate(estimate.issueDate)}<br/>
-        Valid Until: ${formatDate(estimate.validUntil)}
+        ${L.issueDate}: ${formatDate(estimate.issueDate)}<br/>
+        ${L.validUntil}: ${formatDate(estimate.validUntil)}
       </div>
     </div>
   </div>
   <table>
     <thead>
       <tr>
-        <th>Description</th>
-        <th style="text-align:center">Qty</th>
-        <th style="text-align:right">Unit Price</th>
-        <th style="text-align:right">Amount</th>
+        <th>${L.description}</th>
+        <th style="text-align:center">${L.qty}</th>
+        <th style="text-align:right">${L.unitPrice}</th>
+        <th style="text-align:right">${L.amount}</th>
       </tr>
     </thead>
     <tbody>${itemsRows}</tbody>
@@ -134,24 +177,24 @@ export async function generateEstimatePDF(estimate: EstimateData): Promise<Buffe
   <div class="totals">
     ${totalsHtml}
     <div class="total-final">
-      <span>TOTAL</span>
+      <span>${L.total}</span>
       <span class="total-amount">$${Number(estimate.total).toFixed(2)}</span>
     </div>
   </div>
-  ${estimate.notes ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:10px 14px;margin-bottom:18px;font-size:11px;color:#4b5563;line-height:1.7"><strong style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#9ca3af;">Notes</strong><br/>${estimate.notes}</div>` : ''}
+  ${estimate.notes ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:10px 14px;margin-bottom:18px;font-size:11px;color:#4b5563;line-height:1.7"><strong style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#9ca3af;">${L.notes}</strong><br/>${estimate.notes}</div>` : ''}
   <div class="payment-box">
-    <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Payment Methods</div>
+    <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">${L.payment}</div>
     <div class="payment-row"><img src="${LOGO_ZELLE}"   style="width:18px;height:18px;object-fit:contain;border-radius:4px;flex-shrink:0"/> <span><strong>Zelle:</strong> @joyfulcleaningservices</span></div>
     <div class="payment-row"><img src="${LOGO_CASHAPP}" style="width:18px;height:18px;object-fit:contain;border-radius:4px;flex-shrink:0"/> <span><strong>Cashapp:</strong> $Nathashasalcedo</span></div>
     <div class="payment-row"><img src="${LOGO_VENMO}"   style="width:18px;height:18px;object-fit:contain;border-radius:4px;flex-shrink:0"/> <span><strong>Venmo:</strong> @joyfulcleaningservices</span></div>
     <div class="payment-row"><img src="${LOGO_PAYPAL}"  style="width:18px;height:18px;object-fit:contain;border-radius:4px;flex-shrink:0"/> <span><strong>PayPal:</strong> @joyfulcleaningnc</span></div>
-    <div class="payment-row"><svg width="18" height="18" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg> <span><strong>Debit / Credit Card</strong> — 3% service fee applies</span></div>
-    <div class="payment-row"><svg width="18" height="18" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" stroke-width="1.5"/></svg> <span><strong>Cash or Check</strong> accepted</span></div>
+    <div class="payment-row"><svg width="18" height="18" viewBox="0 0 32 22" fill="none"><rect width="32" height="22" rx="3" fill="#1A1F71"/><rect y="6" width="32" height="5" fill="#F7B600"/><rect x="3" y="14" width="8" height="2.5" rx="1" fill="white" opacity="0.6"/></svg> <span><strong>${L.card}</strong> — ${L.cardFee}</span></div>
+    <div class="payment-row"><svg width="18" height="18" viewBox="0 0 22 22" fill="none"><rect width="22" height="22" rx="4" fill="#16a34a"/><rect x="3" y="7" width="16" height="8" rx="1.5" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" stroke="white" stroke-width="1.5"/></svg> <span><strong>${L.cash}</strong> ${L.accepted}</span></div>
   </div>
   <div class="footer">
     <div class="footer-note">
-      This estimate is valid until ${formatDate(estimate.validUntil)}.<br/>
-      Thank you for choosing Joyful Cleaning Services Corp.
+      ${L.validNote} ${formatDate(estimate.validUntil)}.<br/>
+      ${L.thanks}
     </div>
   </div>
 </div>

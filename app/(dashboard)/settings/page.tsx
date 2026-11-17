@@ -59,6 +59,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.weekly':    'true',
   'notif.aiRequest': 'true',
   'notif.quoteRequest': 'true',
+  'notif.estimateResponse': 'false',
   'notif.schedulePublished': 'false',
   'notif.businessPhoneOffline': 'true',
   'notif.serviceNote': 'false',
@@ -74,6 +75,7 @@ const DEFAULTS: Record<string, string> = {
   'notif.weekly.push':    'false', 'notif.weekly.roles':    'admin',
   'notif.aiRequest.push': 'true',  'notif.aiRequest.roles': 'admin',
   'notif.quoteRequest.push': 'true', 'notif.quoteRequest.roles': 'admin',
+  'notif.estimateResponse.push': 'true', 'notif.estimateResponse.roles': 'admin',
   'notif.schedulePublished.push': 'true', 'notif.schedulePublished.roles': 'user',
   'notif.businessPhoneOffline.push': 'true', 'notif.businessPhoneOffline.roles': 'admin',
   // Recipients are the other side of each service conversation, not whole
@@ -724,6 +726,7 @@ export default function SettingsPage() {
                 { k: 'notif.newClient', ...t.settings.notifications.events.newClient },
                 { k: 'notif.aiRequest', ...t.settings.notifications.events.aiRequest },
                 { k: 'notif.quoteRequest', ...t.settings.notifications.events.quoteRequest },
+                { k: 'notif.estimateResponse', ...t.settings.notifications.events.estimateResponse },
                 { k: 'notif.supplyRequest', ...t.settings.notifications.events.supplyRequest },
                 { k: 'notif.supplyRequestResolved', ...t.settings.notifications.events.supplyRequestResolved },
                 { k: 'notif.lowStock',  ...t.settings.notifications.events.lowStock },

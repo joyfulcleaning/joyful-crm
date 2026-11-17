@@ -149,6 +149,7 @@ const en = {
         newClient:         { label: 'New client registered',          sub: 'When a client is added to the system' },
         aiRequest:         { label: 'AI phone assistant request',     sub: "When a caller's request needs your approval" },
         quoteRequest:      { label: 'Website quote request',          sub: 'When someone submits the "Get a Quote" form on the website' },
+        estimateResponse:  { label: 'Client answered an estimate',    sub: 'When a client accepts, asks for changes, declines, asks a question or settles the date from the estimate link. Questions always reach the email too.' },
         supplyRequest:     { label: 'Supply request from staff',      sub: 'When a staff member asks for products from stock' },
         supplyRequestResolved: { label: 'Supply request dispatched',  sub: 'Tells the staff member who asked what you handed over. Only they get it.' },
         lowStock:          { label: 'Low inventory alert',            sub: 'When a product falls below minimum stock' },
@@ -1118,6 +1119,9 @@ const en = {
       estimateNumber:                'Estimate Number',
       validUntil:                   'Valid Until',
       scheduleVisit:                'Schedule a visit to this property',
+      sendVisitConfirmation:        'Email the visit confirmation to the client',
+      sendVisitConfirmationNoEmail: 'Add the client email to send them the visit confirmation',
+      clientLanguage:               'Client language (emails and estimate link)',
       visitDate:                    'Visit Date',
       visitTime:                    'Visit Time',
       selectTimePlaceholder:        '— Select time —',
@@ -1144,6 +1148,15 @@ const en = {
       converted:        'Converted',
       service_created:  'Service Created',
       cancelled:        'Cancelled',
+    } as Record<string, string>,
+
+    // What the client did with the estimate link.
+    estimateResponse: {
+      sent:     'Sent to client',
+      viewed:   'Seen by client',
+      accepted: 'Client accepted',
+      changes:  'Client asked for changes',
+      declined: 'Client declined',
     } as Record<string, string>,
 
     expenses: {
@@ -1542,6 +1555,7 @@ const es: typeof en = {
         newClient:         { label: 'Nuevo cliente registrado',         sub: 'Cuando se agrega un cliente al sistema' },
         aiRequest:         { label: 'Solicitud del asistente telefónico IA', sub: 'Cuando la solicitud de un llamante necesita tu aprobación' },
         quoteRequest:      { label: 'Solicitud de cotización web',      sub: 'Cuando alguien envía el formulario "Get a Quote" de la página web' },
+        estimateResponse:  { label: 'Respuesta del cliente a una cotización', sub: 'Cuando un cliente acepta, pide cambios, rechaza, pregunta o acuerda la fecha desde el enlace de la cotización. Las preguntas siempre llegan también al correo.' },
         supplyRequest:     { label: 'Pedido de productos del personal', sub: 'Cuando un empleado pide productos del inventario' },
         supplyRequestResolved: { label: 'Pedido de productos despachado', sub: 'Le avisa al empleado que pidió qué le entregaste. Solo le llega a esa persona.' },
         lowStock:          { label: 'Alerta de inventario bajo',        sub: 'Cuando un producto cae por debajo del stock mínimo' },
@@ -2511,6 +2525,9 @@ const es: typeof en = {
       estimateNumber:                'Número de cotización',
       validUntil:                   'Válida hasta',
       scheduleVisit:                'Programar una visita a esta propiedad',
+      sendVisitConfirmation:        'Enviar al cliente la confirmación de la visita por email',
+      sendVisitConfirmationNoEmail: 'Agrega el email del cliente para enviarle la confirmación de la visita',
+      clientLanguage:               'Idioma del cliente (correos y enlace de la cotización)',
       visitDate:                    'Fecha de visita',
       visitTime:                    'Hora de visita',
       selectTimePlaceholder:        '— Seleccionar hora —',
@@ -2537,6 +2554,14 @@ const es: typeof en = {
       converted:        'Convertida',
       service_created:  'Servicio creado',
       cancelled:        'Cancelada',
+    } as Record<string, string>,
+
+    estimateResponse: {
+      sent:     'Enviada al cliente',
+      viewed:   'Vista por el cliente',
+      accepted: 'El cliente aceptó',
+      changes:  'El cliente pidió cambios',
+      declined: 'El cliente rechazó',
     } as Record<string, string>,
 
     expenses: {
