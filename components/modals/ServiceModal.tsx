@@ -116,6 +116,7 @@ interface Props {
   onClose:            () => void
   onSuccess:          (serviceId?: string) => void
   initialDate?:       string
+  initialTime?:       string
   initialClientId?:   string
   initialBasePrice?:  string
   initialNotes?:      string
@@ -125,7 +126,7 @@ interface Props {
   initialService?:    any  // pre-fill all fields from an existing service
 }
 
-export default function ServiceModal({ open, onClose, onSuccess, initialDate, initialClientId, initialBasePrice, initialNotes, initialAddress, initialClientName, initialClientPhone, initialService }: Props) {
+export default function ServiceModal({ open, onClose, onSuccess, initialDate, initialTime, initialClientId, initialBasePrice, initialNotes, initialAddress, initialClientName, initialClientPhone, initialService }: Props) {
   const [clients, setClients] = useState<any[]>([])
   const [staff, setStaff] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -227,12 +228,13 @@ export default function ServiceModal({ open, onClose, onSuccess, initialDate, in
     setForm(f => ({
       ...f,
       ...(initialDate      ? { serviceDate:   initialDate }      : {}),
+      ...(initialTime      ? { serviceTime:   initialTime }      : {}),
       ...(initialClientId  ? { clientId:      initialClientId }  : {}),
       ...(initialBasePrice ? { basePrice:     initialBasePrice } : {}),
       ...(initialNotes     ? { internalNotes: initialNotes }     : {}),
       ...(initialAddress   ? { address:       initialAddress }   : {}),
     }))
-  }, [open, initialService, initialDate, initialClientId, initialBasePrice, initialNotes, initialAddress])
+  }, [open, initialService, initialDate, initialTime, initialClientId, initialBasePrice, initialNotes, initialAddress])
 
   function loadClients(autoSelectId?: string) {
     fetch('/api/clients').then(r => r.json()).catch(() => []).then((c: any[]) => {

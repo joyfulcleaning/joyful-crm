@@ -95,6 +95,14 @@ function fmt(n: number) {
 const inputCls = "w-full px-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
 const labelCls = "text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5"
 
+function nextEstimateNumber(estimates: { estimateNumber: string }[]): string {
+  const yr = new Date().getFullYear()
+  const taken = new Set(estimates.map(e => e.estimateNumber))
+  let n = estimates.length + 1
+  while (taken.has(`EST-${yr}-${String(n).padStart(3, '0')}`)) n++
+  return `EST-${yr}-${String(n).padStart(3, '0')}`
+}
+
 export default function FinancesPage() {
   const { t } = useI18n()
   const { data: session } = useSession()
@@ -411,6 +419,37 @@ export default function FinancesPage() {
   const [estLinkInvoiceId, setEstLinkInvoiceId] = useState('')
   const [estLinking, setEstLinking] = useState(false)
   const [estEditId, setEstEditId] = useState<string | null>(null)
+  // Opened from an estimate visit on the calendar: ?fromVisit=<id> starts a
+  // new estimate linked to that visit; ?estimate=<id>&returnVisit=<id> edits
+  // one. Either way, saving goes back to the visit.
+  const [estFromVisit, setEstFromVisit] = useState<{ id: string; name: string } | null>(null)
+  const [estReturnVisit, setEstReturnVisit] = useState<string | null>(null)
+  const [estOpenId, setEstOpenId] = useState<string | null>(null)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('tab') !== 'estimates') return
+    setActiveTab('estimates')
+    const fromVisit = q.get('fromVisit')
+    const editId = q.get('estimate')
+    if (editId) { setEstOpenId(editId); setEstReturnVisit(q.get('returnVisit')) }
+    if (fromVisit) {
+      fetch(`/api/estimate-visits/${fromVisit}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(v => {
+        if (!v) return
+        setEstEditId(null)
+        setEstFromVisit({ id: v.id, name: v.name })
+        setEstForm(f => ({
+          ...f,
+          clientName:    v.name ?? '',
+          clientEmail:   v.email || v.client?.email || '',
+          clientPhone:   v.phone || v.client?.phone || '',
+          clientAddress: v.address ?? '',
+        }))
+        if (v.clientId) { setEstClientMode('registered'); setEstClientId(v.clientId) }
+        setEstLang(v.lang === 'es' ? 'es' : 'en')
+      }).catch(() => {})
+    }
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
   const [estFromEstimate, setEstFromEstimate] = useState<any | null>(null)
   const [estServiceModalOpen, setEstServiceModalOpen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -498,6 +537,22 @@ export default function FinancesPage() {
     }
   }, [activeTab])
 
+  // A new estimate starts on the next free number (EST-<year>-NNN), not on
+  // one that's already taken.
+  useEffect(() => {
+    if (estEditId || !estimates.length) return
+    if (!estimates.some(e => e.estimateNumber === estForm.estimateNumber)) return
+    setEstForm(f => ({ ...f, estimateNumber: nextEstimateNumber(estimates) }))
+  }, [estimates, estEditId, estForm.estimateNumber])
+
+  useEffect(() => {
+    if (!estOpenId) return
+    const est = estimates.find(e => e.id === estOpenId)
+    if (!est) return
+    setEstOpenId(null)
+    loadEstimateForEdit(est)
+  }, [estOpenId, estimates])
+
   function loadEstimates() {
     fetch('/api/estimates').then(r => r.json()).then(data => {
       setEstimates(Array.isArray(data) ? data : [])
@@ -512,8 +567,9 @@ export default function FinancesPage() {
     try {
       const url  = estEditId ? `/api/estimates/${estEditId}` : '/api/estimates'
       const method = estEditId ? 'PUT' : 'POST'
-      const visitFields = !estEditId && estScheduleVisit
-        ? { visitDate: estVisitDate, visitTime: estVisitTime }
+      const visitFields = estEditId ? {}
+        : estFromVisit ? { estimateVisitId: estFromVisit.id }
+        : estScheduleVisit ? { visitDate: estVisitDate, visitTime: estVisitTime }
         : {}
       const res = await fetch(url, {
         method,
@@ -526,6 +582,11 @@ export default function FinancesPage() {
         return
       }
       const saved = await res.json()
+      const backToVisit = estEditId ? estReturnVisit : estFromVisit?.id
+      if (backToVisit) {
+        window.location.href = `/calendar?visit=${backToVisit}`
+        return
+      }
       if (!estEditId && saved.estimateVisit && estConfirmVisit && saved.clientEmail) {
         await fetch(`/api/estimate-visits/${saved.estimateVisit.id}/confirm`, {
           method: 'POST',
@@ -548,10 +609,8 @@ export default function FinancesPage() {
   }
 
   function resetEstForm() {
-    const yr = new Date().getFullYear()
-    const nextNum = String(estimates.length + 1).padStart(3, '0')
     setEstForm({
-      estimateNumber: `EST-${yr}-${nextNum}`,
+      estimateNumber: nextEstimateNumber(estimates),
       issueDate: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       clientName: '', clientEmail: '', clientPhone: '', clientAddress: '',
@@ -562,6 +621,8 @@ export default function FinancesPage() {
     setEstClientMode('manual')
     setEstSaveError('')
     setEstScheduleVisit(false)
+    setEstFromVisit(null)
+    setEstReturnVisit(null)
     setEstConfirmVisit(true)
     setEstLang('en')
     setEstVisitDate(new Date().toISOString().split('T')[0])
@@ -3742,9 +3803,12 @@ export default function FinancesPage() {
                   {estEditId ? `✏️ ${t.financesPage.estimates.editEstimate}` : t.financesPage.estimates.newEstimate}
                 </h2>
                 <p className="text-xs text-[#6b7280] mt-0.5">{t.financesPage.estimates.fillFieldsHint}</p>
+                {estFromVisit && !estEditId && (
+                  <p className="text-xs font-semibold mt-1" style={{ color: '#ec4899' }}>{t.estimateVisit.fromVisitBanner(estFromVisit.name)}</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                {estEditId && (
+                {(estEditId || estFromVisit) && (
                   <button onClick={() => { setEstEditId(null); resetEstForm() }}
                     className="px-3 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
                     {t.financesPage.estimates.cancelEdit}
@@ -3834,7 +3898,7 @@ export default function FinancesPage() {
                       <input type="date" className={inputCls} value={estForm.validUntil} onChange={e => setEstForm(f => ({ ...f, validUntil: e.target.value }))} />
                     </div>
                   </div>
-                  {!estEditId && (
+                  {!estEditId && !estFromVisit && (
                     <div className="pt-1 border-t border-[#2a2f3d]">
                       <label className="flex items-center gap-2 text-xs font-semibold text-[#9ca3af] cursor-pointer pt-2">
                         <input type="checkbox" checked={estScheduleVisit} onChange={e => setEstScheduleVisit(e.target.checked)} className="w-3.5 h-3.5" />
