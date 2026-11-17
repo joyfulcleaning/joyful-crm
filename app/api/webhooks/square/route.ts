@@ -34,11 +34,14 @@ export async function POST(request: Request) {
     if (payment?.status === 'COMPLETED' && payment?.order_id) {
       try {
         const invoiceId = await getSquareOrderReferenceId(payment.order_id)
+        // amount_money excludes the tip; tip_money is what the client added at checkout.
         const amount = Number(payment.amount_money?.amount ?? 0) / 100
+        const tip    = Number(payment.tip_money?.amount ?? 0) / 100
         if (invoiceId && amount > 0) {
           await recordAutomaticPayment({
             invoiceId,
             amount,
+            tip,
             platform: 'square',
             reference: payment.id,
           })
