@@ -372,3 +372,11 @@ body.light .bg-\[rgba\(251\,146\,60\,0\.15\)\]  { background-color: rgba(216,134
 body.light .bg-\[rgba\(251\,146\,60\,0\.1\)\]   { background-color: rgba(216,134,90,0.10) !important; }
 body.light .text-\[\#fb923c\]                   { color: #9C5A30 !important; }
 body.light .border-\[rgba\(251\,146\,60\,0\.2\)\] { border-color: rgba(216,134,90,0.25) !important; }
+
+/* Wide tables: on tablet widths a table can be wider than its card, and most
+   cards are overflow-hidden, which clipped the right-hand columns. Whatever
+   box directly holds a table scrolls sideways instead. */
+main :has(> table) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

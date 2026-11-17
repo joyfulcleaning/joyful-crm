@@ -21,6 +21,8 @@ const en = {
     analytics:  'Analytics',
     export:     'Export',
     settings:   'Settings',
+    collapseMenu: 'Collapse menu',
+    expandMenu:   'Expand menu',
   },
 
   topbar: {
@@ -1427,6 +1429,8 @@ const es: typeof en = {
     analytics:  'Analíticas',
     export:     'Exportar',
     settings:   'Ajustes',
+    collapseMenu: 'Compactar menú',
+    expandMenu:   'Expandir menú',
   },
 
   topbar: {
