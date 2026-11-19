@@ -4,7 +4,15 @@ const prisma = new PrismaClient()
 // Sends a "new update available" push to every registered device, regardless
 // of role — used after every new build lands in TestFlight so the whole team
 // knows to update.
+//
+// Pass a message as the first argument when the build changes something the
+// team should know about before they run into it:
+//   ts-node scripts/notify-testflight-update.ts "Abre TestFlight. En New Service..."
+const DEFAULT_BODY = 'Hay una nueva versión de Joyful CRM en TestFlight. Abre TestFlight para actualizar.'
+
 async function main() {
+  const body = process.argv[2] || DEFAULT_BODY
+
   const tokens = await prisma.pushToken.findMany({
     include: { user: { select: { name: true, role: true } } },
   })
@@ -19,7 +27,7 @@ async function main() {
     body: JSON.stringify(tokens.map(t => ({
       to: t.token,
       title: '🔄 Actualización disponible',
-      body: 'Hay una nueva versión de Joyful CRM en TestFlight. Abre TestFlight para actualizar.',
+      body,
       data: { type: 'appUpdateAvailable' },
       sound: 'default',
       priority: 'high',
