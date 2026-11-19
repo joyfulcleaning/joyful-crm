@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const authUser = await getAuthUser(request)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets, estimateVisits, aiRequests, aiRequestsPending, supplyRequests, supplyRequestsPending] = await Promise.all([
+  const [services, expenses, invoices, clients, recurringExpenses, inventory, assets, estimateVisits, aiRequests, aiRequestsPending, supplyRequests, supplyRequestsPending, staffAbsences] = await Promise.all([
     prisma.service.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.expense.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
     prisma.invoice.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
@@ -31,6 +31,12 @@ export async function GET(request: Request) {
       where: authUser.role === 'admin' ? undefined : { requestedById: authUser.id },
     }),
     prisma.supplyRequest.count({ where: { status: 'pending' } }),
+    // Same scoping as supply requests: staff only follow their own time off.
+    prisma.staffAbsence.aggregate({
+      _count: { _all: true },
+      _max: { updatedAt: true },
+      where: authUser.role === 'admin' ? undefined : { userId: authUser.id },
+    }),
   ])
 
   return NextResponse.json({
@@ -46,5 +52,6 @@ export async function GET(request: Request) {
     aiRequestsPending,
     supplyRequests: sig(supplyRequests),
     supplyRequestsPending,
+    staffAbsences: sig(staffAbsences),
   })
 }

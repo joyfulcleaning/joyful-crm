@@ -155,8 +155,9 @@ export async function PATCH(
     })
 
     if (absence.userId !== authUser.id) {
+      const [y, m, d] = updated.startDate.toISOString().slice(0, 10).split('-')
       sendPushToUsers('staffAbsenceResolved', [absence.userId], PUSH_TITLES[transition.to],
-        updated.startDate.toISOString().slice(0, 10), { type: 'staffAbsence', absenceId: id })
+        `${m}-${d}-${y}`, { type: 'staffAbsenceResolved', absenceId: id })
         .catch(err => console.error('Failed to notify absence decision:', err))
     }
 
