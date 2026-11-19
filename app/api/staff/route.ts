@@ -4,6 +4,9 @@ import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
+import { Prisma } from '@prisma/client'
+import { ProfileInputError, nextEmployeeCode, pickProfileFields } from '@/lib/staff-profile-server'
+import { STAFF_DOCUMENTS } from '@/lib/staff-documents'
 
 export async function GET(request: Request) {
   try {
@@ -22,7 +25,10 @@ export async function GET(request: Request) {
       orderBy: { name: 'asc' },
       // The group travels with the person so the staffing pickers and the
       // staff cards can label it without a second round trip.
-      include: { staffGroup: { select: { id: true, name: true, color: true, sortOrder: true, isActive: true } } },
+      include: {
+        staffGroup: { select: { id: true, name: true, color: true, sortOrder: true, isActive: true } },
+        hrProfile:  true,
+      },
     })
     // Never ship password hashes to the browser, even for admins
     return NextResponse.json(staff.map(({ password, ...rest }) => rest))
@@ -46,6 +52,18 @@ export async function POST(request: Request) {
     // No hardcoded default — generate a random one-time password when the
     // admin leaves the field blank, instead of every new hire sharing the
     // same predictable temp password.
+    let profile: Record<string, any>
+    try {
+      profile = pickProfileFields(body.profile)
+    } catch (err) {
+      if (err instanceof ProfileInputError) return NextResponse.json({ error: err.message }, { status: 400 })
+      throw err
+    }
+    // Paper documents the new-hire wizard marked as received.
+    const received: string[] = Array.isArray(body.receivedDocuments)
+      ? body.receivedDocuments.filter((k: unknown) => STAFF_DOCUMENTS.some(d => d.key === k))
+      : []
+
     const generatedPassword = body.password ? null : crypto.randomBytes(9).toString('base64url')
     const bcrypt = await import('bcryptjs')
     const hashedPassword = await bcrypt.hash(body.password || generatedPassword!, 12)
@@ -72,16 +90,24 @@ export async function POST(request: Request) {
         emergencyContactName:  body.emergencyContactName  || null,
         emergencyContactPhone: body.emergencyContactPhone || null,
         notes:                 body.notes                 || null,
+        hrProfile:             { create: { ...profile, employeeCode: await nextEmployeeCode() } },
+        ...(received.length
+          ? { staffDocuments: { create: received.map(docType => ({ docType, uploadedById: authUser.id })) } }
+          : {}),
       }
     })
     const { password, ...safeUser } = user
 
-    logAudit(authUser, 'create', 'staff', user.id, { name: user.name, role: user.role })
+    logAudit(authUser, 'create', 'staff', user.id, { name: user.name, role: user.role, receivedDocuments: received })
 
     // Only echoed back when we generated it — an admin-supplied password is
     // already known to them, no need to send it back over the wire again.
     return NextResponse.json(generatedPassword ? { ...safeUser, tempPassword: generatedPassword } : safeUser)
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'That email is already in use', code: 'email_taken' }, { status: 409 })
+    }
+    console.error('Error creating staff:', error)
     return NextResponse.json({ error: 'Failed to create staff member' }, { status: 500 })
   }
 }

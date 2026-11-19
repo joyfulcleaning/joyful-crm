@@ -171,9 +171,147 @@ model User {
   oauthAuthCodes   OAuthAuthCode[]
   oauthTokens      OAuthToken[]
   staffGroup       StaffGroup?      @relation(fields: [staffGroupId], references: [id], onDelete: SetNull)
+  hrProfile        StaffProfile?    @relation("StaffProfileOwner")
+  supervisedProfiles StaffProfile[] @relation("StaffProfileSupervisor")
+  absences         StaffAbsence[]   @relation("StaffAbsenceOwner")
+  requestedAbsences StaffAbsence[]  @relation("StaffAbsenceRequestedBy")
+  reviewedAbsences StaffAbsence[]   @relation("StaffAbsenceReviewedBy")
+  staffDocuments   StaffDocument[]  @relation("StaffDocumentOwner")
+  uploadedStaffDocuments StaffDocument[] @relation("StaffDocumentUploadedBy")
+  staffRecords     StaffRecord[]    @relation("StaffRecordOwner")
+  authoredStaffRecords StaffRecord[] @relation("StaffRecordAuthor")
 
   @@index([staffGroupId])
   @@map("users")
+}
+
+// HR file for a staff member, kept apart from User so the login record and
+// everything reading it (payroll, the mobile app, the assistant tools) stay
+// untouched. Every field is optional: a person with no row here is simply an
+// HR file nobody has filled in yet.
+model StaffProfile {
+  userId           String    @id
+  // Readable ID, JF-0001 and up, assigned in hire-date order. Read-only in the UI.
+  employeeCode     String?   @unique
+  preferredName    String?
+  jobTitle         String?
+  // 'full_time' | 'part_time' | 'contractor' | 'seasonal'
+  employmentType   String?
+  supervisorId     String?
+  zone             String?
+  probationEndDate DateTime? @db.Date
+  // { mon: '8:00-16:00', tue: 'Off', ... }, free text per day, plus the working
+  // pattern read by workPatternOf (work_mon..work_sun, hoursPerDay, worksHolidays,
+  // rotating). JSON on purpose: teams will keep needing new shapes of schedule.
+  weeklySchedule   Json?
+  personalEmail    String?
+  altPhone         String?
+  addressLine      String?
+  city             String?
+  state            String?
+  zipCode          String?
+  medicalNotes     String?
+  bankName         String?
+  bankRouting      String?
+  bankAccount      String?
+  // Hours granted to this person, set by hand on their file.
+  vacationHours    Decimal?  @db.Decimal(6, 2)
+  sickHours        Decimal?  @db.Decimal(6, 2)
+  personalHours    Decimal?  @db.Decimal(6, 2)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation("StaffProfileOwner", fields: [userId], references: [id], onDelete: Cascade)
+  supervisor       User?     @relation("StaffProfileSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+
+  @@index([supervisorId])
+  @@map("staff_profiles")
+}
+
+enum AbsenceStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+// Time off, requested by the person (mobile) or logged by an admin. Balances
+// are never stored: they are worked out from these rows and the hours granted
+// on StaffProfile, so nothing can drift out of step.
+model StaffAbsence {
+  id            String        @id @default(uuid())
+  userId        String
+  // Key of ABSENCE_TYPES in lib/staff-absence.ts
+  type          String
+  startDate     DateTime      @db.Date
+  endDate       DateTime      @db.Date
+  // Only for a part of one day; startDate equals endDate then.
+  partialHours  Decimal?      @db.Decimal(4, 2)
+  // Worked out on the server when the row is created.
+  totalHours    Decimal       @db.Decimal(7, 2)
+  status        AbsenceStatus @default(pending)
+  reason        String?
+  reviewNote    String?
+  requestedById String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation("StaffAbsenceOwner", fields: [userId], references: [id], onDelete: Cascade)
+  requestedBy   User?         @relation("StaffAbsenceRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  reviewedBy    User?         @relation("StaffAbsenceReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, startDate])
+  @@index([status])
+  @@map("staff_absences")
+}
+
+// One HR document on file (I-9, W-4, contract...). The file itself lives in the
+// private staff-documents bucket; a row with no storagePath means "received on
+// paper". Several rows of one type are versions: the newest one counts.
+model StaffDocument {
+  id           String    @id @default(uuid())
+  userId       String
+  // Key of STAFF_DOCUMENTS in lib/staff-documents.ts, or 'other'
+  docType      String
+  title        String?
+  storagePath  String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  issuedAt     DateTime? @db.Date
+  expiresAt    DateTime? @db.Date
+  note         String?
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation("StaffDocumentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy   User?     @relation("StaffDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, docType])
+  @@map("staff_documents")
+}
+
+// Everything else kept on an HR file: incidents, equipment and keys, training,
+// reviews, notes, disciplinary actions. One table on purpose: the shape of each
+// kind lives in lib/staff-records.ts, so a new kind needs no database change.
+model StaffRecord {
+  id        String    @id @default(uuid())
+  userId    String
+  // Key of RECORD_KINDS in lib/staff-records.ts
+  kind      String
+  // The kind's main date (incident day, assigned on, completed on...)
+  date      DateTime? @db.Date
+  // Its closing date, when it has one (returned on, expires on)
+  endDate   DateTime? @db.Date
+  data      Json
+  authorId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation("StaffRecordOwner", fields: [userId], references: [id], onDelete: Cascade)
+  author    User?     @relation("StaffRecordAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, kind])
+  @@map("staff_records")
 }
 
 // Teams the crew is organized into, so staffing a service means picking a group

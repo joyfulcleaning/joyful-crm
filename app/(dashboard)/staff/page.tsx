@@ -3,12 +3,18 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import {
-  Plus, UserCheck, Mail, Phone, CheckCircle2, DollarSign,
+  Plus, CheckCircle2, DollarSign,
   CalendarDays, Loader2, Search, ChevronDown, ChevronUp,
   Eye, Pencil, Trash2, X, Check, Users,
 } from 'lucide-react'
-import StaffModal from '@/components/modals/StaffModal'
-import StaffDetailModal from '@/components/modals/StaffDetailModal'
+import NewStaffWizard from '@/components/staff/NewStaffWizard'
+import StaffDirectory from '@/components/staff/StaffDirectory'
+import StaffProfile from '@/components/staff/StaffProfile'
+import StaffAbsences from '@/components/staff/StaffAbsences'
+import AbsenceModal from '@/components/staff/AbsenceModal'
+import AbsenceDrawer from '@/components/staff/AbsenceDrawer'
+import ComplianceMatrix from '@/components/staff/ComplianceMatrix'
+import { complianceOf } from '@/lib/staff-documents'
 import StaffGroupsModal from '@/components/modals/StaffGroupsModal'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
@@ -18,27 +24,6 @@ import { localDateStr } from '@/lib/local-date'
 import { useI18n } from '@/lib/i18n'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const ROLE_COLORS:   Record<string, string> = { admin: '#4f8ef7', user: '#a78bfa' }
-const STATUS_COLORS: Record<string, string> = { active: '#38d9a9', invited: '#f59e0b', inactive: '#6b7280' }
-
-const SCHEDULE_VISIBILITY_OPTIONS = [
-  { value: '1'    },
-  { value: '2'    },
-  { value: '3'    },
-  { value: '4'    },
-  { value: 'week' },
-  { value: 'full' },
-]
-
-// How many already-worked days stay on their calendar behind today.
-const SCHEDULE_PAST_OPTIONS = [
-  { value: '0'    },
-  { value: 'week' },
-  { value: '7'    },
-  { value: '14'   },
-  { value: '30'   },
-]
-
 const PAY_METHODS = [
   { value: 'check'   },
   { value: 'zelle'   },
@@ -85,7 +70,7 @@ interface RowEdits {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function StaffPage() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const { t } = useI18n()
   const isAdmin = (session?.user as any)?.role === 'admin'
 
@@ -97,7 +82,25 @@ export default function StaffPage() {
   const [modalOpen, setModalOpen]   = useState(false)
   const [groupsOpen, setGroupsOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<any>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+
+  // ── Absences (directory, HR file and the Absences tab all read these) ────────
+  const [absences, setAbsences]         = useState<any[]>([])
+  const [absenceModal, setAbsenceModal] = useState<{ member?: any } | null>(null)
+  const [openAbsenceId, setOpenAbsenceId] = useState<string | null>(null)
+
+  const [documents, setDocuments] = useState<any[]>([])
+
+  function loadDocuments() {
+    fetchJsonOrThrow('/api/staff-documents')
+      .then(setDocuments)
+      .catch((err) => setLoadError(err.message || t.staffPage.loadStaffError))
+  }
+
+  function loadAbsences() {
+    fetchJsonOrThrow('/api/staff-absences')
+      .then(setAbsences)
+      .catch((err) => setLoadError(err.message || t.staffPage.loadStaffError))
+  }
 
   // ── Per-staff schedule visibility (set from each card) ───────────────────────
   const [visibilitySaving, setVisibilitySaving] = useState<string | null>(null)
@@ -113,6 +116,7 @@ export default function StaffPage() {
       if (!res.ok) throw new Error()
       const column = field === 'past' ? 'schedulePastVisibility' : 'scheduleVisibility'
       setStaff(prev => prev.map(m => m.id === memberId ? { ...m, [column]: value } : m))
+      setSelectedMember((prev: any) => prev?.id === memberId ? { ...prev, [column]: value } : prev)
     } catch {
       alert(t.staffPage.scheduleAccessError)
     } finally {
@@ -187,7 +191,7 @@ export default function StaffPage() {
       .catch((err) => { setHistoryError(err.message || t.staffPage.loadPayrollHistoryError); setHistoryLoading(false) })
   }
 
-  useEffect(() => { loadStaff() }, [])
+  useEffect(() => { loadStaff(); loadAbsences(); loadDocuments() }, [])
   useEffect(() => { if (activeTab === 'payroll') loadHistory() }, [activeTab])
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -543,6 +547,59 @@ export default function StaffPage() {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
+  if (sessionStatus === 'authenticated' && !isAdmin) {
+    return <div className="text-center py-16 text-xs text-[#6b7280]">{t.staffHr.adminOnly}</div>
+  }
+
+  const absenceOverlays = (
+    <>
+      {absenceModal && (
+        <AbsenceModal
+          staff={staff}
+          absences={absences}
+          member={absenceModal.member}
+          onClose={() => setAbsenceModal(null)}
+          onSaved={() => { setAbsenceModal(null); loadAbsences() }}
+        />
+      )}
+      {openAbsenceId && (
+        <AbsenceDrawer
+          absenceId={openAbsenceId}
+          staff={staff}
+          absences={absences}
+          onClose={() => setOpenAbsenceId(null)}
+          onChanged={loadAbsences}
+          onOpenMember={member => { setOpenAbsenceId(null); setSelectedMember(member) }}
+        />
+      )}
+    </>
+  )
+
+  if (selectedMember) {
+    return (
+      <>
+      <StaffProfile
+        member={selectedMember}
+        staff={staff}
+        absences={absences}
+        documents={documents}
+        onDocumentsChanged={loadDocuments}
+        onOpenAbsence={a => setOpenAbsenceId(a.id)}
+        onRegisterAbsence={() => setAbsenceModal({ member: selectedMember })}
+        onBack={() => setSelectedMember(null)}
+        onSelect={setSelectedMember}
+        onSaved={updated => {
+          setStaff(prev => prev.map(m => m.id === updated.id ? updated : m))
+          setSelectedMember(updated)
+        }}
+        visibilitySaving={visibilitySaving === selectedMember.id}
+        onVisibilityChange={saveScheduleVisibility}
+      />
+      {absenceOverlays}
+      </>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -552,6 +609,12 @@ export default function StaffPage() {
           <p className="text-xs text-[#6b7280] mt-0.5">{t.staffPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAbsenceModal({})}
+            className="flex items-center gap-2 px-4 py-2 border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] hover:border-[#343c52] text-sm font-semibold rounded-lg transition-colors"
+          >
+            <CalendarDays size={15} />{t.staffAbsence.register}
+          </button>
           <button
             onClick={() => setGroupsOpen(true)}
             className="flex items-center gap-2 px-4 py-2 border border-[#2a2f3d] text-[#6b7280] hover:text-[#e8eaf0] hover:border-[#343c52] text-sm font-semibold rounded-lg transition-colors"
@@ -571,6 +634,12 @@ export default function StaffPage() {
       <div className="flex border-b border-[#2a2f3d]">
         {[
           { key: 'team',    label: `👥 ${t.staffPage.tabTeam}` },
+          { key: 'absences', label: `🗓 ${t.staffAbsence.tab}`, count: absences.filter(a => a.status === 'pending').length },
+          {
+            key: 'compliance',
+            label: `📋 ${t.staffDocs.tab}`,
+            count: staff.filter(m => m.status !== 'inactive').reduce((s, m) => s + complianceOf(m, documents, localDateStr()).alerts, 0),
+          },
           { key: 'payroll', label: `💰 ${t.staffPage.tabPayroll}` },
         ].map(tab => (
           <button
@@ -581,123 +650,31 @@ export default function StaffPage() {
             }`}
           >
             {tab.label}
+            {!!tab.count && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[rgba(245,158,11,0.15)] text-[#f59e0b]">{tab.count}</span>
+            )}
           </button>
         ))}
       </div>
 
       {/* ── Team Tab ─────────────────────────────────────────────────────────── */}
       {activeTab === 'team' && (
-        <div className="grid grid-cols-4 gap-3">
-          {loadError && <div className="col-span-4"><ErrorBanner message={loadError} onRetry={loadStaff} /></div>}
-          {loading ? (
-            <div className="col-span-4 text-center py-10 text-[#6b7280] text-xs">{t.staffPage.loading}</div>
-          ) : (
-            <>
-              {staff.map((member: any) => {
-                const roleColor   = ROLE_COLORS[member.role]    || '#6b7280'
-                const statusColor = STATUS_COLORS[member.status] || '#6b7280'
-                const freqLabel   = PAY_FREQUENCIES.find(f => f.value === member.scheduleType)?.label
-                return (
-                  <div
-                    key={member.id}
-                    onClick={() => { setSelectedMember(member); setDetailOpen(true) }}
-                    className="bg-[#161922] border border-[#2a2f3d] rounded-xl p-4 text-center hover:border-[#4f8ef7] hover:translate-y-[-1px] transition-all cursor-pointer"
-                  >
-                    <div className="relative inline-block mb-3">
-                      <div
-                        className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold mx-auto"
-                        style={{ background: 'linear-gradient(135deg,rgba(79,142,247,0.3),rgba(79,142,247,0.1))', color: '#4f8ef7' }}
-                      >
-                        {initials(member.name)}
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#161922]" style={{ background: statusColor }} />
-                    </div>
-                    <div className="text-sm font-semibold text-[#e8eaf0]">{member.name}</div>
-                    <div className="text-[10px] font-bold mt-1 capitalize" style={{ color: roleColor }}>● {member.role}</div>
-                    {member.staffGroup && (
-                      <div
-                        className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold"
-                        style={{
-                          backgroundColor: `${member.staffGroup.color || '#4f8ef7'}1f`,
-                          color:           member.staffGroup.color || '#4f8ef7',
-                        }}
-                      >
-                        {member.staffGroup.name}
-                      </div>
-                    )}
-                    <div className="mt-3 pt-3 border-t border-[#2a2f3d] space-y-1">
-                      {member.email && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-[#6b7280]">
-                          <Mail size={9} /><span className="truncate">{member.email}</span>
-                        </div>
-                      )}
-                      {member.phone && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-[#6b7280]">
-                          <Phone size={9} /><span>{member.phone}</span>
-                        </div>
-                      )}
-                      {member.hourlyRate && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-[#38d9a9]">
-                          <DollarSign size={9} />
-                          <span>${Number(member.hourlyRate).toLocaleString()} / {freqLabel || member.scheduleType}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5 text-[10px]" style={{ color: statusColor }}>
-                        <UserCheck size={9} /><span className="capitalize">{member.status}</span>
-                      </div>
-                    </div>
-                    {isAdmin && member.role === 'user' && (
-                      <div className="mt-2 pt-2 border-t border-[#2a2f3d]" onClick={e => e.stopPropagation()}>
-                        <label className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1 text-left">
-                          {t.staffPage.calendarAccess}
-                        </label>
-                        <select
-                          value={member.scheduleVisibility || '1'}
-                          disabled={visibilitySaving === member.id}
-                          onChange={e => saveScheduleVisibility(member.id, e.target.value)}
-                          className="w-full px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-50"
-                        >
-                          {SCHEDULE_VISIBILITY_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value}>{t.staffPage.scheduleVisibilityOptions[opt.value]}</option>
-                          ))}
-                        </select>
-
-                        {/* 'full' already shows the whole calendar in both
-                            directions, so a past window would be a no-op. */}
-                        {(member.scheduleVisibility || '1') !== 'full' && (
-                          <>
-                            <label className="text-[9px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1 mt-2 text-left">
-                              {t.staffPage.pastDaysAccess}
-                            </label>
-                            <select
-                              value={member.schedulePastVisibility || '0'}
-                              disabled={visibilitySaving === member.id}
-                              onChange={e => saveScheduleVisibility(member.id, e.target.value, 'past')}
-                              className="w-full px-2 py-1.5 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-[10px] text-[#e8eaf0] focus:outline-none focus:border-[#4f8ef7] disabled:opacity-50"
-                            >
-                              {SCHEDULE_PAST_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{t.staffPage.schedulePastOptions[opt.value]}</option>
-                              ))}
-                            </select>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-              <div
-                onClick={() => setModalOpen(true)}
-                className="bg-[#161922] border border-dashed border-[#2a2f3d] rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-[#4f8ef7] transition-all cursor-pointer min-h-40"
-              >
-                <div className="w-8 h-8 rounded-full bg-[rgba(79,142,247,0.1)] flex items-center justify-center">
-                  <Plus size={16} className="text-[#4f8ef7]" />
-                </div>
-                <span className="text-xs font-semibold text-[#6b7280]">{t.staffPage.addMember}</span>
-              </div>
-            </>
-          )}
+        <div className="space-y-3">
+          {loadError && <ErrorBanner message={loadError} onRetry={loadStaff} />}
+          {loading
+            ? <div className="text-center py-10 text-[#6b7280] text-xs">{t.staffPage.loading}</div>
+            : <StaffDirectory staff={staff} absences={absences} documents={documents} onOpen={setSelectedMember} onOpenAbsence={a => setOpenAbsenceId(a.id)} />}
         </div>
+      )}
+
+      {/* ── Compliance Tab ───────────────────────────────────────────────────── */}
+      {activeTab === 'compliance' && (
+        <ComplianceMatrix staff={staff} documents={documents} onOpen={setSelectedMember} />
+      )}
+
+      {/* ── Absences Tab ─────────────────────────────────────────────────────── */}
+      {activeTab === 'absences' && (
+        <StaffAbsences staff={staff} absences={absences} onOpen={a => setOpenAbsenceId(a.id)} />
       )}
 
       {/* ── Payroll Tab ───────────────────────────────────────────────────────── */}
@@ -1288,12 +1265,20 @@ export default function StaffPage() {
       )}
 
       {/* Modals */}
-      <StaffModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={loadStaff} />
-      <StaffDetailModal
-        member={selectedMember} open={detailOpen}
-        onClose={() => { setDetailOpen(false); setSelectedMember(null) }}
-        onSuccess={loadStaff}
-      />
+      {modalOpen && (
+        <NewStaffWizard
+          staff={staff}
+          onClose={() => setModalOpen(false)}
+          onCreated={id => {
+            setModalOpen(false)
+            loadDocuments()
+            fetchJsonOrThrow('/api/staff')
+              .then(d => { setStaff(d); setSelectedMember(d.find((s: any) => s.id === id) ?? null) })
+              .catch(() => loadStaff())
+          }}
+        />
+      )}
+      {absenceOverlays}
       <StaffGroupsModal
         open={groupsOpen} onClose={() => setGroupsOpen(false)}
         staff={staff} onSuccess={loadStaff}

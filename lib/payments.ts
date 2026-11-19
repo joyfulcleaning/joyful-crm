@@ -68,6 +68,8 @@ export async function createStripePaymentLink(invoice: PayableInvoice): Promise<
 // Square's Quick Pay links don't carry a reference back to our invoice, so we
 // build the link from a minimal Order instead — Order.referenceId round-trips
 // reliably and the webhook looks it up via orders.get(orderId).
+// Tipping is on: Square's checkout offers the client a tip on top of the
+// balance, and the webhook moves whatever they add into the invoice's tip.
 export async function createSquarePaymentLink(invoice: PayableInvoice): Promise<GeneratedLink> {
   const { client: square, locationId } = await getSquare()
   const cents = amountDueCents(invoice)
@@ -82,6 +84,7 @@ export async function createSquarePaymentLink(invoice: PayableInvoice): Promise<
         basePriceMoney: { amount: BigInt(cents), currency: 'USD' },
       }],
     },
+    checkoutOptions: { allowTipping: true },
   })
   const url = response.paymentLink?.url
   const id = response.paymentLink?.id
