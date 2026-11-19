@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { asLang } from '@/lib/estimate-flow'
 
 export async function GET(
   _req: Request,
@@ -41,7 +42,7 @@ export async function PUT(
       estimateNumber, issueDate, validUntil,
       clientName, clientEmail, clientPhone, clientAddress,
       notes, taxRate, subtotal, tax, total, items,
-      clientId, status,
+      clientId, status, lang,
     } = body
 
     const estimate = await prisma.estimate.update({
@@ -62,6 +63,7 @@ export async function PUT(
         items:         items    !== undefined ? items            : undefined,
         clientId:      clientId || null,
         status:        status   || undefined,
+        lang:          lang     !== undefined ? asLang(lang) : undefined,
       },
       include: {
         client:  { select: { id: true, name: true } },

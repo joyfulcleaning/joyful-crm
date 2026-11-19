@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateEstimatePDF, EstimateData } from '@/lib/estimate-pdf'
+import { generateEstimatePDF, estimateDataFrom } from '@/lib/estimate-pdf'
 import { getAuthUser } from '@/lib/mobile-auth'
 
 export async function GET(
@@ -16,29 +16,9 @@ export async function GET(
     const est = await prisma.estimate.findUnique({ where: { id } })
     if (!est) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const rawItems = Array.isArray(est.items) ? est.items as any[] : []
-    const items = rawItems.map((it: any) => ({
-      description: it.description ?? '',
-      qty:         Number(it.qty ?? 1),
-      unitPrice:   Number(it.unitPrice ?? it.unit_price ?? 0),
-      total:       Number(it.total ?? (Number(it.qty ?? 1) * Number(it.unitPrice ?? it.unit_price ?? 0))),
-    }))
-
-    const data: EstimateData = {
-      estimateNumber: est.estimateNumber,
-      issueDate:      est.issueDate?.toISOString() ?? '',
-      validUntil:     est.validUntil?.toISOString() ?? '',
-      clientName:     est.clientName ?? '',
-      clientEmail:    est.clientEmail ?? '',
-      clientPhone:    est.clientPhone ?? '',
-      clientAddress:  est.clientAddress ?? '',
-      notes:          est.notes ?? '',
-      taxRate:        Number(est.taxRate),
-      subtotal:       Number(est.subtotal),
-      tax:            Number(est.tax),
-      total:          Number(est.total),
-      items,
-    }
+    // ?lang= previews the other language without changing the estimate.
+    const q = new URL(_req.url).searchParams.get('lang')
+    const data = estimateDataFrom(est, q === 'es' || q === 'en' ? q : undefined)
 
     const pdf = await generateEstimatePDF(data)
 

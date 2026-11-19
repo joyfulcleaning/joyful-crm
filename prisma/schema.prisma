@@ -475,6 +475,7 @@ model Service {
   photos          ServicePhoto[]
   invoiceItems    InvoiceItem[]
   noteThread      ServiceNote[]
+  estimates       Estimate[]
 
   @@map("services")
 }
@@ -828,10 +829,33 @@ model Estimate {
   clientId       String?
   invoiceId      String?
   emailSentAt    DateTime?
+  // Client-facing acceptance flow. publicToken is the unguessable part of
+  // the /e/[token] link the client opens without logging in; lang is the
+  // language of the emails, the PDF and that page.
+  publicToken       String?   @unique
+  lang              String    @default("en")
+  sentAt            DateTime?
+  sentVia           String?   // email | sms
+  viewedAt          DateTime?
+  response          String?   // accepted | changes | declined
+  respondedAt       DateTime?
+  responseNote      String?
+  declineReason     String?
+  // Who answers next while agreeing on the service date after acceptance:
+  // "team" (the client picked or suggested a day) or "client" (the team
+  // proposed one). Null before acceptance and once a date is agreed.
+  schedulingPending String?
+  agreedDate        DateTime? @db.Date
+  agreedTime        String?
+  // Append-only history shown in the app (viewed, question, accepted,
+  // proposed, suggested, confirmed, resent…). See lib/estimate-flow.ts.
+  events            Json      @default("[]")
+  serviceId         String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   client         Client?   @relation(fields: [clientId], references: [id])
   invoice        Invoice?  @relation(fields: [invoiceId], references: [id])
+  service        Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   estimateVisits EstimateVisit[]
 
   @@map("estimates")
@@ -849,6 +873,9 @@ model EstimateVisit {
   visitTime  String
   notes      String?
   status     String    @default("scheduled") // scheduled | completed | cancelled
+  lang       String    @default("en")
+  confirmationSentAt DateTime?
+  confirmationVia    String?   // email | sms
   estimateId String?
   estimate   Estimate? @relation(fields: [estimateId], references: [id], onDelete: Cascade)
   createdAt  DateTime  @default(now())

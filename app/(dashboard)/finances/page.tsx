@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import CountUp from '@/components/ui/CountUp'
 import { DollarSign, TrendingUp, TrendingDown, Search, Check, CheckCircle, Plus, RefreshCw, ReceiptText, X, ChevronDown, SlidersHorizontal, GripVertical } from 'lucide-react'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
@@ -94,8 +95,19 @@ function fmt(n: number) {
 const inputCls = "w-full px-3 py-2 bg-[#0d0f14] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors"
 const labelCls = "text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5"
 
+function nextEstimateNumber(estimates: { estimateNumber: string }[]): string {
+  const yr = new Date().getFullYear()
+  const taken = new Set(estimates.map(e => e.estimateNumber))
+  let n = estimates.length + 1
+  while (taken.has(`EST-${yr}-${String(n).padStart(3, '0')}`)) n++
+  return `EST-${yr}-${String(n).padStart(3, '0')}`
+}
+
 export default function FinancesPage() {
   const { t } = useI18n()
+  const { data: session } = useSession()
+  // Only an admin books the service an estimate turns into.
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === 'admin'
   const paymentTermLabel = (label: string) => t.financesPage.paymentTerms[label] || label
   const [activeTab, setActiveTab] = useState('summary')
   const [invoices, setInvoices] = useState<any[]>([])
@@ -392,6 +404,9 @@ export default function FinancesPage() {
     { description: '', qty: 1, unitPrice: 0, total: 0 },
   ])
   const [estScheduleVisit, setEstScheduleVisit] = useState(false)
+  // Booking a visit with the estimate: tell the client by email, in their language.
+  const [estConfirmVisit, setEstConfirmVisit] = useState(true)
+  const [estLang, setEstLang] = useState<'en' | 'es'>('en')
   const [estVisitDate, setEstVisitDate] = useState(new Date().toISOString().split('T')[0])
   const [estVisitTime, setEstVisitTime] = useState(TIME_SLOTS[0]?.value || '')
   const [estPDFOpen, setEstPDFOpen] = useState(false)
@@ -404,6 +419,37 @@ export default function FinancesPage() {
   const [estLinkInvoiceId, setEstLinkInvoiceId] = useState('')
   const [estLinking, setEstLinking] = useState(false)
   const [estEditId, setEstEditId] = useState<string | null>(null)
+  // Opened from an estimate visit on the calendar: ?fromVisit=<id> starts a
+  // new estimate linked to that visit; ?estimate=<id>&returnVisit=<id> edits
+  // one. Either way, saving goes back to the visit.
+  const [estFromVisit, setEstFromVisit] = useState<{ id: string; name: string } | null>(null)
+  const [estReturnVisit, setEstReturnVisit] = useState<string | null>(null)
+  const [estOpenId, setEstOpenId] = useState<string | null>(null)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('tab') !== 'estimates') return
+    setActiveTab('estimates')
+    const fromVisit = q.get('fromVisit')
+    const editId = q.get('estimate')
+    if (editId) { setEstOpenId(editId); setEstReturnVisit(q.get('returnVisit')) }
+    if (fromVisit) {
+      fetch(`/api/estimate-visits/${fromVisit}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(v => {
+        if (!v) return
+        setEstEditId(null)
+        setEstFromVisit({ id: v.id, name: v.name })
+        setEstForm(f => ({
+          ...f,
+          clientName:    v.name ?? '',
+          clientEmail:   v.email || v.client?.email || '',
+          clientPhone:   v.phone || v.client?.phone || '',
+          clientAddress: v.address ?? '',
+        }))
+        if (v.clientId) { setEstClientMode('registered'); setEstClientId(v.clientId) }
+        setEstLang(v.lang === 'es' ? 'es' : 'en')
+      }).catch(() => {})
+    }
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
   const [estFromEstimate, setEstFromEstimate] = useState<any | null>(null)
   const [estServiceModalOpen, setEstServiceModalOpen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -491,6 +537,22 @@ export default function FinancesPage() {
     }
   }, [activeTab])
 
+  // A new estimate starts on the next free number (EST-<year>-NNN), not on
+  // one that's already taken.
+  useEffect(() => {
+    if (estEditId || !estimates.length) return
+    if (!estimates.some(e => e.estimateNumber === estForm.estimateNumber)) return
+    setEstForm(f => ({ ...f, estimateNumber: nextEstimateNumber(estimates) }))
+  }, [estimates, estEditId, estForm.estimateNumber])
+
+  useEffect(() => {
+    if (!estOpenId) return
+    const est = estimates.find(e => e.id === estOpenId)
+    if (!est) return
+    setEstOpenId(null)
+    loadEstimateForEdit(est)
+  }, [estOpenId, estimates])
+
   function loadEstimates() {
     fetch('/api/estimates').then(r => r.json()).then(data => {
       setEstimates(Array.isArray(data) ? data : [])
@@ -505,13 +567,14 @@ export default function FinancesPage() {
     try {
       const url  = estEditId ? `/api/estimates/${estEditId}` : '/api/estimates'
       const method = estEditId ? 'PUT' : 'POST'
-      const visitFields = !estEditId && estScheduleVisit
-        ? { visitDate: estVisitDate, visitTime: estVisitTime }
+      const visitFields = estEditId ? {}
+        : estFromVisit ? { estimateVisitId: estFromVisit.id }
+        : estScheduleVisit ? { visitDate: estVisitDate, visitTime: estVisitTime }
         : {}
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, clientId: registeredClientId, ...visitFields }),
+        body: JSON.stringify({ ...data, clientId: registeredClientId, ...visitFields, ...(!estEditId ? { lang: estLang } : {}) }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -519,6 +582,18 @@ export default function FinancesPage() {
         return
       }
       const saved = await res.json()
+      const backToVisit = estEditId ? estReturnVisit : estFromVisit?.id
+      if (backToVisit) {
+        window.location.href = `/calendar?visit=${backToVisit}`
+        return
+      }
+      if (!estEditId && saved.estimateVisit && estConfirmVisit && saved.clientEmail) {
+        await fetch(`/api/estimate-visits/${saved.estimateVisit.id}/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ via: 'email', lang: estLang }),
+        }).catch(() => {})
+      }
       setEstimates(prev =>
         estEditId
           ? prev.map(e => e.id === saved.id ? saved : e)
@@ -534,10 +609,8 @@ export default function FinancesPage() {
   }
 
   function resetEstForm() {
-    const yr = new Date().getFullYear()
-    const nextNum = String(estimates.length + 1).padStart(3, '0')
     setEstForm({
-      estimateNumber: `EST-${yr}-${nextNum}`,
+      estimateNumber: nextEstimateNumber(estimates),
       issueDate: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       clientName: '', clientEmail: '', clientPhone: '', clientAddress: '',
@@ -548,6 +621,10 @@ export default function FinancesPage() {
     setEstClientMode('manual')
     setEstSaveError('')
     setEstScheduleVisit(false)
+    setEstFromVisit(null)
+    setEstReturnVisit(null)
+    setEstConfirmVisit(true)
+    setEstLang('en')
     setEstVisitDate(new Date().toISOString().split('T')[0])
     setEstVisitTime(TIME_SLOTS[0]?.value || '')
   }
@@ -617,14 +694,16 @@ export default function FinancesPage() {
 
   async function handleServiceCreatedFromEstimate(serviceId?: string) {
     if (estFromEstimate && serviceId) {
-      const res = await fetch(`/api/estimates/${estFromEstimate.id}`, {
-        method: 'PUT',
+      // Links the service to the estimate (so the client's link shows it as
+      // booked) and closes the estimate visit.
+      const res = await fetch(`/api/estimates/${estFromEstimate.id}/flow`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'service_created' }),
+        body: JSON.stringify({ action: 'link_service', serviceId }),
       })
       if (res.ok) {
-        const updated = await res.json()
-        setEstimates(prev => prev.map(e => e.id === updated.id ? updated : e))
+        const { estimate: updated } = await res.json()
+        setEstimates(prev => prev.map(e => e.id === updated.id ? { ...e, ...updated } : e))
       }
     }
     setEstServiceModalOpen(false)
@@ -637,6 +716,8 @@ export default function FinancesPage() {
     const tax = Number(est.tax) || 0
     const total = Number(est.total) || 0
     setEstPDFData({
+      id:             est.id,
+      lang:           est.lang === 'es' ? 'es' : 'en',
       estimateNumber: est.estimateNumber,
       issueDate:      est.issueDate?.split('T')[0] ?? '',
       validUntil:     est.validUntil?.split('T')[0] ?? '',
@@ -3710,6 +3791,9 @@ export default function FinancesPage() {
           service_created: 'bg-[#a78bfa]/10 text-[#a78bfa] border-[#a78bfa]/30',
           cancelled:       'bg-[#f87171]/10 text-[#f87171] border-[#f87171]/30',
         }
+        const RESPONSE_COLORS: Record<string, string> = {
+          sent: 'text-[#9ca3af]', viewed: 'text-[#4f8ef7]', accepted: 'text-[#26BD97]', changes: 'text-[#f59e0b]', declined: 'text-[#f87171]',
+        }
         return (
           <div className="space-y-6">
             {/* ── Form header ── */}
@@ -3719,9 +3803,12 @@ export default function FinancesPage() {
                   {estEditId ? `✏️ ${t.financesPage.estimates.editEstimate}` : t.financesPage.estimates.newEstimate}
                 </h2>
                 <p className="text-xs text-[#6b7280] mt-0.5">{t.financesPage.estimates.fillFieldsHint}</p>
+                {estFromVisit && !estEditId && (
+                  <p className="text-xs font-semibold mt-1" style={{ color: '#ec4899' }}>{t.estimateVisit.fromVisitBanner(estFromVisit.name)}</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                {estEditId && (
+                {(estEditId || estFromVisit) && (
                   <button onClick={() => { setEstEditId(null); resetEstForm() }}
                     className="px-3 py-2 text-xs border border-[#2a2f3d] rounded-lg text-[#6b7280] hover:text-[#e8eaf0] transition-colors">
                     {t.financesPage.estimates.cancelEdit}
@@ -3811,7 +3898,7 @@ export default function FinancesPage() {
                       <input type="date" className={inputCls} value={estForm.validUntil} onChange={e => setEstForm(f => ({ ...f, validUntil: e.target.value }))} />
                     </div>
                   </div>
-                  {!estEditId && (
+                  {!estEditId && !estFromVisit && (
                     <div className="pt-1 border-t border-[#2a2f3d]">
                       <label className="flex items-center gap-2 text-xs font-semibold text-[#9ca3af] cursor-pointer pt-2">
                         <input type="checkbox" checked={estScheduleVisit} onChange={e => setEstScheduleVisit(e.target.checked)} className="w-3.5 h-3.5" />
@@ -3834,6 +3921,19 @@ export default function FinancesPage() {
                           </div>
                         </div>
                       )}
+                      {estScheduleVisit && (
+                        <label className={`flex items-center gap-2 text-xs font-semibold mt-3 cursor-pointer ${estForm.clientEmail ? 'text-[#9ca3af]' : 'text-[#6b7280]'}`}>
+                          <input type="checkbox" checked={estConfirmVisit && !!estForm.clientEmail} disabled={!estForm.clientEmail} onChange={e => setEstConfirmVisit(e.target.checked)} className="w-3.5 h-3.5" />
+                          {estForm.clientEmail ? t.financesPage.estimates.sendVisitConfirmation : t.financesPage.estimates.sendVisitConfirmationNoEmail}
+                        </label>
+                      )}
+                      <div className="mt-3">
+                        <label className={labelCls}>{t.financesPage.estimates.clientLanguage}</label>
+                        <select className={inputCls} value={estLang} onChange={e => setEstLang(e.target.value === 'es' ? 'es' : 'en')}>
+                          <option value="en">English</option>
+                          <option value="es">Español</option>
+                        </select>
+                      </div>
                     </div>
                   )}
                   <div>
@@ -3954,12 +4054,19 @@ export default function FinancesPage() {
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${STATUS_COLORS[est.status] ?? STATUS_COLORS.pending}`}>
                               {t.financesPage.estimateStatus[est.status] || est.status}
                             </span>
+                            {est.status !== 'service_created' && (est.response || est.viewedAt || est.sentAt) && (
+                              <div className={`mt-1 text-[10px] font-semibold ${RESPONSE_COLORS[est.response ?? (est.viewedAt ? 'viewed' : 'sent')]}`}>
+                                {t.financesPage.estimateResponse[est.response ?? (est.viewedAt ? 'viewed' : 'sent')]}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {est.status === 'service_created' ? (
                               <span className="text-[10px] font-semibold text-[#a78bfa]">✓ {t.financesPage.estimates.serviceCreated}</span>
                             ) : est.status === 'converted' && est.invoice ? (
                               <span className="text-[#26BD97] font-mono font-semibold text-[10px]">{est.invoice.invoiceNumber}</span>
+                            ) : !isAdmin ? (
+                              <span className="text-[10px] text-[#6b7280]">—</span>
                             ) : (
                               <button onClick={() => openCreateServiceFromEstimate(est)}
                                 className="text-[10px] px-2.5 py-1 bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/30 rounded-lg font-semibold transition-colors">

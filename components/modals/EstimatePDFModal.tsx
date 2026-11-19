@@ -28,6 +28,11 @@ export interface EstimateData {
   subtotal: number
   tax: number
   total: number
+  // Set for a saved estimate: emailing it then goes through
+  // /api/estimates/[id]/email, which adds the client's accept link and
+  // records the send.
+  id?: string
+  lang?: 'en' | 'es'
 }
 
 interface Props {
@@ -72,11 +77,17 @@ export default function EstimatePDFModal({ estimate, open, onClose }: Props) {
     setSendError('')
     setSent(false)
     try {
-      const res = await fetch('/api/estimates/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(estimate),
-      })
+      const res = estimate.id
+        ? await fetch(`/api/estimates/${estimate.id}/email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lang: estimate.lang }),
+          })
+        : await fetch('/api/estimates/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(estimate),
+          })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setSent(true)
       setTimeout(() => setSent(false), 4000)

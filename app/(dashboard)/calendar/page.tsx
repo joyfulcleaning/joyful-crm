@@ -9,10 +9,12 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { Copy, Pencil, SlidersHorizontal, ChevronLeft, ChevronRight, Link2, Check } from 'lucide-react'
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal'
 import ServiceModal from '@/components/modals/ServiceModal'
+import EstimateVisitModal from '@/components/modals/EstimateVisitModal'
 import { useSyncPoll } from '@/lib/useSyncPoll'
 import ErrorBanner from '@/components/ErrorBanner'
 import { useI18n } from '@/lib/i18n'
 import { serviceCategory, categoryColor, categoryAccent, CATEGORY_COLOR } from '@/lib/service-types'
+import { ESTIMATE_VISIT_COLOR } from '@/lib/estimate-stage'
 
 function fmt12h(t?: string | null) {
   if (!t) return '—'
@@ -63,8 +65,6 @@ function typeBadgeStyle(type?: string | null) {
   const c = categoryColor(type)
   return { backgroundColor: `${c}1f`, color: c }
 }
-
-const ESTIMATE_VISIT_COLOR = '#ec4899'
 
 function initShowEstimateVisits(): boolean {
   try {
@@ -132,7 +132,15 @@ export default function CalendarPage() {
   const [editOpen, setEditOpen] = useState(false)
   // ── Row being reviewed (click a row to keep it highlighted across all its columns) ──
   const [reviewRowId, setReviewRowId] = useState<string | null>(null)
-  const [reviewVisitId, setReviewVisitId] = useState<string | null>(null)
+  // The estimate visit open in its modal (admin only; staff get no visits).
+  const [openVisitId, setOpenVisitId] = useState<string | null>(null)
+  // Finances sends you back here with ?visit=<id> after saving its estimate.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('visit')
+    if (!id) return
+    setOpenVisitId(id)
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
   const [newServiceOpen, setNewServiceOpen] = useState(false)
   const [newServiceDate, setNewServiceDate] = useState('')
   const servicesRef = useRef<any[]>([])
@@ -458,17 +466,20 @@ export default function CalendarPage() {
           <p className="text-[var(--muted)] text-sm mt-1">{t.calendarPage.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showEstimateVisits}
-              onChange={toggleShowEstimateVisits}
-              className="w-3 h-3"
-              style={{ accentColor: ESTIMATE_VISIT_COLOR }}
-            />
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
-            {t.calendarPage.estimateVisits}
-          </label>
+          {/* Estimate visits are admin-only; the API sends staff none. */}
+          {sessionUser?.role === 'admin' && (
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showEstimateVisits}
+                onChange={toggleShowEstimateVisits}
+                className="w-3 h-3"
+                style={{ accentColor: ESTIMATE_VISIT_COLOR }}
+              />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTIMATE_VISIT_COLOR }} />
+              {t.calendarPage.estimateVisits}
+            </label>
+          )}
           {sessionUser?.role === 'admin' && (
             <div className="relative" ref={shareMenuRef}>
               <button
@@ -591,6 +602,7 @@ export default function CalendarPage() {
             dayMaxEvents={3}
             eventOrder="order,start"
             dateClick={handleDateClick}
+            eventClick={info => { if (info.event.extendedProps.kind === 'estimateVisit') setOpenVisitId(info.event.id.replace(/^visit-/, '')) }}
             displayEventTime={false}
             datesSet={handleDatesSet}
           />
@@ -772,10 +784,10 @@ export default function CalendarPage() {
               {selectedVisits.map(v => (
                 <tr
                   key={v.id}
-                  onClick={() => setReviewVisitId(prev => prev === v.id ? null : v.id)}
+                  onClick={() => setOpenVisitId(v.id)}
                   style={{
-                    backgroundColor: reviewVisitId === v.id ? 'rgba(74,63,176,0.16)' : undefined,
-                    borderLeft: reviewVisitId === v.id ? '3px solid #4A3FB0' : '3px solid transparent',
+                    backgroundColor: openVisitId === v.id ? 'rgba(74,63,176,0.16)' : undefined,
+                    borderLeft: openVisitId === v.id ? '3px solid #4A3FB0' : '3px solid transparent',
                   }}
                   className="border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--surface3)]"
                 >
@@ -802,6 +814,11 @@ export default function CalendarPage() {
         open={duplicateOpen}
         onClose={() => { setDuplicateOpen(false); setDuplicateService(null) }}
         onSuccess={() => { loadServices(); setDuplicateOpen(false); setDuplicateService(null) }}
+      />
+      <EstimateVisitModal
+        visitId={openVisitId}
+        onClose={() => setOpenVisitId(null)}
+        onChanged={() => loadEstimateVisits()}
       />
       <ServiceModal
         open={newServiceOpen}
