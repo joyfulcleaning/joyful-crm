@@ -7,7 +7,7 @@ import { fmtDate } from '@/lib/staff-profile'
 import {
   ABSENCE_TYPES, absenceHours, balances, hoursBetween, parseHours, parseTime, workPatternOf,
 } from '@/lib/staff-absence'
-import { StatusBadge, TypeLabel, absenceRange, durationText } from './absence-ui'
+import { StatusBadge, TimeSelect, TypeLabel, absenceRange, durationText } from './absence-ui'
 
 const HEADING = 'text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1.5'
 const INPUT = 'w-full px-3 py-1.5 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors'
@@ -268,11 +268,11 @@ export default function AbsenceDrawer({ absenceId, staff, absences, onClose, onC
                       </div>
                       <div>
                         <label className={HEADING}>{sa.modal.startTime}</label>
-                        <input type="time" value={form.startTime} onChange={e => patchForm({ startTime: e.target.value })} className={INPUT} />
+                        <TimeSelect value={form.startTime} onChange={v => patchForm({ startTime: v })} className={INPUT} />
                       </div>
                       <div>
                         <label className={HEADING}>{sa.modal.endTime}</label>
-                        <input type="time" value={form.endTime} onChange={e => patchForm({ endTime: e.target.value })} className={INPUT} />
+                        <TimeSelect value={form.endTime} onChange={v => patchForm({ endTime: v })} className={INPUT} />
                       </div>
                     </div>
                   ) : (

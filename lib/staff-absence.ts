@@ -138,10 +138,19 @@ export function parseHours(value: unknown): number | null {
   return Number.isFinite(hours) && hours >= 0 && hours <= 9999 ? hours : null
 }
 
-// "HH:MM" on a 24-hour clock, or null. Accepts "9:30" and pads it.
+// Time ranges go in half-hour steps to keep the records simple.
+export const TIME_STEP_MINUTES = 30
+
+// Every allowed time of day: "00:00", "00:30", … "23:30".
+export const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_STEP_MINUTES }, (_, i) => {
+  const mins = i * TIME_STEP_MINUTES
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+})
+
+// "HH:MM" on a 24-hour clock on a half-hour step, or null. Accepts "9:30".
 export function parseTime(value: unknown): string | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(value ?? '').trim())
-  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59 || Number(m[2]) % TIME_STEP_MINUTES !== 0) return null
   return `${m[1].padStart(2, '0')}:${m[2]}`
 }
 

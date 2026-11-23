@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { TimeSelect } from './absence-ui'
 import { localDateStr } from '@/lib/local-date'
 import { ABSENCE_TYPES, absenceHours, balances, findOverlap, hoursBetween, parseHours, parseTime, workPatternOf, workingDays } from '@/lib/staff-absence'
 
@@ -138,11 +139,11 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
               </div>
               <div>
                 <label className={LABEL}>{m.startTime}</label>
-                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={INPUT} />
+                <TimeSelect value={startTime} onChange={setStartTime} className={INPUT} />
               </div>
               <div>
                 <label className={LABEL}>{m.endTime}</label>
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={INPUT} />
+                <TimeSelect value={endTime} onChange={setEndTime} className={INPUT} />
               </div>
             </div>
           ) : (

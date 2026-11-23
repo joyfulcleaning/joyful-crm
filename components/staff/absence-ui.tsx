@@ -2,7 +2,7 @@
 
 import { useI18n } from '@/lib/i18n'
 import { fmtDate } from '@/lib/staff-profile'
-import { ABSENCE_STATUS_COLORS, ABSENCE_TYPES, timeRangeText } from '@/lib/staff-absence'
+import { ABSENCE_STATUS_COLORS, ABSENCE_TYPES, TIME_OPTIONS, fmtTime, timeRangeText } from '@/lib/staff-absence'
 
 const TH = 'px-3 py-2.5 text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider whitespace-nowrap'
 const TD = 'px-3 py-2.5 text-xs text-[#e8eaf0] whitespace-nowrap'
@@ -29,6 +29,16 @@ export function TypeLabel({ type }: { type: string }) {
       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ABSENCE_TYPES[type]?.color || '#6b7280' }} />
       {t.staffAbsence.types[type] || type}
     </span>
+  )
+}
+
+// Half-hour steps only, so a select reads better than a free time input.
+export function TimeSelect({ value, onChange, className }: { value: string; onChange: (v: string) => void; className: string }) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} className={className}>
+      {!value && <option value="">—</option>}
+      {TIME_OPTIONS.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
+    </select>
   )
 }
 
