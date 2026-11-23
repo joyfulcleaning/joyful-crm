@@ -2,7 +2,7 @@
 
 import { useI18n } from '@/lib/i18n'
 import { fmtDate } from '@/lib/staff-profile'
-import { ABSENCE_STATUS_COLORS, ABSENCE_TYPES } from '@/lib/staff-absence'
+import { ABSENCE_STATUS_COLORS, ABSENCE_TYPES, timeRangeText } from '@/lib/staff-absence'
 
 const TH = 'px-3 py-2.5 text-left text-[10px] font-bold text-[#6b7280] uppercase tracking-wider whitespace-nowrap'
 const TD = 'px-3 py-2.5 text-xs text-[#e8eaf0] whitespace-nowrap'
@@ -33,6 +33,8 @@ export function TypeLabel({ type }: { type: string }) {
 }
 
 export function durationText(a: any, sa: { partial: (h: number) => string; hours: (h: number) => string }) {
+  const range = timeRangeText(a)
+  if (range) return `${range} · ${sa.hours(Number(a.totalHours))}`
   return a.partialHours ? sa.partial(Number(a.totalHours)) : sa.hours(Number(a.totalHours))
 }
 

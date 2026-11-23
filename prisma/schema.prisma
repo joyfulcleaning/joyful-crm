@@ -246,8 +246,15 @@ model StaffAbsence {
   endDate       DateTime      @db.Date
   // Only for a part of one day; startDate equals endDate then.
   partialHours  Decimal?      @db.Decimal(4, 2)
+  // "HH:MM", 24-hour, for a part of one day. endTime before startTime means
+  // the time off runs past midnight (night shifts).
+  startTime     String?       @db.VarChar(5)
+  endTime       String?       @db.VarChar(5)
   // Worked out on the server when the row is created.
   totalHours    Decimal       @db.Decimal(7, 2)
+  // What the person asked for, kept the first time an admin edits the record
+  // so the file shows both the request and what actually happened.
+  originalRequest Json?
   status        AbsenceStatus @default(pending)
   reason        String?
   reviewNote    String?

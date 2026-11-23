@@ -138,6 +138,43 @@ export function parseHours(value: unknown): number | null {
   return Number.isFinite(hours) && hours >= 0 && hours <= 9999 ? hours : null
 }
 
+// "HH:MM" on a 24-hour clock, or null. Accepts "9:30" and pads it.
+export function parseTime(value: unknown): string | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(value ?? '').trim())
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null
+  return `${m[1].padStart(2, '0')}:${m[2]}`
+}
+
+// Hours from start to end; an end at or before the start runs past midnight.
+export function hoursBetween(start: string, end: string) {
+  const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+  let diff = mins(end) - mins(start)
+  if (diff <= 0) diff += 24 * 60
+  return Math.round(diff / 60 * 100) / 100
+}
+
+// "14:30" → "2:30 PM".
+export function fmtTime(time: string) {
+  const h = Number(time.slice(0, 2)), m = time.slice(3, 5)
+  return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`
+}
+
+// A part of one day comes as a time range; neither time means whole days.
+// Returns the hours it spends, or an error key for the caller to report.
+export function readTimeRange(startTime: unknown, endTime: unknown):
+  { startTime: string | null; endTime: string | null; partialHours: number | null } | { error: string } {
+  const empty = (v: unknown) => v === undefined || v === null || v === ''
+  if (empty(startTime) && empty(endTime)) return { startTime: null, endTime: null, partialHours: null }
+  const start = parseTime(startTime), end = parseTime(endTime)
+  if (!start || !end) return { error: 'Invalid time range' }
+  if (start === end) return { error: 'Start and end time are the same' }
+  return { startTime: start, endTime: end, partialHours: hoursBetween(start, end) }
+}
+
+export function timeRangeText(a: { startTime?: string | null; endTime?: string | null }) {
+  return a.startTime && a.endTime ? `${fmtTime(a.startTime)} – ${fmtTime(a.endTime)}` : ''
+}
+
 export function isActive(absence: { status: string }) {
   return (ACTIVE_STATUSES as readonly string[]).includes(absence.status)
 }

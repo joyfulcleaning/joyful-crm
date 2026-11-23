@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { localDateStr } from '@/lib/local-date'
-import { ABSENCE_TYPES, absenceHours, balances, findOverlap, parseHours, workPatternOf, workingDays } from '@/lib/staff-absence'
+import { ABSENCE_TYPES, absenceHours, balances, findOverlap, hoursBetween, parseHours, parseTime, workPatternOf, workingDays } from '@/lib/staff-absence'
 
 const INPUT = 'w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors'
 const LABEL = 'text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5'
@@ -29,7 +29,8 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
   const [partial, setPartial] = useState(false)
   const [from, setFrom]       = useState(today)
   const [to, setTo]           = useState(today)
-  const [hours, setHours]     = useState('')
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime]     = useState('13:00')
   const [manualHours, setManualHours] = useState('')
   const [reason, setReason]   = useState('')
   const [status, setStatus]   = useState<'pending' | 'approved'>('pending')
@@ -39,8 +40,9 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
   const end        = partial ? from : to
   const person     = staff.find(s => s.id === userId)
   const badRange   = !!from && !!end && end < from
-  const partialNum = partial ? Number(hours) : null
-  const badHours   = partial && !(Number(hours) > 0 && Number(hours) <= 24)
+  const validTimes = !!parseTime(startTime) && !!parseTime(endTime) && startTime !== endTime
+  const partialNum = partial && validTimes ? hoursBetween(startTime, endTime) : null
+  const badHours   = partial && !validTimes
   const overlap    = !!userId && !!from && !!end && !badRange && !!findOverlap(absences, userId, from, end)
   const pattern    = workPatternOf(person)
   const noRange    = !from || !end || badRange
@@ -71,7 +73,8 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
           userId, type, status, reason,
           startDate: from,
           endDate: end,
-          partialHours: partial ? Number(hours) : null,
+          startTime: partial ? startTime : null,
+          endTime:   partial ? endTime : null,
           totalHours: manual,
         }),
       })
@@ -128,14 +131,18 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
           </div>
 
           {partial ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className={LABEL}>{m.date}</label>
                 <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={INPUT} />
               </div>
               <div>
-                <label className={LABEL}>{m.hoursLabel}</label>
-                <input type="number" min="0.5" max="24" step="0.5" value={hours} onChange={e => setHours(e.target.value)} className={INPUT} />
+                <label className={LABEL}>{m.startTime}</label>
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={INPUT} />
+              </div>
+              <div>
+                <label className={LABEL}>{m.endTime}</label>
+                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={INPUT} />
               </div>
             </div>
           ) : (
@@ -156,6 +163,7 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
               <div className="flex justify-between"><span className="text-[#6b7280]">{m.working}</span><span className="font-semibold text-[#e8eaf0]">{days}</span></div>
             )}
             <div className="flex justify-between"><span className="text-[#6b7280]">{m.total}</span><span className="font-semibold text-[#e8eaf0]">{total}</span></div>
+            {partial && validTimes && endTime < startTime && <div className="text-[#6b7280]">{m.overnight}</div>}
             {!bucket && <div className="text-[#6b7280]">{m.noBalance}</div>}
             {bucket && balance?.available != null && (
               <div className={after! < 0 ? 'text-[#f87171] font-semibold' : 'text-[#e8eaf0]'}>{m.balanceFlow(balance.available, after!)}</div>

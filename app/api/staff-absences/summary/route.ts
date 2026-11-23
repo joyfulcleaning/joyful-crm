@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
-import { ABSENCE_TYPES, absenceHours, balances, workPatternOf } from '@/lib/staff-absence'
+import { ABSENCE_TYPES, absenceHours, balances, readTimeRange, workPatternOf } from '@/lib/staff-absence'
 
 // What the mobile time-off tab needs about the signed-in person, without
 // handing staff their whole HR file: this year's hour balances and, when
@@ -36,8 +36,9 @@ export async function GET(request: Request) {
     if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
       const toParam = searchParams.get('to')?.slice(0, 10)
       const to = toParam && /^\d{4}-\d{2}-\d{2}$/.test(toParam) && toParam >= from ? toParam : from
-      const partial = Number(searchParams.get('partialHours'))
-      const partialHours = from === to && Number.isFinite(partial) && partial > 0 && partial <= 24 ? partial : null
+      const range = readTimeRange(searchParams.get('startTime'), searchParams.get('endTime'))
+      const partial = 'error' in range ? null : range.partialHours
+      const partialHours = from === to && partial ? partial : null
       preview = {
         hours:  absenceHours(from, to, partialHours, pattern),
         bucket: ABSENCE_TYPES[searchParams.get('type') ?? '']?.bucket ?? null,

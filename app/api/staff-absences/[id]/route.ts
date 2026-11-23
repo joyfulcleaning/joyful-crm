@@ -1,10 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAuthUser } from '@/lib/mobile-auth'
+import { AuthUser, getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { sendPushToUsers } from '@/lib/push'
-import { ACTIVE_STATUSES, isActive, parseHours } from '@/lib/staff-absence'
+import { parseDateOnly } from '@/lib/staff-profile-server'
+import {
+  ABSENCE_TYPES, ACTIVE_STATUSES, absenceHours, isActive, parseHours, readTimeRange, workPatternOf,
+} from '@/lib/staff-absence'
 
 const SUGGESTIONS_PER_SERVICE = 3
 
@@ -93,6 +96,78 @@ const TRANSITIONS: Record<string, { to: 'approved' | 'rejected' | 'cancelled'; f
   cancel:  { to: 'cancelled', from: ['pending', 'approved'] },
 }
 
+const ymd = (d: Date) => d.toISOString().slice(0, 10)
+
+// What the absence says right now, in the shape kept as `originalRequest`.
+function snapshotOf(a: any) {
+  return {
+    type: a.type, startDate: ymd(a.startDate), endDate: ymd(a.endDate),
+    startTime: a.startTime, endTime: a.endTime, totalHours: Number(a.totalHours),
+  }
+}
+
+async function editAbsence(authUser: AuthUser, absence: any, body: any) {
+  const type = body.type ?? absence.type
+  if (!ABSENCE_TYPES[type]) return NextResponse.json({ error: 'Invalid absence type' }, { status: 400 })
+
+  const from = String(body.startDate ?? ymd(absence.startDate)).slice(0, 10)
+  const to   = String(body.endDate ?? body.startDate ?? ymd(absence.endDate)).slice(0, 10)
+  const startDate = parseDateOnly(from), endDate = parseDateOnly(to)
+  if (!startDate || !endDate) return NextResponse.json({ error: 'Invalid dates' }, { status: 400 })
+  if (to < from) return NextResponse.json({ error: 'End date is before start date' }, { status: 400 })
+
+  const range = readTimeRange(body.startTime, body.endTime)
+  if ('error' in range) return NextResponse.json({ error: range.error }, { status: 400 })
+  let partialHours = range.partialHours
+  // Older partial requests only carry the hours, without a time range.
+  if (partialHours === null && body.partialHours !== undefined && body.partialHours !== null && body.partialHours !== '') {
+    partialHours = parseHours(body.partialHours)
+    if (!partialHours || partialHours > 24) return NextResponse.json({ error: 'Invalid hours' }, { status: 400 })
+  }
+  if (partialHours !== null && from !== to) {
+    return NextResponse.json({ error: 'Partial absences cover a single day' }, { status: 400 })
+  }
+
+  const overlap = await prisma.staffAbsence.findFirst({
+    where: {
+      id:        { not: absence.id },
+      userId:    absence.userId,
+      status:    { in: [...ACTIVE_STATUSES] },
+      startDate: { lte: endDate },
+      endDate:   { gte: startDate },
+    },
+  })
+  if (overlap) return NextResponse.json({ error: 'Overlaps another absence', code: 'overlap' }, { status: 409 })
+
+  const profile = await prisma.staffProfile.findUnique({ where: { userId: absence.userId }, select: { weeklySchedule: true } })
+  let totalHours = absenceHours(from, to, partialHours, workPatternOf({ hrProfile: profile }))
+  if (body.totalHours !== undefined && body.totalHours !== null && body.totalHours !== '') {
+    const manual = parseHours(body.totalHours)
+    if (manual === null) return NextResponse.json({ error: 'Invalid hours' }, { status: 400 })
+    totalHours = manual
+  }
+
+  const before = snapshotOf(absence)
+  const updated = await prisma.staffAbsence.update({
+    where: { id: absence.id },
+    data: {
+      type, startDate, endDate, partialHours, totalHours,
+      startTime: range.startTime,
+      endTime:   range.endTime,
+      reason:    body.reason === undefined ? undefined : String(body.reason).trim() || null,
+      // Kept once: later edits never overwrite what was first asked for.
+      originalRequest: absence.originalRequest ?? before,
+    },
+    include: INCLUDE,
+  })
+
+  // Dates and hours aren't sensitive, so the log keeps the values themselves.
+  logAudit(authUser, 'update', 'staffAbsence', absence.id, {
+    staffId: updated.userId, staffName: updated.user.name, action: 'edit', before, after: snapshotOf(updated),
+  })
+  return NextResponse.json(updated)
+}
+
 const PUSH_TITLES: Record<string, string> = {
   approved:  'Ausencia aprobada',
   rejected:  'Ausencia rechazada',
@@ -110,25 +185,20 @@ export async function PATCH(
     const { id } = await context.params
     const body = await request.json()
     const transition = TRANSITIONS[body.action]
-    if (!transition && body.action !== 'adjust') return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    if (!transition && body.action !== 'edit') return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
     const absence = await prisma.staffAbsence.findUnique({ where: { id } })
     if (!absence) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const isAdmin = authUser.role === 'admin'
 
-    // Correcting the hours, for rotating schedules or anything the suggestion
-    // can't know. The status stays as it is.
-    if (body.action === 'adjust') {
+    // Correcting the record — dates, times, type, hours or reason — when
+    // someone was away longer or shorter than they asked, or the schedule
+    // can't know the hours. The status stays as it is.
+    if (body.action === 'edit') {
       if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       if (!isActive(absence)) return NextResponse.json({ error: 'This absence is closed' }, { status: 409 })
-      const totalHours = parseHours(body.totalHours)
-      if (totalHours === null) return NextResponse.json({ error: 'Invalid hours' }, { status: 400 })
-      const adjusted = await prisma.staffAbsence.update({ where: { id }, data: { totalHours }, include: INCLUDE })
-      logAudit(authUser, 'update', 'staffAbsence', id, {
-        staffId: adjusted.userId, staffName: adjusted.user.name, action: 'adjust', from: Number(absence.totalHours), to: totalHours,
-      })
-      return NextResponse.json(adjusted)
+      return editAbsence(authUser, absence, body)
     }
 
     // Staff can only withdraw their own request while it is still pending.

@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { notifyEvent } from '@/lib/notify-admin'
 import { parseDateOnly } from '@/lib/staff-profile-server'
-import { ABSENCE_TYPES, ACTIVE_STATUSES, absenceHours, parseHours, workPatternOf } from '@/lib/staff-absence'
+import { ABSENCE_TYPES, ACTIVE_STATUSES, absenceHours, parseHours, readTimeRange, timeRangeText, workPatternOf } from '@/lib/staff-absence'
 
 const INCLUDE = {
   user:       { select: { id: true, name: true } },
@@ -55,8 +55,15 @@ export async function POST(request: Request) {
     const to   = String(body.endDate ?? body.startDate).slice(0, 10)
     if (to < from) return NextResponse.json({ error: 'End date is before start date' }, { status: 400 })
 
-    let partialHours: number | null = null
-    if (body.partialHours !== undefined && body.partialHours !== null && body.partialHours !== '') {
+    // A part of a day comes as a time range and the hours follow from it. A
+    // bare partialHours is still accepted for callers that only know the hours.
+    const range = readTimeRange(body.startTime, body.endTime)
+    if ('error' in range) return NextResponse.json({ error: range.error }, { status: 400 })
+    let partialHours: number | null = range.partialHours
+    if (range.partialHours !== null && from !== to) {
+      return NextResponse.json({ error: 'Partial absences cover a single day' }, { status: 400 })
+    }
+    if (partialHours === null && body.partialHours !== undefined && body.partialHours !== null && body.partialHours !== '') {
       partialHours = Number(body.partialHours)
       if (!Number.isFinite(partialHours) || partialHours <= 0 || partialHours > 24) {
         return NextResponse.json({ error: 'Invalid hours' }, { status: 400 })
@@ -90,6 +97,8 @@ export async function POST(request: Request) {
         startDate,
         endDate,
         partialHours,
+        startTime: range.startTime,
+        endTime:   range.endTime,
         totalHours,
         status,
         reason:        body.reason?.trim() || null,
@@ -104,13 +113,15 @@ export async function POST(request: Request) {
     })
 
     if (status === 'pending') {
-      const range = from === to ? from : `${from} → ${to}`
+      const mdy = (d: string) => `${d.slice(5, 7)}-${d.slice(8, 10)}-${d.slice(0, 4)}`
+      const when = (from === to ? mdy(from) : `${mdy(from)} → ${mdy(to)}`)
+        + (range.startTime ? `, ${timeRangeText(range)}` : '')
       notifyEvent('staffAbsence', {
         pushTitle:    'Solicitud de ausencia',
-        pushBody:     `${absence.user.name}: ${range}`,
+        pushBody:     `${absence.user.name}: ${when}`,
         pushData:     { type: 'staffAbsence', absenceId: absence.id },
         emailSubject: `Solicitud de ausencia: ${absence.user.name}`,
-        emailHtml:    `<p>${absence.user.name} solicitó una ausencia: ${range}.</p><p>Revísala en Staff → Ausencias.</p>`,
+        emailHtml:    `<p>${absence.user.name} solicitó una ausencia: ${when}.</p><p>Revísala en Staff → Ausencias.</p>`,
       }).catch(err => console.error('Failed to notify absence request:', err))
     }
 
