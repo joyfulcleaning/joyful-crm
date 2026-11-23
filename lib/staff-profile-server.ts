@@ -1,21 +1,26 @@
 import { prisma } from './prisma'
+import { employeeCodeChoices, formatEmployeeCode } from './staff-profile'
 
-const CODE_PREFIX = 'JF-'
+export { formatEmployeeCode }
 
-export function formatEmployeeCode(n: number) {
-  return `${CODE_PREFIX}${String(n).padStart(4, '0')}`
-}
-
-export async function nextEmployeeCode() {
+async function codeChoices() {
   const rows = await prisma.staffProfile.findMany({
     where: { employeeCode: { not: null } },
     select: { employeeCode: true },
   })
-  const highest = rows.reduce((max, r) => {
-    const n = parseInt(r.employeeCode!.slice(CODE_PREFIX.length), 10)
-    return Number.isNaN(n) ? max : Math.max(max, n)
-  }, 0)
-  return formatEmployeeCode(highest + 1)
+  return employeeCodeChoices(rows.map(r => r.employeeCode))
+}
+
+export async function nextEmployeeCode() {
+  return (await codeChoices()).next
+}
+
+// The ID for a new hire: the one the admin picked if it is still free,
+// otherwise the next automatic one. null means the pick was taken meanwhile.
+export async function employeeCodeFor(requested: unknown) {
+  const { next, free } = await codeChoices()
+  if (!requested || requested === next) return next
+  return typeof requested === 'string' && free.includes(requested) ? requested : null
 }
 
 const TEXT_FIELDS = [

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { Prisma } from '@prisma/client'
-import { ProfileInputError, nextEmployeeCode, pickProfileFields } from '@/lib/staff-profile-server'
+import { ProfileInputError, employeeCodeFor, pickProfileFields } from '@/lib/staff-profile-server'
 import { STAFF_DOCUMENTS } from '@/lib/staff-documents'
 
 export async function GET(request: Request) {
@@ -64,6 +64,11 @@ export async function POST(request: Request) {
       ? body.receivedDocuments.filter((k: unknown) => STAFF_DOCUMENTS.some(d => d.key === k))
       : []
 
+    const employeeCode = await employeeCodeFor(body.employeeCode)
+    if (!employeeCode) {
+      return NextResponse.json({ error: 'That employee ID was just taken', code: 'code_taken' }, { status: 409 })
+    }
+
     const generatedPassword = body.password ? null : crypto.randomBytes(9).toString('base64url')
     const bcrypt = await import('bcryptjs')
     const hashedPassword = await bcrypt.hash(body.password || generatedPassword!, 12)
@@ -90,7 +95,7 @@ export async function POST(request: Request) {
         emergencyContactName:  body.emergencyContactName  || null,
         emergencyContactPhone: body.emergencyContactPhone || null,
         notes:                 body.notes                 || null,
-        hrProfile:             { create: { ...profile, employeeCode: await nextEmployeeCode() } },
+        hrProfile:             { create: { ...profile, employeeCode } },
         ...(received.length
           ? { staffDocuments: { create: received.map(docType => ({ docType, uploadedById: authUser.id })) } }
           : {}),
@@ -98,13 +103,17 @@ export async function POST(request: Request) {
     })
     const { password, ...safeUser } = user
 
-    logAudit(authUser, 'create', 'staff', user.id, { name: user.name, role: user.role, receivedDocuments: received })
+    logAudit(authUser, 'create', 'staff', user.id, { name: user.name, role: user.role, employeeCode, receivedDocuments: received })
 
     // Only echoed back when we generated it — an admin-supplied password is
     // already known to them, no need to send it back over the wire again.
     return NextResponse.json(generatedPassword ? { ...safeUser, tempPassword: generatedPassword } : safeUser)
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      // Two admins creating someone at the same moment can land on one ID.
+      if (JSON.stringify(error.meta?.target ?? '').includes('employeeCode')) {
+        return NextResponse.json({ error: 'That employee ID was just taken', code: 'code_taken' }, { status: 409 })
+      }
       return NextResponse.json({ error: 'That email is already in use', code: 'email_taken' }, { status: 409 })
     }
     console.error('Error creating staff:', error)

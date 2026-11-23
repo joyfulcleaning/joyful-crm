@@ -5,7 +5,7 @@ import { Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 import StaffGroupSelect from '@/components/StaffGroupSelect'
 import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
 import { useI18n } from '@/lib/i18n'
-import { EMPLOYMENT_TYPES, WEEK_DAYS } from '@/lib/staff-profile'
+import { EMPLOYMENT_TYPES, WEEK_DAYS, employeeCodeChoices } from '@/lib/staff-profile'
 import { DEFAULT_PATTERN } from '@/lib/staff-absence'
 import { STAFF_DOCUMENTS } from '@/lib/staff-documents'
 
@@ -30,6 +30,7 @@ const BLANK = {
   scheduleType: 'weekly', hourlyRate: '', per1BR: '', per2BR: '', per3BR: '', extraFee: '',
   bankName: '', bankRouting: '', bankAccount: '', vacationHours: '', sickHours: '', personalHours: '',
   received: [] as string[], password: '',
+  employeeCode: '', // '' = the next automatic ID
 }
 type Form = typeof BLANK
 
@@ -64,6 +65,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
   const [created, setCreated] = useState<{ id: string; tempPassword?: string } | null>(null)
 
   const set = (key: keyof Form, value: any) => setForm(prev => ({ ...prev, [key]: value }))
+  const codes = employeeCodeChoices(staff.map(s => s.hrProfile?.employeeCode))
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
   const payOk = form.scheduleType === 'per_service' ? RATE_KEYS.some(k => form[k]) : !!form.hourlyRate
@@ -113,6 +115,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
           workPermitExpiry: form.workPermit === 'true' ? form.workPermitExpiry : '',
           emergencyContactName: form.emergencyContactName, emergencyContactPhone: form.emergencyContactPhone,
           password: form.password,
+          employeeCode: form.employeeCode || null,
           receivedDocuments: form.received,
           profile: {
             preferredName: form.preferredName, jobTitle: form.jobTitle, employmentType: form.employmentType,
@@ -129,6 +132,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
         }),
       })
       const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.code === 'code_taken') { setError(w.codeTaken); set('employeeCode', ''); setStep(2); return }
       if (res.status === 409) { setError(w.emailTaken); setStep(1); return }
       if (!res.ok) throw new Error()
       if (data.tempPassword) setCreated({ id: data.id, tempPassword: data.tempPassword })
@@ -184,7 +188,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
   const review: { step: number; rows: [string, string][] }[] = [
     { step: 0, rows: [[f.name, `${form.firstName} ${form.lastName}`], [f.preferredName, form.preferredName], [f.dateOfBirth, form.dateOfBirth], [f.taxId, form.taxId && `${form.taxIdType} ${form.taxId}`], [f.immigrationStatus, form.immigrationStatus]] },
     { step: 1, rows: [[f.email, form.email], [f.phone, form.phone], [f.addressLine, [form.addressLine, form.city, form.state, form.zipCode].filter(Boolean).join(', ')], [t.staffHr.profile.sections.emergency, [form.emergencyContactName, form.emergencyContactPhone].filter(Boolean).join(' · ')]] },
-    { step: 2, rows: [[f.jobTitle, form.jobTitle], [f.group, groupName(form.staffGroupId) ?? ''], [f.employmentType, hr.employmentTypes[form.employmentType] ?? ''], [f.hireDate, form.hireDate], [f.role, t.staffHr.profile.roles[form.role]],
+    { step: 2, rows: [[f.employeeCode, form.employeeCode || codes.next], [f.jobTitle, form.jobTitle], [f.group, groupName(form.staffGroupId) ?? ''], [f.employmentType, hr.employmentTypes[form.employmentType] ?? ''], [f.hireDate, form.hireDate], [f.role, t.staffHr.profile.roles[form.role]],
       [w.workDays, form.rotating === 'true' ? f.rotating : `${form.workDays.map(d => t.staffHr.profile.days[d]).join(', ')} · ${form.hoursPerDay} h`]] },
     { step: 3, rows: [[f.payType, PAY_FREQUENCIES.find(p => p.value === form.scheduleType)?.label ?? ''], [f.payAmount, form.scheduleType === 'per_service' ? RATE_KEYS.map(k => form[k] && `${f[k]}: $${form[k]}`).filter(Boolean).join(' · ') : form.hourlyRate && `$${form.hourlyRate}`],
       [t.staffHr.profile.sections.hours, [form.vacationHours, form.sickHours, form.personalHours].some(Boolean) ? `${form.vacationHours || 0} / ${form.sickHours || 0} / ${form.personalHours || 0}` : '']] },
@@ -257,6 +261,10 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
 
             {step === 2 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {select('employeeCode', f.employeeCode, [
+                  { value: '', label: `${codes.next} · ${w.codeAuto}` },
+                  ...codes.free.map(code => ({ value: code, label: `${code} · ${w.codeFree}` })),
+                ], { blank: false })}
                 {field('jobTitle', f.jobTitle, { required: true })}
                 <div>
                   <label className={LABEL}>{f.group}</label>

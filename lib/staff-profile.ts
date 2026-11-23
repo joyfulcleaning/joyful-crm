@@ -4,6 +4,23 @@
 export const EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contractor', 'seasonal'] as const
 export const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
+const EMPLOYEE_CODE = /^JF-(\d+)$/
+
+export function formatEmployeeCode(n: number) {
+  return `JF-${String(n).padStart(4, '0')}`
+}
+
+// A new hire gets the number after the highest one in use. Any lower number
+// nobody holds (JF-0002 to JF-0005 are kept back on purpose) can be picked by
+// hand instead.
+export function employeeCodeChoices(codes: (string | null | undefined)[]) {
+  const taken = new Set(codes.map(c => c && EMPLOYEE_CODE.exec(c)?.[1]).filter(Boolean).map(Number))
+  const highest = Math.max(0, ...Array.from(taken))
+  const free: string[] = []
+  for (let n = 1; n < highest; n++) if (!taken.has(n)) free.push(formatEmployeeCode(n))
+  return { next: formatEmployeeCode(highest + 1), free }
+}
+
 // Days ahead that a work permit counts as "expiring soon".
 export const PERMIT_ALERT_DAYS = 60
 
