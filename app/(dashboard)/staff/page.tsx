@@ -13,6 +13,7 @@ import StaffProfile from '@/components/staff/StaffProfile'
 import StaffAbsences from '@/components/staff/StaffAbsences'
 import AbsenceModal from '@/components/staff/AbsenceModal'
 import AbsenceDrawer from '@/components/staff/AbsenceDrawer'
+import PayrollAbsences from '@/components/staff/PayrollAbsences'
 import ComplianceMatrix from '@/components/staff/ComplianceMatrix'
 import { complianceOf } from '@/lib/staff-documents'
 import StaffGroupsModal from '@/components/modals/StaffGroupsModal'
@@ -59,6 +60,8 @@ interface CalcRow {
   count3BR:        number
   countExtra:      number
   baseAmount:      number
+  // Approved and pending time off inside the period (see /api/payroll/calculate).
+  absences:        any[]
 }
 
 interface RowEdits {
@@ -960,6 +963,13 @@ export default function StaffPage() {
                           )}
                         </div>
                       </div>
+
+                      <PayrollAbsences
+                        absences={row.absences ?? []}
+                        disabled={isPaid}
+                        onOpen={setOpenAbsenceId}
+                        onNote={text => setEdit(row.userId, 'notes', edit.notes?.trim() ? `${edit.notes.trim()} · ${text}` : text)}
+                      />
 
                       {/* Notes */}
                       <div className="px-5 pb-3.5">

@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/mobile-auth'
 import { logAudit } from '@/lib/audit'
 import { notifyEvent } from '@/lib/notify-admin'
 import { parseDateOnly } from '@/lib/staff-profile-server'
-import { ABSENCE_TYPES, ACTIVE_STATUSES, absenceHours, parseHours, readTimeRange, timeRangeText, workPatternOf } from '@/lib/staff-absence'
+import { ABSENCE_TYPES, ACTIVE_STATUSES, REASON_REQUIRED, absenceHours, parseHours, readTimeRange, timeRangeText, workPatternOf } from '@/lib/staff-absence'
 
 const INCLUDE = {
   user:       { select: { id: true, name: true } },
@@ -46,6 +46,9 @@ export async function POST(request: Request) {
 
     if (!userId) return NextResponse.json({ error: 'Staff member is required' }, { status: 400 })
     if (!ABSENCE_TYPES[body.type]) return NextResponse.json({ error: 'Invalid absence type' }, { status: 400 })
+    if (REASON_REQUIRED.has(body.type) && !String(body.reason ?? '').trim()) {
+      return NextResponse.json({ error: 'A reason is required for this type', code: 'reason_required' }, { status: 400 })
+    }
 
     const startDate = parseDateOnly(body.startDate)
     const endDate   = parseDateOnly(body.endDate ?? body.startDate)

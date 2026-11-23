@@ -5,7 +5,7 @@ import { Plus, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { TimeSelect } from './absence-ui'
 import { localDateStr } from '@/lib/local-date'
-import { ABSENCE_TYPES, absenceHours, balances, findOverlap, hoursBetween, parseHours, parseTime, workPatternOf, workingDays } from '@/lib/staff-absence'
+import { ABSENCE_TYPES, REASON_REQUIRED, absenceHours, balances, findOverlap, hoursBetween, parseHours, parseTime, workPatternOf, workingDays } from '@/lib/staff-absence'
 
 const INPUT = 'w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors'
 const LABEL = 'text-[10px] font-bold text-[#6b7280] uppercase tracking-wider block mb-1.5'
@@ -63,6 +63,7 @@ export default function AbsenceModal({ staff, absences, member, onClose, onSaved
     if (badRange) { setError(m.badRange); return }
     if (badHours) { setError(m.badHours); return }
     if (overlap)  { setError(m.overlap); return }
+    if (REASON_REQUIRED.has(type) && !reason.trim()) { setError(m.reasonRequired); return }
     if (manualHours !== '' && manual === null) { setError(m.badHours); return }
 
     setSaving(true); setError('')

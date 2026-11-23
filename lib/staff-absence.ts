@@ -20,7 +20,12 @@ export const ABSENCE_TYPES: Record<string, { color: string; bucket: Bucket | nul
   parental:      { color: '#2dd4bf', bucket: null },
   unpaid:        { color: '#f59e0b', bucket: null },
   workers_comp:  { color: '#e879f9', bucket: null },
+  // Anything that fits nowhere else; the reason says what it is.
+  other:         { color: '#64748b', bucket: null },
 }
+
+// Types whose request makes no sense without a reason.
+export const REASON_REQUIRED = new Set(['other'])
 
 export const BUCKET_FIELDS: Record<Bucket, 'vacationHours' | 'sickHours' | 'personalHours'> = {
   vacation: 'vacationHours', sick: 'sickHours', personal: 'personalHours',
@@ -166,6 +171,12 @@ export function hoursBetween(start: string, end: string) {
 export function fmtTime(time: string) {
   const h = Number(time.slice(0, 2)), m = time.slice(3, 5)
   return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`
+}
+
+// Whether a time of day falls inside a range; a range ending before it starts
+// runs past midnight.
+export function timeInRange(time: string, start: string, end: string) {
+  return start < end ? time >= start && time < end : time >= start || time < end
 }
 
 // A part of one day comes as a time range; neither time means whole days.

@@ -5,7 +5,7 @@ import { Check, Loader2, Pencil, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { fmtDate } from '@/lib/staff-profile'
 import {
-  ABSENCE_TYPES, absenceHours, balances, hoursBetween, parseHours, parseTime, workPatternOf,
+  ABSENCE_TYPES, REASON_REQUIRED, absenceHours, balances, hoursBetween, parseHours, parseTime, workPatternOf,
 } from '@/lib/staff-absence'
 import { StatusBadge, TimeSelect, TypeLabel, absenceRange, durationText } from './absence-ui'
 
@@ -163,6 +163,7 @@ export default function AbsenceDrawer({ absenceId, staff, absences, onClose, onC
     else if (form.partial && timed && form.startTime === form.endTime) error = sa.modal.badHours
     else if (form.partial && !timed && !detail.partialHours) error = sa.modal.badHours
     else if (parseHours(form.hours) === null) error = sa.modal.badHours
+    else if (REASON_REQUIRED.has(form.type) && !form.reason.trim()) error = sa.modal.reasonRequired
     const partialHours = form.partial ? (timed && !error ? hoursBetween(form.startTime, form.endTime) : Number(detail.partialHours) || 0) : null
     const suggested = error && !partialHours ? 0 : absenceHours(form.from, end, partialHours, workPatternOf(member))
     return { error, timed, suggested, overnight: form.partial && timed && form.endTime < form.startTime }
@@ -405,11 +406,14 @@ export default function AbsenceDrawer({ absenceId, staff, absences, onClose, onC
                 </button>
               </>
             )}
-            {detail.status === 'approved' && (
-              <button onClick={() => act('cancel')} disabled={busy} className="px-4 py-2 rounded-lg border border-[#2a2f3d] text-xs font-semibold text-[#f87171] hover:border-[#f87171] transition-all disabled:opacity-50">
-                {sa.cancelAbsence}
-              </button>
-            )}
+            {/* Cancelling withdraws it (no longer needed), unlike declining it.
+                On a pending one it sits apart, on the left, as the rarer move. */}
+            <button onClick={() => act('cancel')} disabled={busy}
+              className={`px-4 py-2 rounded-lg border border-[#2a2f3d] text-xs font-semibold text-[#f87171] hover:border-[#f87171] transition-all disabled:opacity-50 ${
+                detail.status === 'pending' ? 'order-first mr-auto' : ''
+              }`}>
+              {sa.cancelAbsence}
+            </button>
           </div>
         )}
       </aside>

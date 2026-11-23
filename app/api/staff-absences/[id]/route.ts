@@ -6,7 +6,8 @@ import { logAudit } from '@/lib/audit'
 import { sendPushToUsers } from '@/lib/push'
 import { parseDateOnly } from '@/lib/staff-profile-server'
 import {
-  ABSENCE_TYPES, ACTIVE_STATUSES, absenceHours, isActive, parseHours, readTimeRange, workPatternOf,
+  ABSENCE_TYPES, ACTIVE_STATUSES, REASON_REQUIRED, absenceHours, isActive, parseHours, readTimeRange,
+  timeInRange, workPatternOf,
 } from '@/lib/staff-absence'
 
 const SUGGESTIONS_PER_SERVICE = 3
@@ -83,7 +84,29 @@ export async function GET(
       return { ...rest, suggestions }
     })
 
-    return NextResponse.json({ ...absence, affected })
+    // Every service on those days, so the whole day's distribution can be
+    // weighed: `assigned` marks the absent person's, and `clash` the ones
+    // whose start falls inside a part-day range (all of theirs on a full day).
+    const allServices = await prisma.service.findMany({
+      where: {
+        serviceDate: { gte: absence.startDate, lte: absence.endDate },
+        status:      { not: 'cancelled' },
+      },
+      select: {
+        id: true, serviceNumber: true, serviceDate: true, serviceTime: true, type: true, status: true,
+        client: { select: { name: true } },
+        staff:  { select: { userId: true, user: { select: { name: true } } } },
+      },
+      orderBy: [{ serviceDate: 'asc' }, { serviceTime: 'asc' }],
+    })
+    const dayServices = allServices.map(({ staff, ...service }) => {
+      const assigned = staff.some(s => s.userId === absence.userId)
+      const clash = assigned && (!absence.startTime || !absence.endTime
+        || timeInRange(service.serviceTime, absence.startTime, absence.endTime))
+      return { ...service, staffNames: staff.map(s => s.user.name), assigned, clash }
+    })
+
+    return NextResponse.json({ ...absence, affected, dayServices })
   } catch (error) {
     console.error('Error fetching absence:', error)
     return NextResponse.json({ error: 'Failed to fetch absence' }, { status: 500 })
@@ -109,6 +132,10 @@ function snapshotOf(a: any) {
 async function editAbsence(authUser: AuthUser, absence: any, body: any) {
   const type = body.type ?? absence.type
   if (!ABSENCE_TYPES[type]) return NextResponse.json({ error: 'Invalid absence type' }, { status: 400 })
+  const reason = body.reason === undefined ? absence.reason : String(body.reason).trim() || null
+  if (REASON_REQUIRED.has(type) && !reason) {
+    return NextResponse.json({ error: 'A reason is required for this type', code: 'reason_required' }, { status: 400 })
+  }
 
   const from = String(body.startDate ?? ymd(absence.startDate)).slice(0, 10)
   const to   = String(body.endDate ?? body.startDate ?? ymd(absence.endDate)).slice(0, 10)
@@ -154,7 +181,7 @@ async function editAbsence(authUser: AuthUser, absence: any, body: any) {
       type, startDate, endDate, partialHours, totalHours,
       startTime: range.startTime,
       endTime:   range.endTime,
-      reason:    body.reason === undefined ? undefined : String(body.reason).trim() || null,
+      reason,
       // Kept once: later edits never overwrite what was first asked for.
       originalRequest: absence.originalRequest ?? before,
     },

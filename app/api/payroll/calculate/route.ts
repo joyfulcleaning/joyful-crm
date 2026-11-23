@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/mobile-auth'
+import { ABSENCE_TYPES, DEFAULT_PATTERN, absenceHours, workPatternOf } from '@/lib/staff-absence'
 
 const EXTRA_FEE_TYPES = new Set(['Deep Clean', 'Heavy Deep Clean'])
 
@@ -27,7 +28,24 @@ export async function GET(request: Request) {
       orderBy: { name: 'asc' },
     })
 
-    const results = await Promise.all(staffList.map(async (user) => {
+    const absencesOf = await periodAbsences(staffList.map(u => u.id), from, to)
+
+    const results = await Promise.all(staffList.map(async (user) => ({
+      ...await payFor(user, fromDate, toDate),
+      // Shown next to the pay so the admin can decide on any adjustment;
+      // nothing here changes the amount on its own.
+      absences: absencesOf.get(user.id) ?? [],
+    })))
+
+    return NextResponse.json(results)
+  } catch (error) {
+    console.error('Payroll calculate error:', error)
+    return NextResponse.json({ error: 'Failed to calculate payroll' }, { status: 500 })
+  }
+}
+
+// What the person earns in the period under their pay frequency.
+async function payFor(user: any, fromDate: Date, toDate: Date) {
       const freq = user.scheduleType || 'weekly'
 
       if (freq === 'daily' || freq === 'per_service') {
@@ -102,13 +120,44 @@ export async function GET(request: Request) {
         count1BR: 0, count2BR: 0, count3BR: 0, countExtra: 0,
         baseAmount: rate,
       }
-    }))
+}
 
-    return NextResponse.json(results)
-  } catch (error) {
-    console.error('Payroll calculate error:', error)
-    return NextResponse.json({ error: 'Failed to calculate payroll' }, { status: 500 })
+// Approved and pending time off that touches the pay period, per person.
+// `hoursInPeriod` is the part of it inside the period: the recorded hours
+// when it falls entirely inside, else worked out from the person's schedule.
+async function periodAbsences(userIds: string[], from: string, to: string) {
+  const periodFrom = new Date(`${from}T00:00:00.000Z`)
+  const periodTo   = new Date(`${to}T00:00:00.000Z`)
+  const [absences, profiles] = await Promise.all([
+    prisma.staffAbsence.findMany({
+      where: {
+        userId:    { in: userIds },
+        status:    { in: ['approved', 'pending'] },
+        startDate: { lte: periodTo },
+        endDate:   { gte: periodFrom },
+      },
+      orderBy: { startDate: 'asc' },
+    }),
+    prisma.staffProfile.findMany({ where: { userId: { in: userIds } }, select: { userId: true, weeklySchedule: true } }),
+  ])
+  const patternOf = new Map(profiles.map(p => [p.userId, workPatternOf({ hrProfile: p })]))
+
+  const byUser = new Map<string, any[]>()
+  for (const a of absences) {
+    const start = a.startDate.toISOString().slice(0, 10), end = a.endDate.toISOString().slice(0, 10)
+    const inside = start >= from && end <= to
+    const hoursInPeriod = inside
+      ? Number(a.totalHours)
+      : absenceHours(start > from ? start : from, end < to ? end : to, a.partialHours ? Number(a.partialHours) : null,
+          patternOf.get(a.userId) ?? DEFAULT_PATTERN)
+    const row = {
+      id: a.id, type: a.type, status: a.status, startDate: start, endDate: end,
+      startTime: a.startTime, endTime: a.endTime, totalHours: Number(a.totalHours), hoursInPeriod,
+      bucket: ABSENCE_TYPES[a.type]?.bucket ?? null,
+    }
+    byUser.set(a.userId, [...(byUser.get(a.userId) ?? []), row])
   }
+  return byUser
 }
 
 function userBase(user: any) {
