@@ -7,10 +7,15 @@ export const DOCUMENTS_BUCKET = 'staff-documents'
 // Days ahead that a document counts as "expiring".
 export const DOC_ALERT_DAYS = 60
 
-// `required`: every active person must have it. `expires`: carries a date.
-export const STAFF_DOCUMENTS: { key: string; required: boolean; expires: boolean }[] = [
+// `required`: every active person must have it. `requiredFor`: only people
+// with one of these employment types must have it; anyone else may still have
+// one on file. `expires`: carries a date.
+type StaffDocumentDef = { key: string; required: boolean; requiredFor?: string[]; expires: boolean }
+
+export const STAFF_DOCUMENTS: StaffDocumentDef[] = [
   { key: 'i9',       required: true,  expires: false },
   { key: 'w4',       required: true,  expires: false },
+  { key: 'w9',       required: false, requiredFor: ['contractor'], expires: false },
   { key: 'nc4',      required: true,  expires: false },
   { key: 'contract', required: true,  expires: false },
   { key: 'photoId',  required: true,  expires: true  },
@@ -21,6 +26,10 @@ export const STAFF_DOCUMENTS: { key: string; required: boolean; expires: boolean
   { key: 'deposit',  required: false, expires: false },
   { key: 'handbook', required: true,  expires: false },
 ]
+
+export function isDocRequired(def: StaffDocumentDef, employmentType: string | null | undefined) {
+  return def.required || (!!employmentType && !!def.requiredFor?.includes(employmentType))
+}
 
 export type DocStatus = 'valid' | 'expiring' | 'expired' | 'missing' | 'na'
 
@@ -49,7 +58,10 @@ export function docStatus(doc: any | undefined, required: boolean, today: string
 // Inactive people are left out of compliance entirely.
 export function complianceOf(member: any, documents: any[], today: string) {
   const latest = latestDocs(documents, member.id)
-  const rows = STAFF_DOCUMENTS.map(def => ({ ...def, doc: latest.get(def.key), status: docStatus(latest.get(def.key), def.required, today) }))
+  const rows = STAFF_DOCUMENTS.map(def => {
+    const required = isDocRequired(def, member.hrProfile?.employmentType)
+    return { ...def, required, doc: latest.get(def.key), status: docStatus(latest.get(def.key), required, today) }
+  })
   const count = (s: DocStatus) => rows.filter(r => r.status === s).length
   const required = rows.filter(r => r.required)
   const ok = required.filter(r => r.status === 'valid' || r.status === 'expiring').length

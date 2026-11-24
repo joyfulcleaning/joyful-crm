@@ -7,7 +7,7 @@ import { PAY_FREQUENCIES } from '@/components/modals/StaffModal'
 import { useI18n } from '@/lib/i18n'
 import { EMPLOYMENT_TYPES, WEEK_DAYS, employeeCodeChoices } from '@/lib/staff-profile'
 import { DEFAULT_PATTERN } from '@/lib/staff-absence'
-import { STAFF_DOCUMENTS } from '@/lib/staff-documents'
+import { STAFF_DOCUMENTS, isDocRequired } from '@/lib/staff-documents'
 
 const INPUT = 'w-full px-3 py-2 bg-[#1e2330] border border-[#2a2f3d] rounded-lg text-xs text-[#e8eaf0] placeholder-[#6b7280] focus:outline-none focus:border-[#4f8ef7] transition-colors'
 const INVALID = 'border-[#f87171] ring-2 ring-[rgba(248,113,113,0.15)]'
@@ -90,7 +90,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
     if (i <= reached && Array.from({ length: i }, (_, k) => k).every(stepValid)) { setStep(i); setTouched(false) }
   }
 
-  const pendingRequired = STAFF_DOCUMENTS.filter(d => d.required && !form.received.includes(d.key)).length
+  const pendingRequired = STAFF_DOCUMENTS.filter(d => isDocRequired(d, form.employmentType) && !form.received.includes(d.key)).length
 
   async function create() {
     const firstBad = [0, 1, 2, 3].find(i => !stepValid(i))
@@ -324,7 +324,7 @@ export default function NewStaffWizard({ staff, onClose, onCreated }: Props) {
                     <div key={d.key} className="flex items-center justify-between gap-3 bg-[#1e2330] border border-[#2a2f3d] rounded-lg px-3 py-2">
                       <div>
                         <div className="text-xs font-semibold text-[#e8eaf0]">{t.staffDocs.names[d.key]}</div>
-                        <div className="text-[10px] text-[#6b7280]">{d.required ? t.staffDocs.required : t.staffDocs.optional}</div>
+                        <div className="text-[10px] text-[#6b7280]">{isDocRequired(d, form.employmentType) ? t.staffDocs.required : t.staffDocs.optional}</div>
                       </div>
                       <div className="flex gap-1">
                         {[true, false].map(value => (

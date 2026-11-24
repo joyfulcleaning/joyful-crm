@@ -913,13 +913,13 @@ const en = {
     tab:          'Document compliance',
     tabInFile:    'Documents',
     names: {
-      i9: 'Form I-9', w4: 'Federal W-4', nc4: 'NC-4 (state)', contract: 'Signed employment contract',
+      i9: 'Form I-9', w4: 'Federal W-4', w9: 'W-9 (contractors)', nc4: 'NC-4 (state)', contract: 'Signed employment contract',
       photoId: 'Photo ID', license: "Driver's license", background: 'Background check',
       keys: 'Keys and codes agreement', hazcom: 'HazCom certificate (chemicals)',
       deposit: 'Direct deposit authorization', handbook: 'Employee handbook acknowledgment', other: 'Other document',
     } as Record<string, string>,
     short: {
-      i9: 'I-9', w4: 'W-4', nc4: 'NC-4', contract: 'Contract', photoId: 'Photo ID', license: 'License',
+      i9: 'I-9', w4: 'W-4', w9: 'W-9', nc4: 'NC-4', contract: 'Contract', photoId: 'Photo ID', license: 'License',
       background: 'Background', keys: 'Keys', hazcom: 'HazCom', deposit: 'Deposit', handbook: 'Handbook',
     } as Record<string, string>,
     statuses: { valid: 'Valid', expiring: 'Expiring', expired: 'Expired', missing: 'Missing', na: 'Not required' } as Record<string, string>,
@@ -2833,13 +2833,13 @@ const es: typeof en = {
     tab:          'Cumplimiento documental',
     tabInFile:    'Documentos',
     names: {
-      i9: 'Formulario I-9', w4: 'W-4 Federal', nc4: 'NC-4 Estatal', contract: 'Contrato laboral firmado',
+      i9: 'Formulario I-9', w4: 'W-4 Federal', w9: 'W-9 (contratistas)', nc4: 'NC-4 Estatal', contract: 'Contrato laboral firmado',
       photoId: 'Identificación con foto', license: 'Licencia de conducir', background: 'Verificación de antecedentes',
       keys: 'Acuerdo de llaves y códigos', hazcom: 'Certificado HazCom (químicos)',
       deposit: 'Autorización de depósito directo', handbook: 'Acuse del manual del empleado', other: 'Otro documento',
     } as Record<string, string>,
     short: {
-      i9: 'I-9', w4: 'W-4', nc4: 'NC-4', contract: 'Contrato', photoId: 'ID con foto', license: 'Licencia',
+      i9: 'I-9', w4: 'W-4', w9: 'W-9', nc4: 'NC-4', contract: 'Contrato', photoId: 'ID con foto', license: 'Licencia',
       background: 'Antecedentes', keys: 'Llaves', hazcom: 'HazCom', deposit: 'Dep. directo', handbook: 'Manual',
     } as Record<string, string>,
     statuses: { valid: 'Vigente', expiring: 'Por vencer', expired: 'Vencido', missing: 'Faltante', na: 'No aplica' } as Record<string, string>,
