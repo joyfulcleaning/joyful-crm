@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { Eye, Paperclip, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { localDateStr } from '@/lib/local-date'
 import { fmtDate } from '@/lib/staff-profile'
@@ -44,8 +44,15 @@ export default function ProfileDocuments({ member, documents, onChanged }: Props
   const [error, setError]     = useState('')
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
-  function openModal(docType: string) {
-    setModal({ docType }); setForm({ title: '', issuedAt: '', expiresAt: '', note: '' }); setFile(null); setError('')
+  // `paperDoc`: attaching the scan of a document already recorded on paper
+  // keeps its dates and note, since the new row becomes the current one.
+  function openModal(docType: string, paperDoc?: any) {
+    const day = (v: any) => (v ? String(v).slice(0, 10) : '')
+    setModal({ docType })
+    setForm(paperDoc
+      ? { title: paperDoc.title ?? '', issuedAt: day(paperDoc.issuedAt), expiresAt: day(paperDoc.expiresAt), note: paperDoc.note ?? '' }
+      : { title: '', issuedAt: '', expiresAt: '', note: '' })
+    setFile(null); setError('')
   }
 
   async function save() {
@@ -97,14 +104,20 @@ export default function ProfileDocuments({ member, documents, onChanged }: Props
   function fileCell(doc: any) {
     if (!doc) return '—'
     if (!doc.storagePath) return <span className="text-[#6b7280]">{sd.paper}</span>
-    return <span title={doc.fileName}>{doc.fileName?.slice(0, 28)} <span className="text-[#6b7280]">{fileSizeText(doc.sizeBytes)}</span></span>
+    return (
+      <button onClick={() => view(doc.id)} title={doc.fileName} className="text-left hover:text-[#4f8ef7] hover:underline">
+        {doc.fileName?.slice(0, 28)} <span className="text-[#6b7280]">{fileSizeText(doc.sizeBytes)}</span>
+      </button>
+    )
   }
 
   function actions(doc: any, docType: string, canRenew: boolean) {
     return (
       <div className="flex items-center gap-1.5 justify-end">
         {doc?.storagePath && <button onClick={() => view(doc.id)} className={ACTION}><Eye size={11} />{sd.view}</button>}
-        <button onClick={() => openModal(docType)} className={ACTION}><Upload size={11} />{doc && canRenew ? sd.renew : sd.upload}</button>
+        {doc && !doc.storagePath
+          ? <button onClick={() => openModal(docType, doc)} className={`${ACTION} text-[#4f8ef7] border-[rgba(79,142,247,0.4)]`}><Paperclip size={11} />{sd.attachFile}</button>
+          : <button onClick={() => openModal(docType)} className={ACTION}><Upload size={11} />{doc && canRenew ? sd.renew : sd.upload}</button>}
         {doc && (
           <button onClick={() => remove(doc.id)} title={sd.deleteConfirm} className={`${ACTION} ${confirmId === doc.id ? 'text-[#f87171] border-[#f87171]' : ''}`}>
             <Trash2 size={11} />{confirmId === doc.id ? '?' : ''}
@@ -168,7 +181,9 @@ export default function ProfileDocuments({ member, documents, onChanged }: Props
                   <td className={TD}>{fileCell(doc)}</td>
                   <td className={TD}>
                     <div className="flex items-center gap-1.5 justify-end">
-                      {doc.storagePath && <button onClick={() => view(doc.id)} className={ACTION}><Eye size={11} />{sd.view}</button>}
+                      {doc.storagePath
+                        ? <button onClick={() => view(doc.id)} className={ACTION}><Eye size={11} />{sd.view}</button>
+                        : <button onClick={() => openModal('other', doc)} className={`${ACTION} text-[#4f8ef7] border-[rgba(79,142,247,0.4)]`}><Paperclip size={11} />{sd.attachFile}</button>}
                       <button onClick={() => remove(doc.id)} title={sd.deleteConfirm} className={`${ACTION} ${confirmId === doc.id ? 'text-[#f87171] border-[#f87171]' : ''}`}>
                         <Trash2 size={11} />{confirmId === doc.id ? '?' : ''}
                       </button>
@@ -201,6 +216,9 @@ export default function ProfileDocuments({ member, documents, onChanged }: Props
                 <label className={LABEL}>{sd.modal.file}</label>
                 <input type="file" accept=".pdf,image/*,.doc,.docx" onChange={e => setFile(e.target.files?.[0] ?? null)}
                   className="w-full text-xs text-[#6b7280] file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-[#1e2330] file:text-[#e8eaf0] file:text-xs" />
+                {!file && (
+                  <div className="mt-2 bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.25)] text-[#f59e0b] text-[11px] rounded-lg px-3 py-2">{sd.modal.noFile}</div>
+                )}
               </div>
               <div>
                 <label className={LABEL}>{sd.modal.issued}</label>
@@ -223,7 +241,7 @@ export default function ProfileDocuments({ member, documents, onChanged }: Props
               </button>
               <button onClick={save} disabled={saving || (modal.docType === 'other' && !form.title.trim())}
                 className="flex items-center gap-2 px-4 py-2 bg-[#4f8ef7] hover:bg-[#3a7ee0] text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-50">
-                <Save size={13} />{saving ? sd.modal.saving : sd.modal.save}
+                <Save size={13} />{saving ? sd.modal.saving : file ? sd.modal.save : sd.modal.savePaper}
               </button>
             </div>
           </div>
